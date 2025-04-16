@@ -15,42 +15,59 @@ export async function generateEnergyForecast(
   siteId: number, 
   interval: string = '24h'
 ): Promise<EnergyForecast> {
-  // Get duration in hours based on interval
-  const durationHours = getForecastDurationHours(interval as ForecastInterval);
-  
-  // Get historical data to base forecast on
-  const readings = await storage.getEnergyReadings(siteId, 48); // Last 48 readings
-  
-  // Get site devices to factor into forecast
-  const devices = await storage.getDevicesBySite(siteId);
-  
-  // Calculate the forecast using available data and devices
-  // Even if no historical data, we'll generate a basic forecast based on device capabilities
-  const forecast = calculateForecast(readings || [], devices || [], durationHours);
-  
-  console.log("Generated forecast with data:", 
-    `Site ID: ${siteId}, `, 
-    `Readings count: ${readings?.length || 0}, `,
-    `Devices count: ${devices?.length || 0}, `,
-    `Interval: ${interval}, `,
-    `Duration: ${durationHours}h`);
-  
-  // Save the forecast to the database
-  const newForecast: InsertEnergyForecast = {
-    siteId,
-    forecastDate: new Date(Date.now() + durationHours * 60 * 60 * 1000),
-    forecastType: 'generation', // Using the existing enum value that's closest to 'energy'
-    value: forecast.data.production.reduce((sum, val) => sum + val, 0), // Summarized value
-    confidence: forecast.accuracy,
-    algorithm: 'time-series-analysis',
-    metadata: {
-      forecastInterval: interval,
-      data: forecast.data,
-      factors: forecast.factors
+  try {
+    // Get duration in hours based on interval
+    const durationHours = getForecastDurationHours(interval as ForecastInterval);
+    
+    // Get historical data to base forecast on
+    let readings: EnergyReading[] = [];
+    try {
+      readings = await storage.getEnergyReadings(siteId, 48); // Last 48 readings
+    } catch (error) {
+      console.warn(`Failed to get readings for site ${siteId}, using empty set:`, error);
+      // Proceed with empty readings
     }
-  };
-  
-  return await storage.createEnergyForecast(newForecast);
+    
+    // Get site devices to factor into forecast
+    let devices: any[] = [];
+    try {
+      devices = await storage.getDevicesBySite(siteId);
+    } catch (error) {
+      console.warn(`Failed to get devices for site ${siteId}, using default devices:`, error);
+      // Proceed with default device assumptions
+    }
+    
+    // Calculate the forecast using available data and devices
+    // Even if no historical data, we'll generate a basic forecast based on device capabilities
+    const forecast = calculateForecast(readings || [], devices || [], durationHours);
+    
+    console.log("Generated forecast with data:", 
+      `Site ID: ${siteId}, `, 
+      `Readings count: ${readings?.length || 0}, `,
+      `Devices count: ${devices?.length || 0}, `,
+      `Interval: ${interval}, `,
+      `Duration: ${durationHours}h`);
+    
+    // Save the forecast to the database
+    const newForecast: InsertEnergyForecast = {
+      siteId,
+      forecastDate: new Date(Date.now() + durationHours * 60 * 60 * 1000),
+      forecastType: 'generation', // Using the existing enum value that's closest to 'energy'
+      value: forecast.data.production.reduce((sum, val) => sum + val, 0), // Summarized value
+      confidence: forecast.accuracy,
+      algorithm: 'time-series-analysis',
+      metadata: {
+        forecastInterval: interval,
+        data: forecast.data,
+        factors: forecast.factors
+      }
+    };
+    
+    return await storage.createEnergyForecast(newForecast);
+  } catch (error: any) {
+    console.error(`Failed to generate forecast for site ${siteId}:`, error);
+    throw new Error(`Failed to generate forecast: ${error?.message || 'Unknown error'}`);
+  }
 }
 
 /**
