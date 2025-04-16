@@ -51,8 +51,8 @@ export const getCurrentTariffRate = async (req: Request, res: Response) => {
     let period = 'Standard Rate';
     
     // If it's a time-of-use tariff, determine the current rate based on time of day
-    if (tariff.isTimeOfUse && tariff.schedule) {
-      const schedule = tariff.schedule;
+    if (tariff.isTimeOfUse && tariff.scheduleData) {
+      const schedule = tariff.scheduleData as Record<string, Record<string, number>>;
       const hours = now.getHours();
       
       // Determine the current season
@@ -194,7 +194,7 @@ export const createIsraeliTariffData = async (siteId: number) => {
       isTimeOfUse: true,
       currency: 'ILS',
       dataIntervalSeconds: 60,
-      schedule: {
+      scheduleData: {
         // Summer rates (June-September)
         summer: {
           peak: 0.85,     // Peak: 17:00-22:00
