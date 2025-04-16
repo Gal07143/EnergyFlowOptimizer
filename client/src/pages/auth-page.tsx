@@ -1,6 +1,4 @@
-import { useAuth } from "@/hooks/use-auth";
-import { z } from "zod";
-import { insertUserSchema } from "@shared/schema";
+import { useAuth, loginSchema, registerSchema } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -10,24 +8,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { z } from "zod";
 import { Loader2 } from "lucide-react";
-
-// Define schemas for form validation
-const loginSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-const registerSchema = insertUserSchema.extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
@@ -42,7 +24,7 @@ export default function AuthPage() {
   }, [user, navigate]);
 
   // Login form
-  const loginForm = useForm<LoginFormValues>({
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
@@ -51,7 +33,7 @@ export default function AuthPage() {
   });
 
   // Register form
-  const registerForm = useForm<RegisterFormValues>({
+  const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
@@ -59,14 +41,15 @@ export default function AuthPage() {
       password: "",
       confirmPassword: "",
       role: "viewer",
+      siteId: undefined,
     }
   });
 
-  const onLoginSubmit = (values: LoginFormValues) => {
+  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
     loginMutation.mutate(values);
   };
 
-  const onRegisterSubmit = (values: RegisterFormValues) => {
+  const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
     registerMutation.mutate(values);
   };
 

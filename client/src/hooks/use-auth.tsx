@@ -4,9 +4,10 @@ import {
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
-import { User as SelectUser, InsertUser } from "@shared/schema";
+import { User as SelectUser, insertUserSchema } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
 
 type AuthContextType = {
   user: SelectUser | null;
@@ -17,15 +18,21 @@ type AuthContextType = {
   registerMutation: UseMutationResult<Omit<SelectUser, "password">, Error, RegisterData>;
 };
 
-// Types for auth mutations
-type LoginData = {
-  username: string;
-  password: string;
-};
+const loginSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
-type RegisterData = Omit<InsertUser, "id"> & {
-  confirmPassword: string;
-};
+const registerSchema = insertUserSchema.extend({
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type LoginData = z.infer<typeof loginSchema>;
+type RegisterData = z.infer<typeof registerSchema>;
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -148,3 +155,5 @@ export function useAuth() {
   }
   return context;
 }
+
+export { loginSchema, registerSchema };
