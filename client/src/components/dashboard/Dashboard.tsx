@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInitializeDemoData } from '@/hooks/useSiteData';
+import EnergyForecast from '@/components/forecasting/EnergyForecast';
 
 export default function Dashboard() {
   const { currentSiteId } = useSiteSelector();
@@ -90,6 +91,9 @@ export default function Dashboard() {
       </div>
       <EnergyOverview latestReading={latestReading} />
       <EnergyFlow latestReading={latestReading} devices={devices} />
+      <div className="px-4 sm:px-6 lg:px-8 mt-6">
+        <EnergyForecast siteId={currentSiteId} />
+      </div>
       <DeviceManagement devices={devices} siteId={currentSiteId} />
       <EnergyOptimization siteId={currentSiteId} settings={optimizationSettings} />
       <AdvancedFeatures siteId={currentSiteId} settings={optimizationSettings} />

@@ -1,8 +1,15 @@
 import { Request, Response } from 'express';
 import { storage } from '../storage';
-import { z } from 'zod';
-import { insertEnergyForecastSchema } from '@shared/schema';
+import { 
+  insertEnergyForecastSchema, 
+  InsertEnergyForecast 
+} from '@shared/schema';
+import { ZodError } from 'zod';
+import { fromZodError } from 'zod-validation-error';
 import * as forecastService from '../services/forecastService';
+
+// Import ForecastInterval type from service
+type ForecastInterval = '1h' | '6h' | '24h' | '7d' | '30d';
 
 /**
  * Get energy forecasts for a site
@@ -10,6 +17,11 @@ import * as forecastService from '../services/forecastService';
 export async function getEnergyForecasts(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
+    
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
+    }
+    
     const forecasts = await storage.getEnergyForecasts(siteId);
     res.json(forecasts);
   } catch (error) {
@@ -24,12 +36,21 @@ export async function getEnergyForecasts(req: Request, res: Response) {
 export async function getEnergyForecastsByType(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
-    const forecastType = req.params.forecastType;
+    const { forecastType } = req.params;
+    
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
+    }
+    
+    if (!forecastType) {
+      return res.status(400).json({ message: 'Forecast type is required' });
+    }
+    
     const forecasts = await storage.getEnergyForecastsByType(siteId, forecastType);
     res.json(forecasts);
   } catch (error) {
     console.error('Error fetching energy forecasts by type:', error);
-    res.status(500).json({ message: 'Failed to fetch energy forecasts by type' });
+    res.status(500).json({ message: 'Failed to fetch energy forecasts' });
   }
 }
 
@@ -41,11 +62,14 @@ export async function getLatestEnergyForecast(req: Request, res: Response) {
     const siteId = parseInt(req.params.siteId);
     const interval = req.query.interval as string | undefined;
     
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
+    }
+    
     const forecast = await storage.getLatestEnergyForecast(siteId, interval);
     
     if (!forecast) {
-      res.status(404).json({ message: 'Energy forecast not found' });
-      return;
+      return res.status(404).json({ message: 'No forecast found for site' });
     }
     
     res.json(forecast);
@@ -60,16 +84,21 @@ export async function getLatestEnergyForecast(req: Request, res: Response) {
  */
 export async function createEnergyForecast(req: Request, res: Response) {
   try {
-    const validatedData = insertEnergyForecastSchema.parse(req.body);
-    const forecast = await storage.createEnergyForecast(validatedData);
+    // Validate request body
+    const forecastData = insertEnergyForecastSchema.parse(req.body);
+    
+    // Create forecast
+    const forecast = await storage.createEnergyForecast(forecastData);
+    
     res.status(201).json(forecast);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ message: 'Invalid forecast data', errors: error.errors });
-    } else {
-      console.error('Error creating energy forecast:', error);
-      res.status(500).json({ message: 'Failed to create energy forecast' });
+    if (error instanceof ZodError) {
+      const validationError = fromZodError(error);
+      return res.status(400).json({ message: validationError.message });
     }
+    
+    console.error('Error creating energy forecast:', error);
+    res.status(500).json({ message: 'Failed to create energy forecast' });
   }
 }
 
@@ -79,25 +108,24 @@ export async function createEnergyForecast(req: Request, res: Response) {
 export async function generateEnergyForecast(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
-    const interval = (req.query.interval as forecastService.ForecastInterval) || '24h';
+    const interval = (req.query.interval as string) || '24h';
     
-    // Validate interval
-    const validIntervals = ['1h', '6h', '24h', '7d', '30d'];
-    if (!validIntervals.includes(interval)) {
-      return res.status(400).json({ 
-        message: 'Invalid interval', 
-        validIntervals 
-      });
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
     }
     
-    // Generate or get recent forecast
-    const forecast = await forecastService.getOrCreateForecast(siteId, interval);
-    res.json(forecast);
-  } catch (error: any) {
+    // Check if site exists
+    const site = await storage.getSite(siteId);
+    if (!site) {
+      return res.status(404).json({ message: 'Site not found' });
+    }
+    
+    // Generate forecast
+    const forecast = await forecastService.generateEnergyForecast(siteId, interval);
+    
+    res.status(201).json(forecast);
+  } catch (error) {
     console.error('Error generating energy forecast:', error);
-    res.status(500).json({ 
-      message: 'Failed to generate energy forecast',
-      error: error.message || 'Unknown error'
-    });
+    res.status(500).json({ message: 'Failed to generate energy forecast' });
   }
 }
