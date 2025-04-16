@@ -34,14 +34,16 @@ export async function generateEnergyForecast(siteId: number, interval: ForecastI
   // Save the forecast to the database
   const newForecast: InsertEnergyForecast = {
     siteId,
-    forecastType: 'energy',
-    interval,
-    startTime: new Date(),
-    endTime: new Date(Date.now() + durationHours * 60 * 60 * 1000),
-    generatedAt: new Date(),
-    forecastData: forecast.data,
-    accuracy: forecast.accuracy,
-    factors: forecast.factors
+    forecastDate: new Date(Date.now() + durationHours * 60 * 60 * 1000),
+    forecastType: 'generation', // Using the existing enum value that's closest to 'energy'
+    value: forecast.data.production.reduce((sum, val) => sum + val, 0), // Summarized value
+    confidence: forecast.accuracy,
+    algorithm: 'time-series-analysis',
+    metadata: {
+      forecastInterval: interval,
+      data: forecast.data,
+      factors: forecast.factors
+    }
   };
   
   return await storage.createEnergyForecast(newForecast);
@@ -334,7 +336,7 @@ export async function getOrCreateForecast(
   
   // Check if the forecast is recent enough (less than 1 hour old)
   if (latestForecast && 
-     (new Date().getTime() - new Date(latestForecast.generatedAt).getTime() < 60 * 60 * 1000)) {
+     (new Date().getTime() - new Date(latestForecast.timestamp).getTime() < 60 * 60 * 1000)) {
     return latestForecast;
   }
   

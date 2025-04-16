@@ -81,6 +81,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/sites/:siteId/energy-readings/latest', energyController.getLatestEnergyReading);
   app.post('/api/energy-readings', energyController.createEnergyReading);
   
+  // Energy forecast routes
+  app.get('/api/sites/:siteId/forecasts', forecastController.getEnergyForecasts);
+  app.get('/api/sites/:siteId/forecasts/type/:forecastType', forecastController.getEnergyForecastsByType);
+  app.get('/api/sites/:siteId/forecasts/latest', forecastController.getLatestEnergyForecast);
+  app.post('/api/forecasts', forecastController.createEnergyForecast);
+  app.post('/api/sites/:siteId/forecasts/generate', forecastController.generateEnergyForecast);
+  
   // Optimization routes
   app.get('/api/sites/:siteId/optimization-settings', optimizationController.getOptimizationSettings);
   app.post('/api/optimization-settings', optimizationController.createOptimizationSettings);

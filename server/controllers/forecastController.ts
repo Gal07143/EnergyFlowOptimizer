@@ -93,11 +93,11 @@ export async function generateEnergyForecast(req: Request, res: Response) {
     // Generate or get recent forecast
     const forecast = await forecastService.getOrCreateForecast(siteId, interval);
     res.json(forecast);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating energy forecast:', error);
     res.status(500).json({ 
       message: 'Failed to generate energy forecast',
-      error: error.message
+      error: error.message || 'Unknown error'
     });
   }
 }

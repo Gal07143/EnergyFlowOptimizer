@@ -324,7 +324,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(energyForecasts)
       .where(eq(energyForecasts.siteId, siteId))
-      .orderBy(desc(energyForecasts.generatedAt));
+      .orderBy(desc(energyForecasts.timestamp));
   }
   
   async getEnergyForecastsByType(siteId: number, forecastType: string): Promise<EnergyForecast[]> {
@@ -337,24 +337,20 @@ export class DatabaseStorage implements IStorage {
           eq(energyForecasts.forecastType, forecastType as any)
         )
       )
-      .orderBy(desc(energyForecasts.generatedAt));
+      .orderBy(desc(energyForecasts.timestamp));
   }
   
   async getLatestEnergyForecast(
     siteId: number, 
     interval?: string
   ): Promise<EnergyForecast | undefined> {
-    const query = db
+    // Note: We don't have an interval field in our current schema
+    // but we're keeping the parameter for future compatibility
+    const [forecast] = await db
       .select()
       .from(energyForecasts)
-      .where(eq(energyForecasts.siteId, siteId));
-      
-    if (interval) {
-      query.where(eq(energyForecasts.interval, interval as any));
-    }
-    
-    const [forecast] = await query
-      .orderBy(desc(energyForecasts.generatedAt))
+      .where(eq(energyForecasts.siteId, siteId))
+      .orderBy(desc(energyForecasts.timestamp))
       .limit(1);
       
     return forecast || undefined;
