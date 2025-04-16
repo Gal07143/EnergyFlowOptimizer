@@ -24,8 +24,16 @@ export async function generateEnergyForecast(
   // Get site devices to factor into forecast
   const devices = await storage.getDevicesBySite(siteId);
   
-  // Calculate the forecast using time series analysis and device capabilities
-  const forecast = calculateForecast(readings, devices, durationHours);
+  // Calculate the forecast using available data and devices
+  // Even if no historical data, we'll generate a basic forecast based on device capabilities
+  const forecast = calculateForecast(readings || [], devices || [], durationHours);
+  
+  console.log("Generated forecast with data:", 
+    `Site ID: ${siteId}, `, 
+    `Readings count: ${readings?.length || 0}, `,
+    `Devices count: ${devices?.length || 0}, `,
+    `Interval: ${interval}, `,
+    `Duration: ${durationHours}h`);
   
   // Save the forecast to the database
   const newForecast: InsertEnergyForecast = {
@@ -237,14 +245,25 @@ function generateSimplifiedForecast(
   durationHours: number
 ): void {
   // Use device capabilities to create a baseline
+  // If we have no devices, we'll use default values for a typical home
+  
+  // For solar panels, use capacity from devices if available, or default to 5kW
   const solarPanels = devices.filter(device => device.type === 'solar_pv');
-  const totalSolarCapacity = solarPanels.reduce((sum, panel) => sum + (Number(panel.capacity) || 0), 0);
+  const totalSolarCapacity = solarPanels.length > 0 
+    ? solarPanels.reduce((sum, panel) => sum + (Number(panel.capacity) || 0), 0)
+    : 5.0; // Default to 5kW solar if no panels
   
+  // For batteries, use capacity from devices if available, or default to 10kWh
   const batteries = devices.filter(device => device.type === 'battery');
-  const totalBatteryCapacity = batteries.reduce((sum, battery) => sum + (Number(battery.capacity) || 0), 0);
+  const totalBatteryCapacity = batteries.length > 0
+    ? batteries.reduce((sum, battery) => sum + (Number(battery.capacity) || 0), 0)
+    : 10.0; // Default to 10kWh battery if no batteries
   
+  // For EV chargers, use capacity from devices if available, or default to 7.4kW
   const evChargers = devices.filter(device => device.type === 'ev_charger');
-  const totalChargerCapacity = evChargers.reduce((sum, charger) => sum + (Number(charger.capacity) || 0), 0);
+  const totalChargerCapacity = evChargers.length > 0
+    ? evChargers.reduce((sum, charger) => sum + (Number(charger.capacity) || 0), 0)
+    : 7.4; // Default to 7.4kW EV charger if no chargers
   
   // Baseline consumption (average household ~1kW with some appliances)
   const baseConsumption = 1 + Math.random(); // 1-2 kW
