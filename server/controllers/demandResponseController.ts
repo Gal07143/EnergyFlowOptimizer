@@ -464,34 +464,44 @@ export async function createDemoDemandResponseData(siteId: number) {
       });
 
     // Create some demand response actions for the completed event
-    await db
-      .insert(demandResponseActions)
-      .values([
-        {
-          eventId: completedEvent.id,
-          deviceId: 1,
-          actionType: "setpoint_adjustment",
-          startTime: new Date(yesterday.getTime()),
-          endTime: new Date(yesterdayEnd.getTime()),
-          parameters: { setpoint: 24, previous: 21 },
-          status: "completed",
-          result: "success",
-          createdAt: new Date(yesterday.getTime() - 300000), // 5 minutes before event
-          updatedAt: new Date(yesterdayEnd.getTime() + 300000) // 5 minutes after event
-        },
-        {
-          eventId: completedEvent.id,
-          deviceId: 2,
-          actionType: "charging_delay",
-          startTime: new Date(yesterday.getTime()),
-          endTime: new Date(yesterdayEnd.getTime()),
-          parameters: { delayMinutes: 120 },
-          status: "completed",
-          result: "success",
-          createdAt: new Date(yesterday.getTime() - 300000),
-          updatedAt: new Date(yesterdayEnd.getTime() + 300000)
-        }
-      ]);
+    // First we need the site participation for the completed event
+    const [completedParticipation] = await db
+      .select()
+      .from(siteEventParticipations)
+      .where(eq(siteEventParticipations.eventId, completedEvent.id))
+      .limit(1);
+
+    if (completedParticipation) {
+      await db
+        .insert(demandResponseActions)
+        .values([
+          {
+            participationId: completedParticipation.id,
+            deviceId: 1,
+            actionType: "setpoint_adjustment",
+            startTime: new Date(yesterday.getTime()),
+            endTime: new Date(yesterdayEnd.getTime()),
+            setPoint: 24,
+            estimatedReduction: 0.8,
+            actualReduction: 0.7,
+            status: "completed",
+            createdAt: new Date(yesterday.getTime() - 300000), // 5 minutes before event
+            updatedAt: new Date(yesterdayEnd.getTime() + 300000) // 5 minutes after event
+          },
+          {
+            participationId: completedParticipation.id,
+            deviceId: 2,
+            actionType: "charging_delay",
+            startTime: new Date(yesterday.getTime()),
+            endTime: new Date(yesterdayEnd.getTime()),
+            estimatedReduction: 1.2,
+            actualReduction: 1.3,
+            status: "completed",
+            createdAt: new Date(yesterday.getTime() - 300000),
+            updatedAt: new Date(yesterdayEnd.getTime() + 300000)
+          }
+        ]);
+    }
 
     return { program, settings, events: [scheduledEvent, completedEvent] };
   } catch (error) {
