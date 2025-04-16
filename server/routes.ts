@@ -84,6 +84,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/tariffs', optimizationController.createTariff);
   app.put('/api/tariffs/:id', optimizationController.updateTariff);
   
+  // Demo user creation
+  app.post('/api/create-demo-user', async (req, res) => {
+    try {
+      // See if user already exists
+      const existingUser = await storage.getUserByUsername('admin');
+      if (existingUser) {
+        return res.status(200).json({
+          message: 'Demo user already exists',
+          user: {
+            username: existingUser.username,
+            email: existingUser.email,
+            role: existingUser.role
+          }
+        });
+      }
+      
+      // Import password hashing function
+      const { hashPassword } = await import('./auth');
+      
+      // Create a demo admin user with hashed password
+      const demoUser = await storage.createUser({
+        username: 'admin',
+        password: await hashPassword('password123'),
+        email: 'admin@example.com',
+        role: 'admin',
+        firstName: 'Admin',
+        lastName: 'User',
+        isEmailVerified: true
+      });
+      
+      res.status(201).json({
+        message: 'Demo user created successfully',
+        user: {
+          username: demoUser.username,
+          email: demoUser.email,
+          role: demoUser.role
+        }
+      });
+    } catch (error) {
+      console.error('Error creating demo user:', error);
+      res.status(500).json({ message: 'Failed to create demo user' });
+    }
+  });
+
   // Demo data route - for initial setup
   app.post('/api/demo-setup', async (req, res) => {
     try {
