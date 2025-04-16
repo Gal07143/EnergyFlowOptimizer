@@ -15,6 +15,7 @@ import * as deviceController from './controllers/deviceController';
 import * as energyController from './controllers/energyController';
 import * as forecastController from './controllers/forecastController';
 import * as optimizationController from './controllers/optimizationController';
+import * as demandResponseController from './controllers/demandResponseController';
 import * as authController from './controllers/authController';
 import * as setupController from './controllers/setupController';
 import * as initController from './controllers/initController';

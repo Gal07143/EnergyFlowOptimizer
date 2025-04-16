@@ -7,10 +7,12 @@ import Analytics from "@/pages/Analytics";
 import Optimization from "@/pages/Optimization";
 import Settings from "@/pages/Settings";
 import Weather from "@/pages/Weather";
+import DemandResponse from "@/pages/DemandResponse";
 import AuthPage from "@/pages/auth-page";
 import EmailVerificationPage from "@/pages/email-verification-page";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
+import { SiteProvider } from "@/hooks/use-site-context";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
@@ -21,6 +23,7 @@ function Router() {
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/optimization" component={Optimization} />
       <ProtectedRoute path="/weather" component={Weather} />
+      <ProtectedRoute path="/demand-response" component={DemandResponse} />
       <ProtectedRoute path="/settings" component={Settings} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/verify-email" component={EmailVerificationPage} />
@@ -40,8 +43,10 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router />
-      <Toaster />
+      <SiteProvider>
+        <Router />
+        <Toaster />
+      </SiteProvider>
     </AuthProvider>
   );
 }
