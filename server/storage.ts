@@ -236,7 +236,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDeviceReading(reading: InsertDeviceReading): Promise<DeviceReading> {
-    const [newReading] = await db.insert(deviceReadings).values(reading).returning();
+    const [newReading] = await db.insert(deviceReadings).values([reading] as any).returning();
     return newReading;
   }
 
@@ -279,7 +279,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEnergyReading(reading: InsertEnergyReading): Promise<EnergyReading> {
-    const [newReading] = await db.insert(energyReadings).values(reading).returning();
+    const [newReading] = await db.insert(energyReadings).values([reading] as any).returning();
     return newReading;
   }
 
@@ -293,7 +293,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOptimizationSettings(settings: InsertOptimizationSetting): Promise<OptimizationSetting> {
-    const [newSettings] = await db.insert(optimizationSettings).values(settings).returning();
+    const [newSettings] = await db.insert(optimizationSettings).values([settings] as any).returning();
     return newSettings;
   }
 
@@ -320,7 +320,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTariff(tariff: InsertTariff): Promise<Tariff> {
-    const [newTariff] = await db.insert(tariffs).values(tariff).returning();
+    const [newTariff] = await db.insert(tariffs).values([tariff] as any).returning();
     return newTariff;
   }
 

@@ -15,6 +15,7 @@ import * as deviceController from './controllers/deviceController';
 import * as energyController from './controllers/energyController';
 import * as optimizationController from './controllers/optimizationController';
 import * as authController from './controllers/authController';
+import * as setupController from './controllers/setupController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -131,9 +132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: demoUser.role
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating demo user:', error);
-      res.status(500).json({ message: 'Failed to create demo user', error: error.message });
+      res.status(500).json({ message: 'Failed to create demo user', error: error?.message || 'Unknown error' });
     }
   });
 
@@ -338,9 +339,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           meter: meterReading
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error setting up demo data:', error);
-      res.status(500).json({ message: 'Failed to set up demo data' });
+      res.status(500).json({ message: 'Failed to set up demo data', error: error?.message || 'Unknown error' });
     }
   });
 
