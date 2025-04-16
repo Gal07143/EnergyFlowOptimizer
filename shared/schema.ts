@@ -196,13 +196,50 @@ export const tariffsRelations = relations(tariffs, ({ one }) => ({
 }));
 
 // Insert Schemas
-export const insertSiteSchema = createInsertSchema(sites).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertSiteSchema = createInsertSchema(sites, {
+  maxCapacity: z.string().or(z.number()).transform(val => String(val)),
+  gridConnectionPoint: z.string().or(z.number()).transform(val => String(val))
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
-export const insertDeviceSchema = createInsertSchema(devices).omit({ id: true, createdAt: true, updatedAt: true, status: true });
-export const insertDeviceReadingSchema = createInsertSchema(deviceReadings).omit({ id: true });
-export const insertEnergyReadingSchema = createInsertSchema(energyReadings).omit({ id: true });
-export const insertOptimizationSettingsSchema = createInsertSchema(optimizationSettings).omit({ id: true, updatedAt: true });
-export const insertTariffSchema = createInsertSchema(tariffs).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertDeviceSchema = createInsertSchema(devices, {
+  capacity: z.string().or(z.number()).optional().transform(val => val ? String(val) : undefined)
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertDeviceReadingSchema = createInsertSchema(deviceReadings, {
+  power: z.string().or(z.number()).transform(val => String(val)),
+  energy: z.string().or(z.number()).transform(val => String(val)),
+  stateOfCharge: z.string().or(z.number()).transform(val => String(val)),
+  voltage: z.string().or(z.number()).transform(val => String(val)),
+  current: z.string().or(z.number()).transform(val => String(val)),
+  frequency: z.string().or(z.number()).transform(val => String(val)),
+  temperature: z.string().or(z.number()).transform(val => String(val))
+}).omit({ id: true });
+
+export const insertEnergyReadingSchema = createInsertSchema(energyReadings, {
+  gridPower: z.string().or(z.number()).transform(val => String(val)),
+  solarPower: z.string().or(z.number()).transform(val => String(val)),
+  batteryPower: z.string().or(z.number()).transform(val => String(val)),
+  evPower: z.string().or(z.number()).transform(val => String(val)),
+  homePower: z.string().or(z.number()).transform(val => String(val)),
+  gridEnergy: z.string().or(z.number()).transform(val => String(val)),
+  solarEnergy: z.string().or(z.number()).transform(val => String(val)),
+  batteryEnergy: z.string().or(z.number()).transform(val => String(val)),
+  evEnergy: z.string().or(z.number()).transform(val => String(val)),
+  homeEnergy: z.string().or(z.number()).transform(val => String(val)),
+  selfSufficiency: z.string().or(z.number()).transform(val => String(val)),
+  carbon: z.string().or(z.number()).transform(val => String(val))
+}).omit({ id: true });
+
+export const insertOptimizationSettingsSchema = createInsertSchema(optimizationSettings, {
+  peakShavingTarget: z.string().or(z.number()).transform(val => String(val))
+}).omit({ id: true, updatedAt: true });
+
+export const insertTariffSchema = createInsertSchema(tariffs, {
+  importRate: z.string().or(z.number()).transform(val => String(val)),
+  exportRate: z.string().or(z.number()).transform(val => String(val))
+}).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Export Types
 export type Site = typeof sites.$inferSelect;

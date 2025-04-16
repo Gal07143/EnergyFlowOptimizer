@@ -98,8 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         manufacturer: 'SunPower',
         serialNumber: 'SP12345678',
         firmwareVersion: '1.2.3',
-        capacity: 10.5,
-        status: 'online',
+        capacity: '10.5',
         siteId: site.id,
         settings: {
           orientation: 'south',
