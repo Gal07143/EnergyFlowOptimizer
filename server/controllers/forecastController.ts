@@ -60,16 +60,24 @@ export async function getEnergyForecastsByType(req: Request, res: Response) {
 export async function getLatestEnergyForecast(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
-    const interval = req.query.interval as string | undefined;
+    const interval = (req.query.interval as ForecastInterval) || '24h';
     
     if (isNaN(siteId)) {
       return res.status(400).json({ message: 'Invalid site ID' });
     }
     
-    const forecast = await storage.getLatestEnergyForecast(siteId, interval);
+    // Get or generate forecast
+    let forecast = await storage.getLatestEnergyForecast(siteId, interval);
     
+    // If no forecast exists, generate one
     if (!forecast) {
-      return res.status(404).json({ message: 'No forecast found for site' });
+      console.log(`No forecast found for site ${siteId}, generating a new one...`);
+      try {
+        forecast = await forecastService.generateEnergyForecast(siteId, interval);
+      } catch (genError) {
+        console.error('Error generating energy forecast:', genError);
+        return res.status(500).json({ message: 'Failed to generate energy forecast' });
+      }
     }
     
     res.json(forecast);
