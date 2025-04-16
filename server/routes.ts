@@ -18,6 +18,7 @@ import * as optimizationController from './controllers/optimizationController';
 import * as authController from './controllers/authController';
 import * as setupController from './controllers/setupController';
 import * as initController from './controllers/initController';
+import { weatherController } from './controllers/weatherController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -103,6 +104,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/create-demo-user', setupController.createDemoUser);
   app.post('/api/demo-setup', setupController.createDemoData);
   app.post('/api/initialize', initController.initSystem);
+  
+  // Weather routes
+  app.get('/api/sites/:siteId/weather/current', weatherController.getCurrentWeather);
+  app.get('/api/sites/:siteId/weather/forecast', weatherController.getWeatherForecast);
+  app.get('/api/sites/:siteId/weather/recent', weatherController.getRecentWeatherData);
+  app.post('/api/weather/api-key', weatherController.setApiKey);
+  app.get('/api/weather/api-key/status', weatherController.checkApiKey);
 
   return httpServer;
 }

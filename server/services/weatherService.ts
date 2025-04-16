@@ -63,6 +63,8 @@ class WeatherService {
       const data = await response.json() as any;
 
       // Process response and convert to our data format
+      const condition = this.mapWeatherCondition(data.weather[0].main);
+      
       const weatherDataEntry: InsertWeatherData = {
         siteId,
         timestamp: new Date(),
@@ -76,7 +78,7 @@ class WeatherService {
         uvIndex: data.uvi || 0,
         sunriseTime: new Date(data.sys.sunrise * 1000),
         sunsetTime: new Date(data.sys.sunset * 1000),
-        condition: this.mapWeatherCondition(data.weather[0].main),
+        condition: condition as any, // TypeScript casting needed here
         icon: data.weather[0].icon,
         isForecasted: false,
         source: 'openweathermap',
@@ -91,7 +93,11 @@ class WeatherService {
       };
 
       // Save to database
-      const [savedWeather] = await db.insert(weatherData).values(weatherDataEntry).returning();
+      try {
+        await db.insert(weatherData).values([weatherDataEntry]);
+      } catch (error) {
+        console.error('Error saving weather data to database:', error);
+      }
       return weatherDataEntry;
     }
     catch (error) {
@@ -150,6 +156,8 @@ class WeatherService {
       for (const item of data.list) {
         const forecastTime = new Date(item.dt * 1000);
         
+        const condition = this.mapWeatherCondition(item.weather[0].main);
+        
         const weatherDataEntry: InsertWeatherData = {
           siteId,
           timestamp: new Date(),
@@ -161,7 +169,8 @@ class WeatherService {
           windDirection: item.wind?.deg || 0,
           precipitation: item.rain?.['3h'] || 0,
           pressure: item.main.pressure,
-          condition: this.mapWeatherCondition(item.weather[0].main),
+          uvIndex: 0, // OpenWeatherMap forecast doesn't provide UV index
+          condition: condition as any, // Type casting needed
           icon: item.weather[0].icon,
           isForecasted: true,
           source: 'openweathermap',
@@ -178,7 +187,11 @@ class WeatherService {
         forecasts.push(weatherDataEntry);
         
         // Save to database
-        await db.insert(weatherData).values(weatherDataEntry);
+        try {
+          await db.insert(weatherData).values([weatherDataEntry]);
+        } catch (error) {
+          console.error('Error saving forecast to database:', error);
+        }
       }
 
       return forecasts;
