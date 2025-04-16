@@ -16,6 +16,7 @@ import * as energyController from './controllers/energyController';
 import * as forecastController from './controllers/forecastController';
 import * as optimizationController from './controllers/optimizationController';
 import * as demandResponseController from './controllers/demandResponseController';
+import * as tariffController from './controllers/tariffController';
 import * as authController from './controllers/authController';
 import * as setupController from './controllers/setupController';
 import * as initController from './controllers/initController';
@@ -96,10 +97,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/sites/:siteId/optimization-settings', optimizationController.updateOptimizationSettings);
   
   // Tariff routes
-  app.get('/api/sites/:siteId/tariffs', optimizationController.getTariffs);
-  app.get('/api/tariffs/:id', optimizationController.getTariff);
-  app.post('/api/tariffs', optimizationController.createTariff);
-  app.put('/api/tariffs/:id', optimizationController.updateTariff);
+  app.get('/api/tariffs', tariffController.getTariffs);
+  app.get('/api/tariffs/:id', tariffController.getTariff);
+  app.get('/api/sites/:siteId/tariff', tariffController.getSiteTariff);
+  app.get('/api/sites/:siteId/tariff/rate', tariffController.getCurrentTariffRate);
+  app.post('/api/tariffs', tariffController.createTariff);
+  app.put('/api/tariffs/:id', tariffController.updateTariff);
+  app.post('/api/sites/:siteId/tariff/israeli', async (req, res) => {
+    try {
+      const siteId = parseInt(req.params.siteId);
+      const result = await tariffController.createIsraeliTariffData(siteId);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error('Error creating Israeli tariff:', error);
+      res.status(500).json({ message: 'Failed to create Israeli tariff' });
+    }
+  });
   
   // Setup routes
   app.post('/api/create-demo-user', setupController.createDemoUser);

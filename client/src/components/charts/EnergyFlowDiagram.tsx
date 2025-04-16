@@ -52,6 +52,28 @@ export default function EnergyFlowDiagram({
     });
   }, [gridPower, solarPower, batteryPower, evPower, homePower]);
 
+  // Calculating line opacity/intensity based on power values (for modern look)
+  const maxPower = Math.max(
+    Math.abs(gridPower), 
+    solarPower, 
+    Math.abs(batteryPower), 
+    evPower, 
+    homePower
+  );
+  
+  const getOpacity = (power: number) => {
+    const minOpacity = 0.3;
+    const normalizedValue = Math.abs(power) / (maxPower || 1);
+    return Math.max(minOpacity, normalizedValue);
+  };
+  
+  const getStrokeWidth = (power: number) => {
+    const minWidth = 2;
+    const maxWidth = 5;
+    const normalizedValue = Math.abs(power) / (maxPower || 1);
+    return minWidth + normalizedValue * (maxWidth - minWidth);
+  };
+
   return (
     <svg 
       ref={svgRef} 
@@ -60,132 +82,147 @@ export default function EnergyFlowDiagram({
       xmlns="http://www.w3.org/2000/svg"
       style={{ overflow: 'visible' }}
     >
+      {/* Background grid */}
+      <rect width="800" height="300" fill="#111827" rx="8" />
+
       {/* Grid Connection */}
       <g>
-        <rect x="20" y="120" width="80" height="60" rx="5" fill="#6B7280" className="dark:fill-gray-600"/>
-        <text x="60" y="155" fontSize="14" textAnchor="middle" fill="white">Grid</text>
+        <rect x="20" y="120" width="80" height="60" rx="5" fill="#222" stroke="#444" strokeWidth="1"/>
+        <text x="60" y="155" fontSize="14" textAnchor="middle" fill="#fff" className="font-medium">Grid</text>
         
         {/* Grid Connection Values */}
-        <rect x="20" y="190" width="80" height="30" rx="3" fill="#F3F4F6" className="dark:fill-gray-800"/>
-        <text x="60" y="210" fontSize="12" textAnchor="middle" fill="#374151" className="dark:fill-white">
+        <rect x="20" y="190" width="80" height="40" rx="3" fill="#333" strokeWidth="1" stroke="#444"/>
+        <text x="60" y="210" fontSize="12" textAnchor="middle" fill="#fff" className="font-medium">
           {gridValue} kW
         </text>
+        <circle cx="60" cy="228" r="6" fill={isGridImporting ? "#16a34a" : "#dc2626"} />
       </g>
 
       {/* Solar Panels */}
       <g>
-        <rect x="150" y="40" width="80" height="60" rx="5" fill="#FCD34D" className="dark:fill-amber-500"/>
-        <text x="190" y="75" fontSize="14" textAnchor="middle" fill="#422006" className="dark:fill-white">Solar PV</text>
+        <rect x="150" y="40" width="80" height="60" rx="5" fill="#222" stroke="#444" strokeWidth="1"/>
+        <text x="190" y="75" fontSize="14" textAnchor="middle" fill="#fff" className="font-medium">Solar PV</text>
         
         {/* Solar Values */}
-        <rect x="150" y="110" width="80" height="30" rx="3" fill="#F3F4F6" className="dark:fill-gray-800"/>
-        <text x="190" y="130" fontSize="12" textAnchor="middle" fill="#374151" className="dark:fill-white">
+        <rect x="150" y="110" width="80" height="40" rx="3" fill="#333" stroke="#444" strokeWidth="1"/>
+        <text x="190" y="130" fontSize="12" textAnchor="middle" fill="#fff" className="font-medium">
           {solarValue} kW
         </text>
+        <circle cx="190" cy="148" r="6" fill={solarPower > 0 ? "#16a34a" : "#555"} />
       </g>
 
       {/* Battery Storage */}
       <g>
-        <rect x="150" y="200" width="80" height="60" rx="5" fill="#60A5FA" className="dark:fill-blue-600"/>
-        <text x="190" y="235" fontSize="14" textAnchor="middle" fill="white">Battery</text>
+        <rect x="150" y="200" width="80" height="60" rx="5" fill="#222" stroke="#444" strokeWidth="1"/>
+        <text x="190" y="235" fontSize="14" textAnchor="middle" fill="#fff" className="font-medium">Battery</text>
         
         {/* Battery Values */}
-        <rect x="150" y="270" width="80" height="30" rx="3" fill="#F3F4F6" className="dark:fill-gray-800"/>
-        <text x="190" y="290" fontSize="12" textAnchor="middle" fill="#374151" className="dark:fill-white">
+        <rect x="150" y="270" width="80" height="40" rx="3" fill="#333" stroke="#444" strokeWidth="1"/>
+        <text x="190" y="290" fontSize="12" textAnchor="middle" fill="#fff" className="font-medium">
           {batterySOC}% SoC
         </text>
+        <circle cx="190" cy="308" r="6" fill={isBatteryCharging ? "#16a34a" : "#dc2626"} />
       </g>
 
-      {/* Home Energy Management */}
+      {/* Smart Home Hub */}
       <g>
-        <rect x="360" y="120" width="100" height="60" rx="5" fill="#10B981" className="dark:fill-green-600"/>
-        <text x="410" y="145" fontSize="14" textAnchor="middle" fill="white">Smart Home</text>
-        <text x="410" y="165" fontSize="14" textAnchor="middle" fill="white">Manager</text>
+        <rect x="360" y="120" width="100" height="60" rx="5" fill="#222" stroke="#444" strokeWidth="1"/>
+        <text x="410" y="145" fontSize="14" textAnchor="middle" fill="#fff" className="font-medium">Smart Home</text>
+        <text x="410" y="165" fontSize="14" textAnchor="middle" fill="#fff" className="font-medium">Hub</text>
         
-        {/* Home Values */}
-        <rect x="370" y="190" width="80" height="30" rx="3" fill="#F3F4F6" className="dark:fill-gray-800"/>
-        <text x="410" y="210" fontSize="12" textAnchor="middle" fill="#374151" className="dark:fill-white">
+        {/* Home Hub Values */}
+        <rect x="370" y="190" width="80" height="40" rx="3" fill="#333" stroke="#444" strokeWidth="1"/>
+        <text x="410" y="210" fontSize="12" textAnchor="middle" fill="#fff" className="font-medium">
           {/* Total managed power */}
           {formatNumber(Math.abs(gridPower) + solarPower, 1)} kW
         </text>
+        <circle cx="410" cy="228" r="6" fill="#16a34a" />
       </g>
 
       {/* EV Charger */}
       <g>
-        <rect x="570" y="40" width="80" height="60" rx="5" fill="#6366F1" className="dark:fill-indigo-600"/>
-        <text x="610" y="75" fontSize="14" textAnchor="middle" fill="white">EV Charger</text>
+        <rect x="570" y="40" width="80" height="60" rx="5" fill="#222" stroke="#444" strokeWidth="1"/>
+        <text x="610" y="75" fontSize="14" textAnchor="middle" fill="#fff" className="font-medium">EV Charger</text>
         
         {/* EV Values */}
-        <rect x="570" y="110" width="80" height="30" rx="3" fill="#F3F4F6" className="dark:fill-gray-800"/>
-        <text x="610" y="130" fontSize="12" textAnchor="middle" fill="#374151" className="dark:fill-white">
+        <rect x="570" y="110" width="80" height="40" rx="3" fill="#333" stroke="#444" strokeWidth="1"/>
+        <text x="610" y="130" fontSize="12" textAnchor="middle" fill="#fff" className="font-medium">
           {evValue} kW
         </text>
+        <circle cx="610" cy="148" r="6" fill={evPower > 0 ? "#16a34a" : "#555"} />
       </g>
 
       {/* Home Consumption */}
       <g>
-        <rect x="570" y="200" width="80" height="60" rx="5" fill="#F97316" className="dark:fill-orange-600"/>
-        <text x="610" y="235" fontSize="14" textAnchor="middle" fill="white">Home</text>
+        <rect x="570" y="200" width="80" height="60" rx="5" fill="#222" stroke="#444" strokeWidth="1"/>
+        <text x="610" y="235" fontSize="14" textAnchor="middle" fill="#fff" className="font-medium">Home</text>
         
         {/* Home Values */}
-        <rect x="570" y="270" width="80" height="30" rx="3" fill="#F3F4F6" className="dark:fill-gray-800"/>
-        <text x="610" y="290" fontSize="12" textAnchor="middle" fill="#374151" className="dark:fill-white">
+        <rect x="570" y="270" width="80" height="40" rx="3" fill="#333" stroke="#444" strokeWidth="1"/>
+        <text x="610" y="290" fontSize="12" textAnchor="middle" fill="#fff" className="font-medium">
           {homeValue} kW
         </text>
+        <circle cx="610" cy="308" r="6" fill={homePower > 0 ? "#16a34a" : "#555"} />
       </g>
 
       {/* Flow Paths */}
-      {/* Grid to/from Home Manager */}
+      {/* Grid to/from Home Hub - dynamic thickness based on power */}
       <path 
-        d={isGridImporting ? "M100 150 L360 150" : "M360 150 L100 150"} 
-        stroke="#6B7280" 
-        strokeWidth="4" 
-        className="dark:stroke-gray-600 energy-flow-path" 
+        d={isGridImporting ? "M100 150 C200 150, 250 150, 360 150" : "M360 150 C250 150, 200 150, 100 150"} 
+        stroke="#3f9" 
+        strokeWidth={getStrokeWidth(gridPower)}
+        strokeOpacity={getOpacity(gridPower)}
+        className="energy-flow-path" 
+        fill="none"
         markerEnd={isGridImporting ? "url(#arrowheadGrid)" : "url(#arrowheadManager)"}
       />
       
-      {/* Solar to Home Manager */}
+      {/* Solar to Home Hub - curved */}
       <path 
-        d="M190 100 L190 150 L360 150" 
-        stroke="#FCD34D" 
-        strokeWidth="4" 
+        d="M190 100 C190 120, 190 130, 230 140 C270 150, 300 150, 360 150" 
+        stroke="#3f9" 
+        strokeWidth={getStrokeWidth(solarPower)}
+        strokeOpacity={getOpacity(solarPower)}
+        fill="none"
         className="energy-flow-path"
         markerEnd="url(#arrowheadSolar)"
       />
       
-      {/* Battery to/from Home Manager */}
+      {/* Battery to/from Home Hub - curved */}
       <path 
-        d={isBatteryCharging ? "M360 150 L320 150 L320 230 L230 230" : "M230 230 L320 230 L320 150 L360 150"} 
-        stroke="#60A5FA" 
-        strokeWidth="4" 
-        className="dark:stroke-blue-600 energy-flow-path"
+        d={isBatteryCharging 
+          ? "M360 150 C320 150, 300 150, 280 160 C260 170, 250 200, 230 230" 
+          : "M230 230 C250 200, 260 170, 280 160 C300 150, 320 150, 360 150"} 
+        stroke="#3f9" 
+        strokeWidth={getStrokeWidth(batteryPower)}
+        strokeOpacity={getOpacity(batteryPower)}
+        fill="none"
+        className="energy-flow-path"
         markerEnd={isBatteryCharging ? "url(#arrowheadBattery)" : "url(#arrowheadManager)"}
       />
       
-      {/* Home Manager to EV */}
+      {/* Home Hub to EV - curved */}
       <path 
-        d="M460 150 L520 150 L520 70 L570 70" 
-        stroke="#10B981" 
-        strokeWidth="4" 
-        className="dark:stroke-green-600 energy-flow-path"
+        d="M460 150 C500 150, 520 140, 530 120 C540 100, 550 70, 570 70" 
+        stroke="#3f9" 
+        strokeWidth={getStrokeWidth(evPower)}
+        strokeOpacity={getOpacity(evPower)}
+        fill="none"
+        className="energy-flow-path"
         markerEnd="url(#arrowheadEV)"
       />
       
-      {/* Home Manager to Home */}
+      {/* Home Hub to Home - curved */}
       <path 
-        d="M460 150 L520 150 L520 230 L570 230" 
-        stroke="#10B981" 
-        strokeWidth="4" 
-        className="dark:stroke-green-600 energy-flow-path"
+        d="M460 150 C500 150, 520 160, 530 180 C540 200, 550 230, 570 230" 
+        stroke="#3f9" 
+        strokeWidth={getStrokeWidth(homePower)}
+        strokeOpacity={getOpacity(homePower)}
+        fill="none"
+        className="energy-flow-path"
         markerEnd="url(#arrowheadHome)"
       />
       
-      {/* Flow Status Points */}
-      <circle cx="235" cy="150" r="6" fill="#FCD34D" />
-      <circle cx="320" cy="190" r="6" fill="#60A5FA" className="dark:fill-blue-600" />
-      <circle cx="520" cy="110" r="6" fill="#10B981" className="dark:fill-green-600" />
-      <circle cx="520" cy="190" r="6" fill="#10B981" className="dark:fill-green-600" />
-
       {/* Arrowhead markers */}
       <defs>
         <marker
@@ -195,7 +232,7 @@ export default function EnergyFlowDiagram({
           refX="10"
           refY="3.5"
           orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#6B7280" className="dark:fill-gray-600" />
+          <polygon points="0 0, 10 3.5, 0 7" fill="#3f9" />
         </marker>
         <marker
           id="arrowheadManager"
@@ -204,7 +241,7 @@ export default function EnergyFlowDiagram({
           refX="10"
           refY="3.5"
           orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#10B981" className="dark:fill-green-600" />
+          <polygon points="0 0, 10 3.5, 0 7" fill="#3f9" />
         </marker>
         <marker
           id="arrowheadSolar"
@@ -213,7 +250,7 @@ export default function EnergyFlowDiagram({
           refX="10"
           refY="3.5"
           orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#FCD34D" className="dark:fill-amber-500" />
+          <polygon points="0 0, 10 3.5, 0 7" fill="#3f9" />
         </marker>
         <marker
           id="arrowheadBattery"
@@ -222,7 +259,7 @@ export default function EnergyFlowDiagram({
           refX="10"
           refY="3.5"
           orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#60A5FA" className="dark:fill-blue-600" />
+          <polygon points="0 0, 10 3.5, 0 7" fill="#3f9" />
         </marker>
         <marker
           id="arrowheadEV"
@@ -231,7 +268,7 @@ export default function EnergyFlowDiagram({
           refX="10"
           refY="3.5"
           orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#10B981" className="dark:fill-green-600" />
+          <polygon points="0 0, 10 3.5, 0 7" fill="#3f9" />
         </marker>
         <marker
           id="arrowheadHome"
@@ -240,7 +277,7 @@ export default function EnergyFlowDiagram({
           refX="10"
           refY="3.5"
           orient="auto">
-          <polygon points="0 0, 10 3.5, 0 7" fill="#10B981" className="dark:fill-green-600" />
+          <polygon points="0 0, 10 3.5, 0 7" fill="#3f9" />
         </marker>
       </defs>
 
