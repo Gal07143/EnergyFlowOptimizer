@@ -10,9 +10,10 @@ export function ProtectedRoute({
   path: string;
   component: () => React.JSX.Element;
 }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isEmailVerified, isEmailVerificationLoading } = useAuth();
 
-  if (isLoading) {
+  // Show loading spinner while checking auth or email verification status
+  if (isLoading || isEmailVerificationLoading) {
     return (
       <Route path={path}>
         <div className="flex items-center justify-center min-h-screen">
@@ -22,6 +23,7 @@ export function ProtectedRoute({
     );
   }
 
+  // Redirect to login if not authenticated
   if (!user) {
     return (
       <Route path={path}>
@@ -30,6 +32,16 @@ export function ProtectedRoute({
     );
   }
 
+  // If user is logged in but email not verified, redirect to verification page
+  if (user && !isEmailVerified && user.email) {
+    return (
+      <Route path={path}>
+        <Redirect to="/verify-email" />
+      </Route>
+    );
+  }
+
+  // If all conditions pass, show the protected component
   return (
     <Route path={path}>
       <Layout>

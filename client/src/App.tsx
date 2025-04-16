@@ -7,6 +7,7 @@ import Analytics from "@/pages/Analytics";
 import Optimization from "@/pages/Optimization";
 import Settings from "@/pages/Settings";
 import AuthPage from "@/pages/auth-page";
+import EmailVerificationPage from "@/pages/email-verification-page";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -20,6 +21,7 @@ function Router() {
       <ProtectedRoute path="/optimization" component={Optimization} />
       <ProtectedRoute path="/settings" component={Settings} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/verify-email" component={EmailVerificationPage} />
       <Route component={NotFound} />
     </Switch>
   );

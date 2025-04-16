@@ -13,15 +13,28 @@ import { Loader2 } from "lucide-react";
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, isEmailVerified, loginMutation, registerMutation } = useAuth();
   const [location, navigate] = useLocation();
+  
+  // Capture the latest registration response to check for verification requirement
+  const [requiresVerification, setRequiresVerification] = useState(false);
 
-  // Redirect if user is already logged in
+  // Handle redirects based on auth state
   useEffect(() => {
-    if (user) {
-      navigate("/");
+    if (!user) return;
+    
+    // If user is logged in but needs email verification
+    if (user && !isEmailVerified && requiresVerification) {
+      navigate("/verify-email");
+      return;
     }
-  }, [user, navigate]);
+    
+    // If user is logged in and either doesn't need verification or is already verified
+    if (user && (isEmailVerified || !requiresVerification)) {
+      navigate("/");
+      return;
+    }
+  }, [user, isEmailVerified, requiresVerification, navigate]);
 
   // Login form
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -50,7 +63,16 @@ export default function AuthPage() {
   };
 
   const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
-    registerMutation.mutate(values);
+    registerMutation.mutate(values, {
+      onSuccess: (user) => {
+        // Check if the response indicates email verification is required
+        if (user.email && 'requiresEmailVerification' in user && user.requiresEmailVerification) {
+          setRequiresVerification(true);
+        } else {
+          setRequiresVerification(false);
+        }
+      }
+    });
   };
 
   return (
