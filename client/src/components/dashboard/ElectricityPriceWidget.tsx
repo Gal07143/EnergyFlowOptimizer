@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
-import { formatNumber, formatTime } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -9,6 +9,38 @@ interface ElectricityPriceWidgetProps {
   siteId: number;
   className?: string;
 }
+
+interface HourData {
+  hour: number;
+  time: string;
+  price: number;
+  isNow: boolean;
+  height?: number;
+}
+
+// Israeli Time-of-Use (TOU) tariffs (prices in ILS per kWh)
+const israeliTouTariffs = {
+  // Summer (June-August)
+  summer: {
+    peak: 0.5734, // Peak: Sunday-Thursday 17:00-22:00
+    shoulder: 0.4140, // Shoulder: Sunday-Thursday 7:00-17:00, 22:00-23:00
+    lowLoad: 0.2809, // Low: Sunday-Thursday 23:00-7:00, Friday-Saturday all day
+  },
+  // Winter (December-February)
+  winter: {
+    peak: 0.5734, // Peak: Sunday-Thursday 17:00-22:00
+    shoulder: 0.3673, // Shoulder: Sunday-Thursday 7:00-17:00, 22:00-23:00
+    lowLoad: 0.2809, // Low: Sunday-Thursday 23:00-7:00, Friday-Saturday all day
+  },
+  // Transition (March-May, September-November)
+  transition: {
+    peak: 0.4756, // Peak: Sunday-Thursday 17:00-22:00
+    shoulder: 0.3673, // Shoulder: Sunday-Thursday 7:00-17:00, 22:00-23:00
+    lowLoad: 0.2809, // Low: Sunday-Thursday 23:00-7:00, Friday-Saturday all day
+  }
+};
+
+type Season = 'summer' | 'winter' | 'transition';
 
 const ElectricityPriceWidget: React.FC<ElectricityPriceWidgetProps> = ({ siteId, className }) => {
   // Fetch electricity prices
@@ -23,8 +55,8 @@ const ElectricityPriceWidget: React.FC<ElectricityPriceWidgetProps> = ({ siteId,
     refetchInterval: 300000 // Refresh every 5 minutes
   });
 
-  // Generate hourly data for the chart
-  const generateHourlyData = () => {
+  // Generate hourly data for the chart with Israeli TOU tariffs
+  const generateHourlyData = (): HourData[] => {
     const now = new Date();
     const currentHour = now.getHours();
     const hours = Array.from({ length: 24 }, (_, i) => {
@@ -37,32 +69,45 @@ const ElectricityPriceWidget: React.FC<ElectricityPriceWidgetProps> = ({ siteId,
       };
     });
 
-    // If we have price data, fill it in
-    if (priceData && priceData.length > 0) {
-      const currentTariff = priceData[0]; // Assuming first tariff is active
-      
-      // Simple logic to generate variable prices
-      hours.forEach((hour, index) => {
-        let basePrice = currentTariff.baseRate || 0.15;
-        
-        // Morning peak (7-9 AM)
-        if (hour.hour >= 7 && hour.hour <= 9) {
-          basePrice *= 1.4;
-        }
-        // Evening peak (18-21)
-        else if (hour.hour >= 18 && hour.hour <= 21) {
-          basePrice *= 1.5;
-        }
-        // Night discount (23-5)
-        else if (hour.hour >= 23 || hour.hour <= 5) {
-          basePrice *= 0.7;
-        }
-        
-        // Add some randomness
-        const randomFactor = 0.95 + Math.random() * 0.1;
-        hours[index].price = basePrice * randomFactor;
-      });
+    // Determine current season (month-based)
+    const currentMonth = now.getMonth() + 1; // 1-12
+    let season: Season;
+    if (currentMonth >= 6 && currentMonth <= 8) {
+      season = 'summer';
+    } else if (currentMonth === 12 || currentMonth <= 2) {
+      season = 'winter';
+    } else {
+      season = 'transition';
     }
+
+    // Determine day of week (0 = Sunday, 6 = Saturday)
+    const dayOfWeek = now.getDay();
+    const isWeekend = dayOfWeek === 5 || dayOfWeek === 6; // Friday or Saturday
+
+    // Apply tariffs based on season, day and hour
+    hours.forEach((hourData, index) => {
+      let price;
+      const h = hourData.hour;
+
+      if (isWeekend) {
+        // Weekend - always low load
+        price = israeliTouTariffs[season].lowLoad;
+      } else {
+        // Weekday
+        if (h >= 17 && h < 22) {
+          // Peak: 17:00-22:00
+          price = israeliTouTariffs[season].peak;
+        } else if ((h >= 7 && h < 17) || (h >= 22 && h < 23)) {
+          // Shoulder: 7:00-17:00, 22:00-23:00
+          price = israeliTouTariffs[season].shoulder;
+        } else {
+          // Low: 23:00-7:00
+          price = israeliTouTariffs[season].lowLoad;
+        }
+      }
+
+      hours[index].price = price;
+    });
 
     return hours;
   };
@@ -76,7 +121,7 @@ const ElectricityPriceWidget: React.FC<ElectricityPriceWidgetProps> = ({ siteId,
   const priceRange = maxPrice - minPrice;
 
   // Process for chart
-  const processForChart = (data: typeof hourlyData) => {
+  const processForChart = (data: HourData[]): HourData[] => {
     return data.map(hour => {
       // Calculate height percentage
       const heightPercent = priceRange > 0 
@@ -95,6 +140,15 @@ const ElectricityPriceWidget: React.FC<ElectricityPriceWidgetProps> = ({ siteId,
   // Find the current time marker position
   const nowIndex = hourlyData.findIndex(h => h.isNow);
   const nowPosition = nowIndex >= 0 ? (nowIndex / (hourlyData.length - 1)) * 100 : 50;
+
+  // Format the current date and time for display
+  const formatCurrentPeriod = () => {
+    const now = new Date();
+    const month = now.toLocaleString('en-US', { month: 'short' });
+    const day = now.getDate();
+    const hour = now.getHours();
+    return `${month} ${day}, ${hour}:00-${hour}:59`;
+  };
 
   if (isLoading) {
     return (
@@ -117,17 +171,17 @@ const ElectricityPriceWidget: React.FC<ElectricityPriceWidgetProps> = ({ siteId,
   return (
     <Card className={cn("w-full", className)}>
       <CardHeader className="pb-2">
-        <CardTitle>Dynamic electricity price</CardTitle>
+        <CardTitle>Israeli Electricity Tariff</CardTitle>
         <CardDescription className="flex items-center gap-1">
           <span>Current Price Period:</span>
-          <span className="font-medium">Apr 4, 16:00-16:59</span>
+          <span className="font-medium">{formatCurrentPeriod()}</span>
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-6">
           <div className="text-3xl font-bold text-primary flex items-end gap-1">
             {formatNumber(currentPrice, 2)}
-            <span className="text-base font-normal text-muted-foreground ml-1">ct/kWh</span>
+            <span className="text-base font-normal text-muted-foreground ml-1">ILS/kWh</span>
           </div>
         </div>
 
@@ -174,5 +228,7 @@ const ElectricityPriceWidget: React.FC<ElectricityPriceWidgetProps> = ({ siteId,
     </Card>
   );
 };
+
+export default ElectricityPriceWidget;
 
 export default ElectricityPriceWidget;
