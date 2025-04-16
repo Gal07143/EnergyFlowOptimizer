@@ -11,10 +11,12 @@ import {
   Sun,
   Gauge,
   X,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/hooks/use-auth';
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -23,11 +25,17 @@ interface SidebarProps {
 
 export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const [location] = useLocation();
+  const { user, logoutMutation } = useAuth();
 
   const isActive = (path: string) => {
     if (path === '/' && location === '/') return true;
     if (path !== '/' && location.startsWith(path)) return true;
     return false;
+  };
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+    if (onClose) onClose();
   };
 
   const navItems = [
@@ -138,15 +146,25 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       
       <div className="flex-shrink-0 flex border-t border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-900">
         <div className="flex-shrink-0 w-full group block">
-          <div className="flex items-center">
-            <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" alt="Energy Admin" />
-              <AvatarFallback>EA</AvatarFallback>
-            </Avatar>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Energy Admin</p>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-500">Site Manager</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Avatar>
+                <AvatarFallback>{user?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+              </Avatar>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{user?.username || 'Guest'}</p>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-500">{user?.role || 'Not logged in'}</p>
+              </div>
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </div>
