@@ -1,378 +1,250 @@
 import { Request, Response } from 'express';
+import { storage } from '../storage';
 import { db } from '../db';
-import { tariffs, type Tariff } from '@shared/schema';
+import { tariffs } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-/**
- * Get all tariffs
- */
-export async function getTariffs(req: Request, res: Response) {
+// Get tariff details for a specific site
+export const getTariffBySite = async (req: Request, res: Response) => {
   try {
-    const allTariffs = await db.select().from(tariffs);
-    res.json(allTariffs);
-  } catch (error) {
-    console.error('Error fetching tariffs:', error);
-    res.status(500).json({ message: 'Failed to fetch tariffs' });
-  }
-}
-
-/**
- * Get a specific tariff by ID
- */
-export async function getTariff(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
-    const [tariff] = await db.select().from(tariffs).where(eq(tariffs.id, parseInt(id)));
+    const siteId = parseInt(req.params.siteId);
     
-    if (!tariff) {
-      return res.status(404).json({ message: 'Tariff not found' });
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
     }
     
-    res.json(tariff);
-  } catch (error) {
+    const siteTariffs = await storage.getTariffs(siteId);
+    
+    // If no tariffs found, return 404
+    if (!siteTariffs || siteTariffs.length === 0) {
+      return res.status(404).json({ message: 'No tariff found for this site' });
+    }
+    
+    // Return the first tariff for now (in the future, we might allow multiple tariffs)
+    res.json(siteTariffs[0]);
+  } catch (error: any) {
     console.error('Error fetching tariff:', error);
-    res.status(500).json({ message: 'Failed to fetch tariff' });
+    res.status(500).json({ message: 'Failed to fetch tariff', error: error?.message || 'Unknown error' });
   }
-}
+};
 
-/**
- * Get a tariff for a specific site
- */
-export async function getSiteTariff(req: Request, res: Response) {
+// Get current tariff rate based on time of day
+export const getCurrentTariffRate = async (req: Request, res: Response) => {
   try {
-    const { siteId } = req.params;
-    const [tariff] = await db.select().from(tariffs).where(eq(tariffs.siteId, parseInt(siteId)));
+    const siteId = parseInt(req.params.siteId);
     
-    if (!tariff) {
-      return res.status(404).json({ message: 'Tariff not found for this site' });
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
     }
     
-    res.json(tariff);
-  } catch (error) {
-    console.error('Error fetching site tariff:', error);
-    res.status(500).json({ message: 'Failed to fetch site tariff' });
-  }
-}
-
-/**
- * Create a new tariff
- */
-export async function createTariff(req: Request, res: Response) {
-  try {
-    const [tariff] = await db.insert(tariffs).values(req.body).returning();
-    res.status(201).json(tariff);
-  } catch (error) {
-    console.error('Error creating tariff:', error);
-    res.status(500).json({ message: 'Failed to create tariff' });
-  }
-}
-
-/**
- * Update an existing tariff
- */
-export async function updateTariff(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
-    const [updatedTariff] = await db
-      .update(tariffs)
-      .set({ ...req.body, updatedAt: new Date() })
-      .where(eq(tariffs.id, parseInt(id)))
-      .returning();
+    const siteTariffs = await storage.getTariffs(siteId);
     
-    if (!updatedTariff) {
-      return res.status(404).json({ message: 'Tariff not found' });
+    if (!siteTariffs || siteTariffs.length === 0) {
+      return res.status(404).json({ message: 'No tariff found for this site' });
     }
     
-    res.json(updatedTariff);
-  } catch (error) {
-    console.error('Error updating tariff:', error);
-    res.status(500).json({ message: 'Failed to update tariff' });
-  }
-}
-
-/**
- * Create Israeli tariff data
- * Using time-of-use structure with seasonal variations
- */
-export async function createIsraeliTariffData(siteId: number) {
-  try {
-    // Check if site already has a tariff
-    const existingTariff = await db.select().from(tariffs).where(eq(tariffs.siteId, siteId));
+    const tariff = siteTariffs[0];
+    const now = new Date();
     
-    if (existingTariff.length > 0) {
-      // Update existing tariff to Israeli TOU tariff
-      await db
-        .update(tariffs)
-        .set({
-          name: 'Israeli TOU Tariff',
-          provider: 'Israel Electric Corporation',
-          importRate: 0.48, // Base rate in NIS
-          exportRate: 0.23, // Solar feed-in rate
-          isTimeOfUse: true,
-          currency: 'ILS',
-          scheduleData: createIsraeliScheduleData(),
-          updatedAt: new Date()
-        })
-        .where(eq(tariffs.siteId, siteId));
-    } else {
-      // Create new Israeli TOU tariff
-      await db.insert(tariffs).values({
-        siteId,
-        name: 'Israeli TOU Tariff',
-        provider: 'Israel Electric Corporation',
-        importRate: 0.48, // Base rate in NIS
-        exportRate: 0.23, // Solar feed-in rate
-        isTimeOfUse: true,
-        currency: 'ILS',
-        scheduleData: createIsraeliScheduleData(),
-        dataIntervalSeconds: 60
-      });
-    }
+    // Default to the regular import rate
+    let rate = tariff.importRate;
+    let period = 'Standard Rate';
     
-    return { success: true };
-  } catch (error) {
-    console.error('Error creating Israeli tariff data:', error);
-    return { success: false, error };
-  }
-}
-
-/**
- * Helper function to create Israeli TOU schedule data
- */
-function createIsraeliScheduleData() {
-  return {
-    seasons: [
-      {
-        name: 'Summer',
-        months: [6, 7, 8], // June, July, August
-        rates: [
-          {
-            name: 'Peak',
-            rate: 0.94, // NIS per kWh
-            times: [
-              { days: [1, 2, 3, 4, 5], // Monday to Friday
-                hours: [
-                  { start: "17:00", end: "22:00" } // 5pm to 10pm
-                ]
-              }
-            ]
-          },
-          {
-            name: 'Shoulder',
-            rate: 0.63, // NIS per kWh
-            times: [
-              { days: [1, 2, 3, 4, 5], // Monday to Friday
-                hours: [
-                  { start: "07:00", end: "17:00" } // 7am to 5pm
-                ]
-              }
-            ]
-          },
-          {
-            name: 'Off-Peak',
-            rate: 0.33, // NIS per kWh
-            times: [
-              { days: [1, 2, 3, 4, 5], // Monday to Friday
-                hours: [
-                  { start: "00:00", end: "07:00" }, // 12am to 7am
-                  { start: "22:00", end: "24:00" }  // 10pm to 12am
-                ]
-              },
-              { days: [6, 0], // Saturday and Sunday (0 = Sunday)
-                hours: [
-                  { start: "00:00", end: "24:00" } // All day
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        name: 'Winter',
-        months: [12, 1, 2], // December, January, February
-        rates: [
-          {
-            name: 'Peak',
-            rate: 0.85, // NIS per kWh
-            times: [
-              { days: [1, 2, 3, 4, 5], // Monday to Friday
-                hours: [
-                  { start: "17:00", end: "21:00" } // 5pm to 9pm
-                ]
-              }
-            ]
-          },
-          {
-            name: 'Shoulder',
-            rate: 0.57, // NIS per kWh
-            times: [
-              { days: [1, 2, 3, 4, 5], // Monday to Friday
-                hours: [
-                  { start: "07:00", end: "17:00" } // 7am to 5pm
-                ]
-              }
-            ]
-          },
-          {
-            name: 'Off-Peak',
-            rate: 0.30, // NIS per kWh
-            times: [
-              { days: [1, 2, 3, 4, 5], // Monday to Friday
-                hours: [
-                  { start: "00:00", end: "07:00" }, // 12am to 7am
-                  { start: "21:00", end: "24:00" }  // 9pm to 12am
-                ]
-              },
-              { days: [6, 0], // Saturday and Sunday (0 = Sunday)
-                hours: [
-                  { start: "00:00", end: "24:00" } // All day
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        name: 'Transition',
-        months: [3, 4, 5, 9, 10, 11], // March, April, May, September, October, November
-        rates: [
-          {
-            name: 'Peak',
-            rate: 0.69, // NIS per kWh
-            times: [
-              { days: [1, 2, 3, 4, 5], // Monday to Friday
-                hours: [
-                  { start: "17:00", end: "22:00" } // 5pm to 10pm
-                ]
-              }
-            ]
-          },
-          {
-            name: 'Off-Peak',
-            rate: 0.39, // NIS per kWh
-            times: [
-              { days: [1, 2, 3, 4, 5], // Monday to Friday
-                hours: [
-                  { start: "00:00", end: "17:00" }, // 12am to 5pm
-                  { start: "22:00", end: "24:00" }  // 10pm to 12am
-                ]
-              },
-              { days: [6, 0], // Saturday and Sunday (0 = Sunday)
-                hours: [
-                  { start: "00:00", end: "24:00" } // All day
-                ]
-              }
-            ]
-          }
-        ]
+    // If it's a time-of-use tariff, determine the current rate based on time of day
+    if (tariff.isTimeOfUse && tariff.schedule) {
+      const schedule = tariff.schedule;
+      const hours = now.getHours();
+      
+      // Determine the current season
+      const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+      
+      let currentSeason;
+      if (month >= 6 && month <= 9) {
+        currentSeason = 'summer'; // June-September
+      } else if (month >= 10 && month <= 11) {
+        currentSeason = 'autumn'; // October-November
+      } else if (month >= 3 && month <= 5) {
+        currentSeason = 'spring'; // March-May
+      } else {
+        currentSeason = 'winter'; // December-February
       }
-    ]
-  };
-}
-
-/**
- * Get the current tariff rate based on date and time
- */
-export async function getCurrentTariffRate(req: Request, res: Response) {
-  try {
-    const { siteId } = req.params;
-    const [tariff] = await db.select().from(tariffs).where(eq(tariffs.siteId, parseInt(siteId)));
-    
-    if (!tariff) {
-      return res.status(404).json({ message: 'Tariff not found for this site' });
-    }
-    
-    // If not time-of-use, return standard rate
-    if (!tariff.isTimeOfUse) {
-      return res.json({
-        currentRate: tariff.importRate,
-        rateType: 'Standard',
-        currency: tariff.currency
-      });
-    }
-    
-    // Get current rate from schedule
-    const now = req.query.datetime ? new Date(req.query.datetime as string) : new Date();
-    const currentRate = getCurrentRateFromSchedule(tariff, now);
-    
-    res.json(currentRate);
-  } catch (error) {
-    console.error('Error fetching current tariff rate:', error);
-    res.status(500).json({ message: 'Failed to fetch current tariff rate' });
-  }
-}
-
-/**
- * Calculate the current rate from a tariff schedule
- */
-function getCurrentRateFromSchedule(tariff: Tariff, date: Date): any {
-  // Default to base rate if schedule data is missing
-  if (!tariff.scheduleData || !tariff.scheduleData.seasons) {
-    return {
-      currentRate: tariff.importRate,
-      rateType: 'Standard',
-      currency: tariff.currency
-    };
-  }
-  
-  const scheduleData = tariff.scheduleData as any;
-  const month = date.getMonth() + 1; // 1-12
-  const day = date.getDay(); // 0-6 (0 = Sunday)
-  const hour = date.getHours();
-  const minute = date.getMinutes();
-  const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-  
-  // Find current season
-  const currentSeason = scheduleData.seasons.find((season: any) => 
-    season.months.includes(month)
-  );
-  
-  if (!currentSeason) {
-    return {
-      currentRate: tariff.importRate,
-      rateType: 'Standard',
-      currency: tariff.currency,
-      season: 'Unknown'
-    };
-  }
-  
-  // Find applicable rate in the season
-  for (const rateObj of currentSeason.rates) {
-    for (const timeRule of rateObj.times) {
-      // Check if the current day is in this rule
-      if (timeRule.days.includes(day)) {
-        // Check if the current time is in any of the hour ranges
-        for (const hourRange of timeRule.hours) {
-          if (isTimeInRange(timeStr, hourRange.start, hourRange.end)) {
-            return {
-              currentRate: rateObj.rate,
-              rateType: rateObj.name,
-              currency: tariff.currency,
-              season: currentSeason.name
-            };
-          }
+      
+      const seasonSchedule = schedule[currentSeason];
+      
+      if (seasonSchedule) {
+        if (hours >= 17 && hours < 22) {
+          rate = seasonSchedule.peak || rate;
+          period = 'Peak (17:00-22:00)';
+        } else if ((hours >= 7 && hours < 17) || (hours >= 22 && hours < 23)) {
+          rate = seasonSchedule.shoulder || rate;
+          period = 'Shoulder (7:00-17:00, 22:00-23:00)';
+        } else {
+          rate = seasonSchedule.offPeak || rate;
+          period = 'Off-Peak (23:00-7:00)';
         }
       }
     }
+    
+    res.json({
+      rate,
+      period,
+      timestamp: now,
+      isTimeOfUse: tariff.isTimeOfUse,
+      currency: tariff.currency
+    });
+  } catch (error: any) {
+    console.error('Error fetching current tariff rate:', error);
+    res.status(500).json({ message: 'Failed to determine current tariff rate', error: error?.message || 'Unknown error' });
   }
-  
-  // Fallback to default rate
-  return {
-    currentRate: tariff.importRate,
-    rateType: 'Standard',
-    currency: tariff.currency,
-    season: currentSeason.name
-  };
-}
+};
 
-/**
- * Check if a time is within a given range
- */
-function isTimeInRange(time: string, start: string, end: string): boolean {
-  // Handle special case for midnight
-  if (end === '24:00') {
-    return time >= start || time < '00:00';
+// Create a new tariff for a site
+export const createTariff = async (req: Request, res: Response) => {
+  try {
+    const siteId = parseInt(req.params.siteId);
+    
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
+    }
+    
+    // Check if site exists
+    const site = await storage.getSite(siteId);
+    
+    if (!site) {
+      return res.status(404).json({ message: 'Site not found' });
+    }
+    
+    // Create the tariff
+    const tariff = await storage.createTariff({
+      siteId,
+      ...req.body,
+      importRate: parseFloat(req.body.importRate) || 0,
+      exportRate: parseFloat(req.body.exportRate) || 0,
+    });
+    
+    res.status(201).json(tariff);
+  } catch (error: any) {
+    console.error('Error creating tariff:', error);
+    res.status(500).json({ message: 'Failed to create tariff', error: error?.message || 'Unknown error' });
   }
-  
-  return time >= start && time < end;
-}
+};
+
+// Update an existing tariff
+export const updateTariff = async (req: Request, res: Response) => {
+  try {
+    const tariffId = parseInt(req.params.id);
+    
+    if (isNaN(tariffId)) {
+      return res.status(400).json({ message: 'Invalid tariff ID' });
+    }
+    
+    // Get the existing tariff
+    const existingTariff = await storage.getTariff(tariffId);
+    
+    if (!existingTariff) {
+      return res.status(404).json({ message: 'Tariff not found' });
+    }
+    
+    // Prepare the update data
+    const updateData = {
+      ...req.body,
+    };
+    
+    // Parse numeric values if provided
+    if (req.body.importRate !== undefined) {
+      updateData.importRate = parseFloat(req.body.importRate);
+    }
+    
+    if (req.body.exportRate !== undefined) {
+      updateData.exportRate = parseFloat(req.body.exportRate);
+    }
+    
+    // Update the tariff
+    const updatedTariff = await storage.updateTariff(tariffId, updateData);
+    
+    res.json(updatedTariff);
+  } catch (error: any) {
+    console.error('Error updating tariff:', error);
+    res.status(500).json({ message: 'Failed to update tariff', error: error?.message || 'Unknown error' });
+  }
+};
+
+// Create Israeli tariff data for a site
+export const createIsraeliTariffData = async (siteId: number) => {
+  try {
+    // Check if site already has a tariff
+    const existingTariffs = await storage.getTariffs(siteId);
+    
+    // If Israeli tariff already exists, return it
+    const existingIsraeliTariff = existingTariffs.find(
+      (t) => t.name === 'Israeli Electricity Tariff' && t.provider === 'Israel Electric Corporation'
+    );
+    
+    if (existingIsraeliTariff) {
+      return existingIsraeliTariff;
+    }
+    
+    // Israeli tariff data with seasonal time-of-use rates
+    const israeliTariffData = {
+      siteId,
+      name: 'Israeli Electricity Tariff',
+      provider: 'Israel Electric Corporation',
+      importRate: 0.55, // Base rate in ILS
+      exportRate: 0.23, // Feed-in tariff for solar in ILS
+      isTimeOfUse: true,
+      currency: 'ILS',
+      dataIntervalSeconds: 60,
+      schedule: {
+        // Summer rates (June-September)
+        summer: {
+          peak: 0.85,     // Peak: 17:00-22:00
+          shoulder: 0.55, // Shoulder: 7:00-17:00, 22:00-23:00
+          offPeak: 0.31   // Off-peak: 23:00-7:00
+        },
+        // Winter rates (December-February)
+        winter: {
+          peak: 0.65,     // Peak: 17:00-22:00
+          shoulder: 0.48, // Shoulder: 7:00-17:00, 22:00-23:00
+          offPeak: 0.28   // Off-peak: 23:00-7:00
+        },
+        // Transition seasons (March-May, October-November)
+        spring: {
+          peak: 0.57,     // Peak: 17:00-22:00
+          shoulder: 0.45, // Shoulder: 7:00-17:00, 22:00-23:00
+          offPeak: 0.26   // Off-peak: 23:00-7:00
+        },
+        autumn: {
+          peak: 0.57,     // Peak: 17:00-22:00
+          shoulder: 0.45, // Shoulder: 7:00-17:00, 22:00-23:00
+          offPeak: 0.26   // Off-peak: 23:00-7:00
+        }
+      }
+    };
+    
+    // Create the Israeli tariff in the database
+    const createdTariff = await storage.createTariff(israeliTariffData);
+    
+    return createdTariff;
+  } catch (error) {
+    console.error('Error creating Israeli tariff data:', error);
+    throw error;
+  }
+};
+
+// API endpoint to create Israeli tariff
+export const createIsraeliTariff = async (req: Request, res: Response) => {
+  try {
+    const siteId = parseInt(req.params.siteId);
+    
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
+    }
+    
+    const israeliTariff = await createIsraeliTariffData(siteId);
+    
+    res.status(201).json(israeliTariff);
+  } catch (error: any) {
+    console.error('Error creating Israeli tariff:', error);
+    res.status(500).json({ message: 'Failed to create Israeli tariff', error: error?.message || 'Unknown error' });
+  }
+};

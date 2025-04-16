@@ -1,244 +1,199 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { 
-  Card, 
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent
-} from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from 'react';
+import { useSiteTariff, useCurrentTariffRate, useCreateIsraeliTariff } from '@/hooks/useTariff';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { CalendarDays, DollarSign, Clock } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Clock, Zap, Calendar } from 'lucide-react';
 
 interface TariffWidgetProps {
   siteId: number;
   className?: string;
 }
 
-const TariffWidget: React.FC<TariffWidgetProps> = ({ siteId, className }) => {
-  const [activeTab, setActiveTab] = useState('current');
+export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
+  const [showTouDetails, setShowTouDetails] = useState(false);
   
-  // Fetch tariff data for site
-  const { data: tariffData, isLoading: tariffLoading } = useQuery({
-    queryKey: ['/api/sites', siteId, 'tariff'],
-    queryFn: async () => {
-      const res = await fetch(`/api/sites/${siteId}/tariff`);
-      if (!res.ok) throw new Error('Failed to fetch tariff data');
-      return await res.json();
-    },
-    enabled: !!siteId,
-  });
+  const { 
+    data: tariff, 
+    isLoading: isTariffLoading, 
+    error: tariffError 
+  } = useSiteTariff(siteId);
   
-  // Fetch current rate based on time of day
-  const { data: currentRate, isLoading: rateLoading } = useQuery({
-    queryKey: ['/api/sites', siteId, 'tariff/rate', new Date().toISOString()],
-    queryFn: async () => {
-      const res = await fetch(`/api/sites/${siteId}/tariff/rate`);
-      if (!res.ok) throw new Error('Failed to fetch current rate');
-      return await res.json();
-    },
-    enabled: !!siteId,
-    refetchInterval: 60000, // Refresh every minute as rates can change
-  });
-  
-  // For demo purposes, if no tariff data is available yet
-  useEffect(() => {
-    if (!tariffLoading && !tariffData) {
-      // This would normally call the API to create a tariff
-      console.log('No tariff data available for this site');
-    }
-  }, [tariffData, tariffLoading, siteId]);
+  const { 
+    data: currentRate, 
+    isLoading: isRateLoading, 
+    error: rateError 
+  } = useCurrentTariffRate(siteId);
 
-  if (tariffLoading || rateLoading) {
+  const { 
+    data: israeliTariff, 
+    isLoading: isCreatingIsraeli,
+    refetch: createIsraeliTariff
+  } = useCreateIsraeliTariff(siteId);
+  
+  const handleCreateIsraeliTariff = () => {
+    createIsraeliTariff();
+  };
+
+  // If no tariff data exists yet, show creation button
+  if (!tariff && !isTariffLoading && !tariffError) {
     return (
-      <Card className={cn("w-full", className)}>
+      <Card className={className}>
         <CardHeader>
-          <CardTitle><Skeleton className="h-6 w-32" /></CardTitle>
-          <CardDescription><Skeleton className="h-4 w-48" /></CardDescription>
+          <CardTitle>No Tariff Data</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Skeleton className="h-40 w-full" />
+        <CardContent className="flex flex-col items-center justify-center py-6">
+          <p className="text-muted-foreground mb-4 text-center">
+            No tariff configuration found for this site. Would you like to create an Israeli tariff model?
+          </p>
+          <Button 
+            onClick={handleCreateIsraeliTariff}
+            disabled={isCreatingIsraeli}
+          >
+            {isCreatingIsraeli ? 'Creating...' : 'Create Israeli Tariff'}
+          </Button>
         </CardContent>
       </Card>
     );
   }
-  
-  // Determine color based on rate type (for Israeli TOU tariff)
-  const getRateColor = (rateType: string) => {
-    switch (rateType?.toLowerCase()) {
-      case 'peak':
-        return 'bg-red-500';
-      case 'shoulder':
-        return 'bg-amber-500';
-      case 'off-peak':
-        return 'bg-green-500';
-      default:
-        return 'bg-blue-500';
-    }
-  };
-  
-  const getSeasonIcon = (season?: string) => {
-    if (!season) return null;
-    
-    switch (season.toLowerCase()) {
-      case 'summer':
-        return '☀️';
-      case 'winter':
-        return '❄️';
-      case 'transition':
-        return '🍂';
-      default:
-        return null;
-    }
-  };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    // Use locale based on currency
-    const locale = currency === 'ILS' ? 'he-IL' : 'en-US';
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currency,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  // Loading state
+  if (isTariffLoading || isRateLoading) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <Skeleton className="h-6 w-[200px] mb-2" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-8 w-[70%]" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (tariffError || rateError) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle>Error Loading Tariff</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-destructive">
+            {tariffError instanceof Error ? tariffError.message : 'Failed to load tariff data'}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Determine the rate type and display the appropriate badge
+  const rateType = tariff?.isTimeOfUse ? 'Time of Use' : 'Fixed Rate';
+  const rateColor = tariff?.isTimeOfUse ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
 
   return (
-    <Card className={cn("w-full", className)}>
+    <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-amber-500" />
-          Electricity Pricing
-        </CardTitle>
-        <CardDescription>
-          {tariffData?.isTimeOfUse 
-            ? 'Time-of-use tariff rates' 
-            : 'Fixed rate electricity tariff'}
-        </CardDescription>
+        <div className="flex justify-between items-center">
+          <CardTitle>{tariff?.name || 'Electricity Tariff'}</CardTitle>
+          <Badge className={rateColor}>{rateType}</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">{tariff?.provider}</p>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="current" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="current">Current Rate</TabsTrigger>
-            <TabsTrigger value="details">Tariff Details</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="current" className="mt-4">
-            {currentRate && (
-              <div className="flex flex-col space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {format(new Date(), 'EEEE, h:mm a')}
-                    </span>
+        {currentRate && (
+          <div className="mb-4">
+            <div className="text-sm text-muted-foreground mb-1 flex items-center">
+              <Clock className="h-4 w-4 mr-1" /> Current Rate
+            </div>
+            <div className="text-3xl font-bold flex items-center">
+              <DollarSign className="h-6 w-6 mr-1 text-primary" />
+              {typeof currentRate.rate === 'number' 
+                ? currentRate.rate.toFixed(2) 
+                : currentRate.rate || '0.00'} 
+              <span className="text-sm text-muted-foreground ml-1">
+                {tariff?.currency || 'USD'}/kWh
+              </span>
+            </div>
+            {currentRate.period && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {currentRate.period}
+              </p>
+            )}
+            {currentRate.timestamp && (
+              <p className="text-xs text-muted-foreground mt-2">
+                <CalendarDays className="h-3 w-3 inline mr-1" />
+                {format(new Date(currentRate.timestamp), 'PPpp')}
+              </p>
+            )}
+          </div>
+        )}
+        
+        {tariff?.isTimeOfUse && (
+          <div className="mt-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium">Rates Overview</span>
+              <Button 
+                variant="link" 
+                className="p-0 h-auto text-xs" 
+                onClick={() => setShowTouDetails(!showTouDetails)}
+              >
+                {showTouDetails ? 'Hide Details' : 'Show Details'}
+              </Button>
+            </div>
+            
+            {showTouDetails && tariff.schedule && (
+              <div className="mt-3 space-y-3 text-sm">
+                {Object.entries(tariff.schedule).map(([period, rates]) => (
+                  <div key={period} className="border rounded-md p-2">
+                    <div className="font-medium mb-1">{period}</div>
+                    <ul className="space-y-1 pl-2">
+                      {typeof rates === 'object' && Object.entries(rates).map(([time, rate]) => (
+                        <li key={time} className="flex justify-between">
+                          <span>{time}</span>
+                          <span className="font-medium">{Number(rate).toFixed(2)} {tariff.currency}/kWh</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  
-                  {currentRate.season && (
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground mr-1">
-                        {currentRate.season}
-                      </span>
-                      <span>{getSeasonIcon(currentRate.season)}</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex flex-col items-center justify-center py-6">
-                  <Badge 
-                    className={cn(
-                      "text-white px-3 py-1 mb-3", 
-                      getRateColor(currentRate.rateType)
-                    )}
-                  >
-                    {currentRate.rateType}
-                  </Badge>
-                  <div className="text-4xl font-bold">
-                    {formatCurrency(currentRate.currentRate, currentRate.currency)}
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    per kWh
-                  </div>
-                </div>
-                
-                {tariffData?.isTimeOfUse && currentRate.season && (
-                  <div className="text-sm text-center text-muted-foreground">
-                    {currentRate.season === 'Summer' && 'Higher rates during evening peak hours (5PM-10PM)'}
-                    {currentRate.season === 'Winter' && 'Peak rates in evening hours (5PM-9PM)'}
-                    {currentRate.season === 'Transition' && 'Moderate rates with evening peak (5PM-10PM)'}
-                  </div>
-                )}
+                ))}
               </div>
             )}
-          </TabsContent>
-          
-          <TabsContent value="details" className="mt-4">
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-1">Tariff Information</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-muted-foreground">Provider:</div>
-                  <div>{tariffData?.provider || 'Not available'}</div>
-                  
-                  <div className="text-muted-foreground">Type:</div>
-                  <div>{tariffData?.isTimeOfUse ? 'Time of Use (TOU)' : 'Fixed Rate'}</div>
-                  
-                  {!tariffData?.isTimeOfUse && (
-                    <>
-                      <div className="text-muted-foreground">Import Rate:</div>
-                      <div>{formatCurrency(tariffData?.importRate || 0, tariffData?.currency || 'USD')}/kWh</div>
-                      
-                      <div className="text-muted-foreground">Export Rate:</div>
-                      <div>{formatCurrency(tariffData?.exportRate || 0, tariffData?.currency || 'USD')}/kWh</div>
-                    </>
-                  )}
+            
+            {!showTouDetails && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="border rounded-md p-2">
+                  <div className="text-xs text-muted-foreground">Import Rate</div>
+                  <div className="font-medium">{tariff.importRate?.toFixed(2) || '0.00'} {tariff.currency}/kWh</div>
+                </div>
+                <div className="border rounded-md p-2">
+                  <div className="text-xs text-muted-foreground">Export Rate</div>
+                  <div className="font-medium">{tariff.exportRate?.toFixed(2) || '0.00'} {tariff.currency}/kWh</div>
                 </div>
               </div>
-              
-              {tariffData?.isTimeOfUse && tariffData?.scheduleData && (
-                <div>
-                  <h4 className="font-medium mb-1">Seasonal Rates</h4>
-                  <div className="space-y-3 text-sm">
-                    {(tariffData.scheduleData as any).seasons?.map((season: any, index: number) => (
-                      <div key={index} className="border rounded-md p-2">
-                        <div className="flex items-center gap-1 font-medium mb-1">
-                          {getSeasonIcon(season.name)} {season.name}
-                          <span className="text-xs text-muted-foreground ml-1">
-                            (Months: {season.months.join(', ')})
-                          </span>
-                        </div>
-                        <div className="pl-2 space-y-1">
-                          {season.rates.map((rate: any, rateIdx: number) => (
-                            <div key={rateIdx} className="flex items-center gap-2">
-                              <Badge 
-                                className={cn(
-                                  "text-white h-5 min-w-[60px] flex justify-center", 
-                                  getRateColor(rate.name)
-                                )}
-                              >
-                                {rate.name}
-                              </Badge>
-                              <span>
-                                {formatCurrency(rate.rate, tariffData.currency)}/kWh
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+            )}
+          </div>
+        )}
+        
+        {!tariff?.isTimeOfUse && (
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="border rounded-md p-3">
+              <div className="text-sm text-muted-foreground">Import Rate</div>
+              <div className="text-xl font-medium mt-1">{tariff?.importRate?.toFixed(2) || '0.00'} {tariff?.currency}/kWh</div>
             </div>
-          </TabsContent>
-        </Tabs>
+            <div className="border rounded-md p-3">
+              <div className="text-sm text-muted-foreground">Export Rate</div>
+              <div className="text-xl font-medium mt-1">{tariff?.exportRate?.toFixed(2) || '0.00'} {tariff?.currency}/kWh</div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
-};
-
-export default TariffWidget;
+}

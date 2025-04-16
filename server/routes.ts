@@ -97,22 +97,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/sites/:siteId/optimization-settings', optimizationController.updateOptimizationSettings);
   
   // Tariff routes
-  app.get('/api/tariffs', tariffController.getTariffs);
-  app.get('/api/tariffs/:id', tariffController.getTariff);
-  app.get('/api/sites/:siteId/tariff', tariffController.getSiteTariff);
+  app.get('/api/sites/:siteId/tariff', tariffController.getTariffBySite);
   app.get('/api/sites/:siteId/tariff/rate', tariffController.getCurrentTariffRate);
-  app.post('/api/tariffs', tariffController.createTariff);
+  app.post('/api/sites/:siteId/tariff', tariffController.createTariff);
   app.put('/api/tariffs/:id', tariffController.updateTariff);
-  app.post('/api/sites/:siteId/tariff/israeli', async (req, res) => {
-    try {
-      const siteId = parseInt(req.params.siteId);
-      const result = await tariffController.createIsraeliTariffData(siteId);
-      res.status(201).json(result);
-    } catch (error) {
-      console.error('Error creating Israeli tariff:', error);
-      res.status(500).json({ message: 'Failed to create Israeli tariff' });
-    }
-  });
+  app.post('/api/sites/:siteId/tariff/israeli', tariffController.createIsraeliTariff);
   
   // Setup routes
   app.post('/api/create-demo-user', setupController.createDemoUser);

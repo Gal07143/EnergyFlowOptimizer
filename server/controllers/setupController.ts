@@ -4,6 +4,7 @@ import { storage } from '../storage';
 import { users } from '@shared/schema';
 import { hashPassword } from '../auth';
 import { createDemoDemandResponseData } from './demandResponseController';
+import { createIsraeliTariffData } from './tariffController';
 
 /**
  * Create demo admin user
@@ -264,6 +265,9 @@ export const createDemoData = async (req: Request, res: Response) => {
     // Create demand response demo data
     const demandResponseData = await createDemoDemandResponseData(site.id);
     
+    // Create Israeli tariff data for demo
+    const israeliTariffResult = await createIsraeliTariffData(site.id);
+    
     res.status(201).json({
       message: 'Demo data created successfully',
       site,
@@ -275,6 +279,7 @@ export const createDemoData = async (req: Request, res: Response) => {
       },
       optimizationSettings,
       tariff,
+      israeliTariff: israeliTariffResult,
       readings: {
         energy: energyReading,
         solar: solarReading,
