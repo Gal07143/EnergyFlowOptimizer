@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { cn } from '@/lib/utils';
 import {
   Cloud,
   CloudRain,
@@ -30,12 +29,11 @@ import {
 
 interface WeatherWidgetProps {
   siteId: number;
-  className?: string;
 }
 
 type WeatherView = 'current' | 'forecast';
 
-export default function WeatherWidget({ siteId, className }: WeatherWidgetProps) {
+export default function WeatherWidget({ siteId }: WeatherWidgetProps) {
   const [view, setView] = useState<WeatherView>('current');
   const [apiKey, setApiKey] = useState('');
   const [showApiKeyForm, setShowApiKeyForm] = useState(false);
@@ -230,7 +228,7 @@ export default function WeatherWidget({ siteId, className }: WeatherWidgetProps)
   };
 
   return (
-    <Card className={cn("w-full", className)}>
+    <Card className="w-full">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg">Weather Information</CardTitle>
