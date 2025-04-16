@@ -157,7 +157,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSite(site: InsertSite): Promise<Site> {
-    const [newSite] = await db.insert(sites).values(site).returning();
+    // Fix for drizzle-orm typing issues
+    const [newSite] = await db.insert(sites).values([site] as any).returning();
     return newSite;
   }
 
@@ -188,7 +189,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDevice(device: InsertDevice): Promise<Device> {
-    const [newDevice] = await db.insert(devices).values(device).returning();
+    const [newDevice] = await db.insert(devices).values([device] as any).returning();
     return newDevice;
   }
 

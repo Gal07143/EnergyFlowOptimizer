@@ -89,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/tariffs', optimizationController.createTariff);
   app.put('/api/tariffs/:id', optimizationController.updateTariff);
   
-  // Demo user creation
+  // Demo user creation - simplified approach
   app.post('/api/create-demo-user', async (req, res) => {
     try {
       // See if user already exists
@@ -105,23 +105,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create a password hash
-      const scryptAsync = promisify(scrypt);
-      const salt = randomBytes(16).toString("hex");
-      const buf = (await scryptAsync('password123', salt, 64)) as Buffer;
-      const hashedPassword = `${buf.toString("hex")}.${salt}`;
+      // Create a password hash directly using the hashPassword utility
+      const hashedPassword = await hashPassword('password123');
       
-      // Create a demo admin user with hashed password
-      const demoUser = await storage.createUser({
-        username: 'admin',
-        password: hashedPassword,
-        email: 'admin@example.com',
-        role: 'admin'
-      });
+      // Use db directly to insert the user to bypass any potential issues
+      const [demoUser] = await db.insert(users)
+        .values({
+          username: 'admin',
+          password: hashedPassword,
+          email: 'admin@example.com',
+          role: 'admin',
+          isEmailVerified: true // Set as verified by default
+        })
+        .returning();
       
-      // First create a verification code and then verify it
-      await storage.setVerificationCode(demoUser.id, "123456");
-      await storage.verifyEmail(demoUser.id, "123456");
+      if (!demoUser) {
+        throw new Error('Failed to create demo user');
+      }
       
       res.status(201).json({
         message: 'Demo user created successfully',
@@ -133,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error creating demo user:', error);
-      res.status(500).json({ message: 'Failed to create demo user' });
+      res.status(500).json({ message: 'Failed to create demo user', error: error.message });
     }
   });
 

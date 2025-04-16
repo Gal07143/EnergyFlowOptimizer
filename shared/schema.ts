@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric, json, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric, json, pgEnum, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -198,6 +198,217 @@ export const tariffsRelations = relations(tariffs, ({ one }) => ({
   }),
 }));
 
+// Alert and Notification System
+export const alertSeverityEnum = pgEnum('alert_severity', [
+  'info', 
+  'warning', 
+  'error', 
+  'critical'
+]);
+
+export const alertStatusEnum = pgEnum('alert_status', [
+  'new', 
+  'acknowledged', 
+  'resolved', 
+  'dismissed'
+]);
+
+export const alerts = pgTable('alerts', {
+  id: serial('id').primaryKey(),
+  siteId: integer('site_id').references(() => sites.id),
+  deviceId: integer('device_id').references(() => devices.id),
+  userId: integer('user_id').references(() => users.id),
+  timestamp: timestamp('timestamp').defaultNow(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  severity: alertSeverityEnum('severity').default('info'),
+  status: alertStatusEnum('status').default('new'),
+  data: json('data'),
+  resolvedAt: timestamp('resolved_at'),
+  resolvedBy: integer('resolved_by').references(() => users.id),
+});
+
+export const alertsRelations = relations(alerts, ({ one }) => ({
+  site: one(sites, {
+    fields: [alerts.siteId],
+    references: [sites.id],
+  }),
+  device: one(devices, {
+    fields: [alerts.deviceId],
+    references: [devices.id],
+  }),
+  user: one(users, {
+    fields: [alerts.userId],
+    references: [users.id],
+  }),
+  resolvedByUser: one(users, {
+    fields: [alerts.resolvedBy],
+    references: [users.id],
+  }),
+}));
+
+// Notifications table
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'alert', 
+  'system', 
+  'update', 
+  'billing', 
+  'optimization'
+]);
+
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  timestamp: timestamp('timestamp').defaultNow(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  type: notificationTypeEnum('type').default('system'),
+  isRead: boolean('is_read').default(false),
+  data: json('data'),
+  linkedEntityId: integer('linked_entity_id'),
+  linkedEntityType: text('linked_entity_type'),
+});
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
+// Energy Forecasts table
+export const forecastTypeEnum = pgEnum('forecast_type', [
+  'generation', 
+  'consumption', 
+  'price'
+]);
+
+export const energyForecasts = pgTable('energy_forecasts', {
+  id: serial('id').primaryKey(),
+  siteId: integer('site_id').references(() => sites.id).notNull(),
+  timestamp: timestamp('timestamp').defaultNow(),
+  forecastDate: timestamp('forecast_date').notNull(),
+  forecastType: forecastTypeEnum('forecast_type').notNull(),
+  value: numeric('value').notNull(),
+  confidence: numeric('confidence'),
+  algorithm: text('algorithm'),
+  metadata: json('metadata'),
+});
+
+export const energyForecastsRelations = relations(energyForecasts, ({ one }) => ({
+  site: one(sites, {
+    fields: [energyForecasts.siteId],
+    references: [sites.id],
+  }),
+}));
+
+// Event logging table
+export const eventLogTypeEnum = pgEnum('event_log_type', [
+  'system', 
+  'user', 
+  'device', 
+  'security', 
+  'optimization'
+]);
+
+export const eventLogs = pgTable('event_logs', {
+  id: serial('id').primaryKey(),
+  timestamp: timestamp('timestamp').defaultNow(),
+  eventType: eventLogTypeEnum('event_type').notNull(),
+  message: text('message').notNull(),
+  userId: integer('user_id').references(() => users.id),
+  deviceId: integer('device_id').references(() => devices.id),
+  siteId: integer('site_id').references(() => sites.id),
+  metadata: json('metadata'),
+  severity: text('severity').default('info'),
+  sourceIp: text('source_ip'),
+});
+
+export const eventLogsRelations = relations(eventLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [eventLogs.userId],
+    references: [users.id],
+  }),
+  device: one(devices, {
+    fields: [eventLogs.deviceId],
+    references: [devices.id],
+  }),
+  site: one(sites, {
+    fields: [eventLogs.siteId],
+    references: [sites.id],
+  }),
+}));
+
+// Grid Connection Details
+export const gridConnectionType = pgEnum('grid_connection_type', [
+  'single_phase', 
+  'three_phase', 
+  'split_phase'
+]);
+
+export const gridConnections = pgTable('grid_connections', {
+  id: serial('id').primaryKey(),
+  siteId: integer('site_id').references(() => sites.id).notNull(),
+  connectionType: gridConnectionType('connection_type').default('single_phase'),
+  capacity: numeric('capacity'),
+  voltage: numeric('voltage'),
+  phases: integer('phases').default(1),
+  meterNumber: text('meter_number'),
+  utilityCompany: text('utility_company'),
+  tariffId: integer('tariff_id').references(() => tariffs.id),
+  gridExportEnabled: boolean('grid_export_enabled').default(true),
+  gridImportEnabled: boolean('grid_import_enabled').default(true),
+  settings: json('settings'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const gridConnectionsRelations = relations(gridConnections, ({ one }) => ({
+  site: one(sites, {
+    fields: [gridConnections.siteId],
+    references: [sites.id],
+  }),
+  tariff: one(tariffs, {
+    fields: [gridConnections.tariffId],
+    references: [tariffs.id],
+  }),
+}));
+
+// Remote Control Commands
+export const commandStatusEnum = pgEnum('command_status', [
+  'pending', 
+  'sent', 
+  'delivered', 
+  'executed', 
+  'failed', 
+  'expired'
+]);
+
+export const remoteCommands = pgTable('remote_commands', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').references(() => devices.id).notNull(),
+  userId: integer('user_id').references(() => users.id),
+  timestamp: timestamp('timestamp').defaultNow(),
+  command: text('command').notNull(),
+  parameters: json('parameters'),
+  status: commandStatusEnum('status').default('pending'),
+  statusMessage: text('status_message'),
+  executedAt: timestamp('executed_at'),
+  expiresAt: timestamp('expires_at'),
+  priority: integer('priority').default(5),
+});
+
+export const remoteCommandsRelations = relations(remoteCommands, ({ one }) => ({
+  device: one(devices, {
+    fields: [remoteCommands.deviceId],
+    references: [devices.id],
+  }),
+  user: one(users, {
+    fields: [remoteCommands.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert Schemas
 export const insertSiteSchema = createInsertSchema(sites, {
   maxCapacity: z.string().or(z.number()).transform(val => val === null ? null : Number(val)),
@@ -250,6 +461,46 @@ export const insertTariffSchema = createInsertSchema(tariffs, {
   exportRate: z.string().or(z.number()).transform(val => val === null ? null : Number(val))
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
+// New insert schemas
+export const insertAlertSchema = createInsertSchema(alerts).omit({ 
+  id: true, 
+  timestamp: true,
+  resolvedAt: true
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ 
+  id: true, 
+  timestamp: true
+});
+
+export const insertEnergyForecastSchema = createInsertSchema(energyForecasts, {
+  value: z.string().or(z.number()).transform(val => Number(val)),
+  confidence: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined)
+}).omit({ 
+  id: true, 
+  timestamp: true
+});
+
+export const insertEventLogSchema = createInsertSchema(eventLogs).omit({ 
+  id: true, 
+  timestamp: true 
+});
+
+export const insertGridConnectionSchema = createInsertSchema(gridConnections, {
+  capacity: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  voltage: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined)
+}).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+
+export const insertRemoteCommandSchema = createInsertSchema(remoteCommands).omit({ 
+  id: true, 
+  timestamp: true,
+  executedAt: true
+});
+
 // Export Types
 export type Site = typeof sites.$inferSelect;
 export type InsertSite = z.infer<typeof insertSiteSchema>;
@@ -271,3 +522,22 @@ export type InsertOptimizationSetting = z.infer<typeof insertOptimizationSetting
 
 export type Tariff = typeof tariffs.$inferSelect;
 export type InsertTariff = z.infer<typeof insertTariffSchema>;
+
+// New table types
+export type Alert = typeof alerts.$inferSelect;
+export type InsertAlert = z.infer<typeof insertAlertSchema>;
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+export type EnergyForecast = typeof energyForecasts.$inferSelect;
+export type InsertEnergyForecast = z.infer<typeof insertEnergyForecastSchema>;
+
+export type EventLog = typeof eventLogs.$inferSelect;
+export type InsertEventLog = z.infer<typeof insertEventLogSchema>;
+
+export type GridConnection = typeof gridConnections.$inferSelect;
+export type InsertGridConnection = z.infer<typeof insertGridConnectionSchema>;
+
+export type RemoteCommand = typeof remoteCommands.$inferSelect;
+export type InsertRemoteCommand = z.infer<typeof insertRemoteCommandSchema>;
