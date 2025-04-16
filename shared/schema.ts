@@ -200,8 +200,8 @@ export const tariffsRelations = relations(tariffs, ({ one }) => ({
 
 // Insert Schemas
 export const insertSiteSchema = createInsertSchema(sites, {
-  maxCapacity: z.string().or(z.number()).transform(val => String(val)),
-  gridConnectionPoint: z.string().or(z.number()).transform(val => String(val))
+  maxCapacity: z.string().or(z.number()).transform(val => val === null ? null : Number(val)),
+  gridConnectionPoint: z.string().or(z.number()).transform(val => val === null ? null : Number(val))
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
 export const insertUserSchema = createInsertSchema(users).omit({ 
@@ -213,7 +213,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 });
 
 export const insertDeviceSchema = createInsertSchema(devices, {
-  capacity: z.string().or(z.number()).optional().transform(val => val ? String(val) : undefined)
+  capacity: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined)
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
 export const insertDeviceReadingSchema = createInsertSchema(deviceReadings, {
@@ -242,12 +242,12 @@ export const insertEnergyReadingSchema = createInsertSchema(energyReadings, {
 }).omit({ id: true });
 
 export const insertOptimizationSettingsSchema = createInsertSchema(optimizationSettings, {
-  peakShavingTarget: z.string().or(z.number()).transform(val => String(val))
+  peakShavingTarget: z.string().or(z.number()).transform(val => val === null ? null : Number(val))
 }).omit({ id: true, updatedAt: true });
 
 export const insertTariffSchema = createInsertSchema(tariffs, {
-  importRate: z.string().or(z.number()).transform(val => String(val)),
-  exportRate: z.string().or(z.number()).transform(val => String(val))
+  importRate: z.string().or(z.number()).transform(val => val === null ? null : Number(val)),
+  exportRate: z.string().or(z.number()).transform(val => val === null ? null : Number(val))
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Export Types

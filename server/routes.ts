@@ -91,8 +91,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const site = await storage.createSite({
         name: 'Home Site',
         address: '123 Solar Avenue',
-        maxCapacity: '20',
-        gridConnectionPoint: '11',
+        maxCapacity: 20,
+        gridConnectionPoint: 11,
         timezone: 'UTC'
       });
       
@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         manufacturer: 'SunPower',
         serialNumber: 'SP12345678',
         firmwareVersion: '1.2.3',
-        capacity: '10.5',
+        capacity: 10.5,
         siteId: site.id,
         settings: {
           orientation: 'south',
@@ -261,7 +261,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         energy: 12.8,
         voltage: 230,
         current: 13.9,
-        frequency: 49.9
+        frequency: 49.9,
+        stateOfCharge: null,
+        temperature: null
       });
       
       res.status(201).json({
