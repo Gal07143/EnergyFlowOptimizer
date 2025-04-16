@@ -59,8 +59,25 @@ export const createDemoUser = async (req: Request, res: Response) => {
  */
 export const createDemoData = async (req: Request, res: Response) => {
   try {
-    // First check/create admin user
-    await createDemoUser(req, res);
+    // First check if admin user exists
+    const existingUser = await storage.getUserByUsername('admin');
+    if (!existingUser) {
+      // Create the admin user but don't send the response yet
+      const hashedPassword = await hashPassword('password123');
+      const [demoUser] = await db.insert(users)
+        .values({
+          username: 'admin',
+          password: hashedPassword,
+          email: 'admin@example.com',
+          role: 'admin',
+          isEmailVerified: true
+        })
+        .returning();
+      
+      if (!demoUser) {
+        throw new Error('Failed to create demo user');
+      }
+    }
     
     // Create a demo site
     const site = await storage.createSite({
