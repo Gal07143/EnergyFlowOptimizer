@@ -54,6 +54,7 @@ export const sites = pgTable('sites', {
 export const sitesRelations = relations(sites, ({ many }) => ({
   devices: many(devices),
   energyReadings: many(energyReadings),
+  energyForecasts: many(energyForecasts),
 }));
 
 // Users

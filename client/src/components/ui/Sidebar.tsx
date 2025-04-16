@@ -83,28 +83,29 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         
         <nav className="mt-5 flex-1 px-2 space-y-1">
           {navItems.map((item) => (
-            <Link
-              key={item.path}
-              href={item.path}
-              onClick={() => onClose?.()}
-            >
-              <a
-                className={cn(
-                  isActive(item.path)
-                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
-                  'group flex items-center px-2 py-2 text-sm font-medium rounded-md'
-                )}
+            <div key={item.path} className="w-full">
+              <Link
+                href={item.path}
+                onClick={() => onClose?.()}
               >
-                <item.icon className={cn(
-                  isActive(item.path)
-                    ? 'text-primary-500 dark:text-primary-400'
-                    : 'text-gray-400 dark:text-gray-500',
-                  'mr-3 h-5 w-5'
-                )} />
-                {item.label}
-              </a>
-            </Link>
+                <div
+                  className={cn(
+                    isActive(item.path)
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
+                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer'
+                  )}
+                >
+                  <item.icon className={cn(
+                    isActive(item.path)
+                      ? 'text-primary-500 dark:text-primary-400'
+                      : 'text-gray-400 dark:text-gray-500',
+                    'mr-3 h-5 w-5'
+                  )} />
+                  {item.label}
+                </div>
+              </Link>
+            </div>
           ))}
           
           <div className="pt-4 pb-2">
@@ -117,28 +118,29 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
             </span>
             
             {deviceItems.map((item) => (
-              <Link
-                key={item.path}
-                href={item.path}
-                onClick={() => onClose?.()}
-              >
-                <a
-                  className={cn(
-                    isActive(item.path)
-                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
-                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md'
-                  )}
+              <div key={item.path} className="w-full">
+                <Link
+                  href={item.path}
+                  onClick={() => onClose?.()}
                 >
-                  <item.icon className={cn(
-                    isActive(item.path)
-                      ? 'text-primary-500 dark:text-primary-400'
-                      : 'text-gray-400 dark:text-gray-500',
-                    'mr-3 h-5 w-5'
-                  )} />
-                  {item.label}
-                </a>
-              </Link>
+                  <div
+                    className={cn(
+                      isActive(item.path)
+                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
+                      'group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer'
+                    )}
+                  >
+                    <item.icon className={cn(
+                      isActive(item.path)
+                        ? 'text-primary-500 dark:text-primary-400'
+                        : 'text-gray-400 dark:text-gray-500',
+                      'mr-3 h-5 w-5'
+                    )} />
+                    {item.label}
+                  </div>
+                </Link>
+              </div>
             ))}
           </div>
         </nav>
