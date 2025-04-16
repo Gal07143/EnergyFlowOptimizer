@@ -1,11 +1,12 @@
 import { db } from "./db";
-import { eq, and, desc, gte, lte } from "drizzle-orm";
+import { eq, and, desc, gte, lte, isNotNull } from "drizzle-orm";
 import { 
   users, 
   sites, 
   devices, 
   deviceReadings, 
   energyReadings, 
+  energyForecasts,
   optimizationSettings, 
   tariffs,
   type User, 
@@ -18,6 +19,8 @@ import {
   type InsertDeviceReading,
   type EnergyReading, 
   type InsertEnergyReading,
+  type EnergyForecast,
+  type InsertEnergyForecast,
   type OptimizationSetting, 
   type InsertOptimizationSetting,
   type Tariff, 
@@ -64,6 +67,12 @@ export interface IStorage {
   createOptimizationSettings(settings: InsertOptimizationSetting): Promise<OptimizationSetting>;
   updateOptimizationSettings(id: number, settings: Partial<OptimizationSetting>): Promise<OptimizationSetting | undefined>;
 
+  // Energy Forecasts
+  getEnergyForecasts(siteId: number): Promise<EnergyForecast[]>;
+  getEnergyForecastsByType(siteId: number, forecastType: string): Promise<EnergyForecast[]>;
+  getLatestEnergyForecast(siteId: number, interval?: string): Promise<EnergyForecast | undefined>;
+  createEnergyForecast(forecast: InsertEnergyForecast): Promise<EnergyForecast>;
+  
   // Tariffs
   getTariffs(siteId: number): Promise<Tariff[]>;
   getTariff(id: number): Promise<Tariff | undefined>;
@@ -307,6 +316,53 @@ export class DatabaseStorage implements IStorage {
       .where(eq(optimizationSettings.id, id))
       .returning();
     return updatedSettings || undefined;
+  }
+
+  // Energy Forecasts
+  async getEnergyForecasts(siteId: number): Promise<EnergyForecast[]> {
+    return await db
+      .select()
+      .from(energyForecasts)
+      .where(eq(energyForecasts.siteId, siteId))
+      .orderBy(desc(energyForecasts.generatedAt));
+  }
+  
+  async getEnergyForecastsByType(siteId: number, forecastType: string): Promise<EnergyForecast[]> {
+    return await db
+      .select()
+      .from(energyForecasts)
+      .where(
+        and(
+          eq(energyForecasts.siteId, siteId),
+          eq(energyForecasts.forecastType, forecastType as any)
+        )
+      )
+      .orderBy(desc(energyForecasts.generatedAt));
+  }
+  
+  async getLatestEnergyForecast(
+    siteId: number, 
+    interval?: string
+  ): Promise<EnergyForecast | undefined> {
+    const query = db
+      .select()
+      .from(energyForecasts)
+      .where(eq(energyForecasts.siteId, siteId));
+      
+    if (interval) {
+      query.where(eq(energyForecasts.interval, interval as any));
+    }
+    
+    const [forecast] = await query
+      .orderBy(desc(energyForecasts.generatedAt))
+      .limit(1);
+      
+    return forecast || undefined;
+  }
+  
+  async createEnergyForecast(forecast: InsertEnergyForecast): Promise<EnergyForecast> {
+    const [newForecast] = await db.insert(energyForecasts).values([forecast] as any).returning();
+    return newForecast;
   }
 
   // Tariffs

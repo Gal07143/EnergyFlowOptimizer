@@ -13,6 +13,7 @@ import { promisify } from "util";
 // Import controllers
 import * as deviceController from './controllers/deviceController';
 import * as energyController from './controllers/energyController';
+import * as forecastController from './controllers/forecastController';
 import * as optimizationController from './controllers/optimizationController';
 import * as authController from './controllers/authController';
 import * as setupController from './controllers/setupController';
