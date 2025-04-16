@@ -100,17 +100,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Import password hashing function
-      const { hashPassword } = await import('./auth');
-      
       // Create a demo admin user with hashed password
       const demoUser = await storage.createUser({
         username: 'admin',
         password: await hashPassword('password123'),
         email: 'admin@example.com',
         role: 'admin',
-        firstName: 'Admin',
-        lastName: 'User',
         isEmailVerified: true
       });
       
