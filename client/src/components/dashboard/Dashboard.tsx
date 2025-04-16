@@ -4,6 +4,7 @@ import EnergyFlow from './EnergyFlow';
 import DeviceManagement from './DeviceManagement';
 import EnergyOptimization from './EnergyOptimization';
 import AdvancedFeatures from './AdvancedFeatures';
+import { ConnectionStatus } from './ConnectionStatus';
 import { useLatestEnergyReading, useRealTimeEnergyData } from '@/hooks/useEnergyData';
 import { useDevices } from '@/hooks/useDevices';
 import { useSiteSelector } from '@/hooks/useSiteData';
@@ -81,6 +82,12 @@ export default function Dashboard() {
 
   return (
     <div className="py-6">
+      <div className="px-4 sm:px-6 lg:px-8 mb-4 flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Dashboard
+        </h2>
+        <ConnectionStatus siteId={currentSiteId} />
+      </div>
       <EnergyOverview latestReading={latestReading} />
       <EnergyFlow latestReading={latestReading} devices={devices} />
       <DeviceManagement devices={devices} siteId={currentSiteId} />

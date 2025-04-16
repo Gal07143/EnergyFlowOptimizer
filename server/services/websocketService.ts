@@ -4,9 +4,11 @@ import { storage } from '../storage';
 
 interface ActiveConnection {
   ws: WebSocket;
+  id: string; // Unique connection ID
   siteId: number;
   deviceId?: number;
   lastActivity: Date;
+  isAlive: boolean; // For ping/pong health check
 }
 
 // Store active connections
@@ -15,40 +17,126 @@ const activeConnections: ActiveConnection[] = [];
 // Connection cleanup interval (in milliseconds)
 const CLEANUP_INTERVAL = 60000; // 1 minute
 
-// Connection heartbeat interval (in milliseconds)
-const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+// Connection ping interval (in milliseconds)
+const PING_INTERVAL = 30000; // 30 seconds
 
 // Initialize WebSocket server
 export function initWebSocketServer(server: Server) {
-  const wss = new WebSocketServer({ server, path: '/ws' });
+  const wss = new WebSocketServer({ 
+    server, 
+    path: '/ws',
+    // Increase the timeout to prevent premature connection closures
+    clientTracking: true,
+    // WebSocket server configuration
+    perMessageDeflate: {
+      zlibDeflateOptions: {
+        chunkSize: 1024,
+        memLevel: 7,
+        level: 3
+      },
+      zlibInflateOptions: {
+        chunkSize: 10 * 1024
+      },
+      // Below options specified as default values
+      concurrencyLimit: 10,
+      threshold: 1024 // Size in bytes below which messages should not be compressed
+    }
+  });
 
-  // Set up WebSocket server
-  wss.on('connection', (ws: WebSocket) => {
+  // Handle WebSocket server errors
+  wss.on('error', (error) => {
+    console.error('WebSocket Server Error:', error);
+  });
+
+  // Handle close events on the WebSocket server
+  wss.on('close', () => {
+    console.log('WebSocket Server Closed');
+    
+    // Clean up all connections when the server closes
+    for (const connection of activeConnections) {
+      try {
+        if (connection.ws.readyState === WebSocket.OPEN) {
+          connection.ws.terminate();
+        }
+      } catch (error) {
+        console.error('Error terminating connection:', error);
+      }
+    }
+    
+    // Clear the connections array
+    activeConnections.length = 0;
+  });
+
+  // Set up connection ping interval
+  const pingInterval = setInterval(() => {
+    for (const connection of activeConnections) {
+      // If connection didn't respond to the previous ping, terminate it
+      if (connection.isAlive === false) {
+        console.log('Terminating unresponsive connection');
+        connection.ws.terminate();
+        continue;
+      }
+      
+      // Mark as inactive until it responds to the ping
+      connection.isAlive = false;
+      
+      // Send ping
+      try {
+        if (connection.ws.readyState === WebSocket.OPEN) {
+          connection.ws.ping();
+        }
+      } catch (error) {
+        console.error('Error sending ping:', error);
+        connection.ws.terminate();
+      }
+    }
+  }, PING_INTERVAL);
+
+  // Clean up interval on process exit
+  process.on('exit', () => {
+    clearInterval(pingInterval);
+  });
+
+  // Set up WebSocket server connection handler
+  wss.on('connection', (ws: WebSocket, req) => {
     console.log('WebSocket client connected');
+    
+    // Generate a unique connection ID
+    const connectionId = generateConnectionId();
     
     // Set initial connection data
     const connection: ActiveConnection = {
       ws,
+      id: connectionId,
       siteId: 0, // Will be updated when client sends subscription message
-      lastActivity: new Date()
+      lastActivity: new Date(),
+      isAlive: true
     };
     
     // Add to active connections
     activeConnections.push(connection);
-    
-    // Set up heartbeat
-    const heartbeatInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'heartbeat' }));
+
+    // Handle pong response (keep-alive)
+    ws.on('pong', () => {
+      // Update the connection's alive status
+      const conn = activeConnections.find(c => c.id === connectionId);
+      if (conn) {
+        conn.isAlive = true;
+        conn.lastActivity = new Date();
       }
-    }, HEARTBEAT_INTERVAL);
+    });
     
     // Handle messages from clients
-    ws.on('message', async (message: string) => {
+    ws.on('message', async (message: Buffer | string) => {
       try {
-        const data = JSON.parse(message);
+        // Update the last activity timestamp
         connection.lastActivity = new Date();
+        connection.isAlive = true;
         
+        // Parse the message
+        const data = JSON.parse(message.toString());
+        
+        // Process different message types
         switch (data.type) {
           case 'subscribe':
             handleSubscription(connection, data);
@@ -58,8 +146,9 @@ export function initWebSocketServer(server: Server) {
             handleUnsubscription(connection, data);
             break;
             
-          case 'pong':
-            // Update last activity timestamp on heartbeat response
+          case 'ping':
+            // Send a pong response
+            sendMessageToClient(ws, { type: 'pong', timestamp: Date.now() });
             break;
             
           default:
@@ -67,39 +156,78 @@ export function initWebSocketServer(server: Server) {
         }
       } catch (error) {
         console.error('Error processing WebSocket message:', error);
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ 
-            type: 'error', 
-            message: 'Invalid message format' 
-          }));
+        try {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Invalid message format' 
+            }));
+          }
+        } catch (sendError) {
+          console.error('Error sending error message:', sendError);
         }
       }
     });
     
     // Handle disconnection
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
-      
-      // Clear heartbeat interval
-      clearInterval(heartbeatInterval);
+    ws.on('close', (code, reason) => {
+      console.log(`WebSocket client disconnected (code: ${code}, reason: ${reason.toString() || 'unknown'})`);
       
       // Remove from active connections
-      const index = activeConnections.findIndex(conn => conn.ws === ws);
-      if (index !== -1) {
-        activeConnections.splice(index, 1);
-      }
+      removeConnection(connectionId);
     });
     
     // Handle errors
     ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
+      console.error('WebSocket client error:', error);
+      
+      // Terminate the connection on error
+      try {
+        ws.terminate();
+      } catch (terminateError) {
+        console.error('Error terminating connection:', terminateError);
+      }
+      
+      // Remove from active connections
+      removeConnection(connectionId);
     });
+
+    // Send an initialization message
+    try {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'connected',
+          timestamp: Date.now(),
+          connectionId
+        }));
+      }
+    } catch (error) {
+      console.error('Error sending welcome message:', error);
+    }
   });
   
   // Set up connection cleanup interval
-  setInterval(cleanupConnections, CLEANUP_INTERVAL);
+  const cleanupInterval = setInterval(cleanupConnections, CLEANUP_INTERVAL);
+  
+  // Clean up interval on process exit
+  process.on('exit', () => {
+    clearInterval(cleanupInterval);
+  });
   
   return wss;
+}
+
+// Remove a connection by ID
+function removeConnection(connectionId: string) {
+  const index = activeConnections.findIndex(conn => conn.id === connectionId);
+  if (index !== -1) {
+    activeConnections.splice(index, 1);
+  }
+}
+
+// Generate a unique connection ID
+function generateConnectionId(): string {
+  return `conn_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 }
 
 // Handle subscription requests
@@ -109,11 +237,16 @@ function handleSubscription(connection: ActiveConnection, data: any) {
     console.log(`Client subscribed to site ${data.siteId}`);
     
     // Send confirmation
-    if (connection.ws.readyState === WebSocket.OPEN) {
-      connection.ws.send(JSON.stringify({ 
-        type: 'subscribed', 
-        siteId: data.siteId 
-      }));
+    try {
+      if (connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify({ 
+          type: 'subscribed', 
+          siteId: data.siteId,
+          timestamp: Date.now()
+        }));
+      }
+    } catch (error) {
+      console.error('Error sending subscription confirmation:', error);
     }
   }
   
@@ -122,11 +255,16 @@ function handleSubscription(connection: ActiveConnection, data: any) {
     console.log(`Client subscribed to device ${data.deviceId}`);
     
     // Send confirmation
-    if (connection.ws.readyState === WebSocket.OPEN) {
-      connection.ws.send(JSON.stringify({ 
-        type: 'subscribed', 
-        deviceId: data.deviceId 
-      }));
+    try {
+      if (connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify({ 
+          type: 'subscribed', 
+          deviceId: data.deviceId,
+          timestamp: Date.now()
+        }));
+      }
+    } catch (error) {
+      console.error('Error sending subscription confirmation:', error);
     }
   }
 }
@@ -138,11 +276,16 @@ function handleUnsubscription(connection: ActiveConnection, data: any) {
     console.log(`Client unsubscribed from site ${data.siteId}`);
     
     // Send confirmation
-    if (connection.ws.readyState === WebSocket.OPEN) {
-      connection.ws.send(JSON.stringify({ 
-        type: 'unsubscribed', 
-        siteId: data.siteId 
-      }));
+    try {
+      if (connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify({ 
+          type: 'unsubscribed', 
+          siteId: data.siteId,
+          timestamp: Date.now()
+        }));
+      }
+    } catch (error) {
+      console.error('Error sending unsubscription confirmation:', error);
     }
   }
   
@@ -151,84 +294,147 @@ function handleUnsubscription(connection: ActiveConnection, data: any) {
     console.log(`Client unsubscribed from device ${data.deviceId}`);
     
     // Send confirmation
-    if (connection.ws.readyState === WebSocket.OPEN) {
-      connection.ws.send(JSON.stringify({ 
-        type: 'unsubscribed', 
-        deviceId: data.deviceId 
-      }));
+    try {
+      if (connection.ws.readyState === WebSocket.OPEN) {
+        connection.ws.send(JSON.stringify({ 
+          type: 'unsubscribed', 
+          deviceId: data.deviceId,
+          timestamp: Date.now()
+        }));
+      }
+    } catch (error) {
+      console.error('Error sending unsubscription confirmation:', error);
     }
   }
 }
 
 // Clean up stale connections
 function cleanupConnections() {
+  console.log(`Active WebSocket connections: ${activeConnections.length}`);
+  
   const now = new Date();
   const staleThreshold = new Date(now.getTime() - (CLEANUP_INTERVAL * 2));
+  let cleanedCount = 0;
   
   for (let i = activeConnections.length - 1; i >= 0; i--) {
     const connection = activeConnections[i];
     
-    // Remove stale connections
-    if (connection.lastActivity < staleThreshold) {
+    // Check if the connection is stale
+    if (connection.lastActivity < staleThreshold || !connection.isAlive) {
       console.log('Removing stale WebSocket connection');
       
-      if (connection.ws.readyState === WebSocket.OPEN) {
-        connection.ws.close();
+      try {
+        // Try to close the connection gracefully
+        if (connection.ws.readyState === WebSocket.OPEN) {
+          connection.ws.close(1000, 'Connection timeout');
+        }
+      } catch (error) {
+        console.error('Error closing stale connection:', error);
+        
+        // Force terminate if close fails
+        try {
+          connection.ws.terminate();
+        } catch (terminateError) {
+          console.error('Error terminating connection:', terminateError);
+        }
       }
       
+      // Remove from array
       activeConnections.splice(i, 1);
+      cleanedCount++;
     }
+  }
+  
+  if (cleanedCount > 0) {
+    console.log(`Cleaned up ${cleanedCount} stale connections`);
   }
 }
 
 // Broadcast energy reading to all clients subscribed to a site
 export function broadcastEnergyReading(siteId: number, reading: any) {
+  const message = JSON.stringify({
+    type: 'energyReading',
+    data: reading,
+    timestamp: Date.now()
+  });
+  
+  let sentCount = 0;
+  
   for (const connection of activeConnections) {
-    if (
-      connection.siteId === siteId && 
-      connection.ws.readyState === WebSocket.OPEN
-    ) {
-      connection.ws.send(JSON.stringify({
-        type: 'energyReading',
-        data: reading
-      }));
+    if (connection.siteId === siteId && connection.ws.readyState === WebSocket.OPEN) {
+      try {
+        connection.ws.send(message);
+        sentCount++;
+      } catch (error) {
+        console.error('Error broadcasting energy reading:', error);
+      }
     }
+  }
+  
+  if (sentCount > 0) {
+    console.log(`Broadcast energy reading to ${sentCount} clients for site ${siteId}`);
   }
 }
 
 // Broadcast device reading to all clients subscribed to a device
 export function broadcastDeviceReading(deviceId: number, reading: any) {
+  const message = JSON.stringify({
+    type: 'deviceReading',
+    data: reading,
+    timestamp: Date.now()
+  });
+  
+  let sentCount = 0;
+  
   for (const connection of activeConnections) {
-    if (
-      connection.deviceId === deviceId && 
-      connection.ws.readyState === WebSocket.OPEN
-    ) {
-      connection.ws.send(JSON.stringify({
-        type: 'deviceReading',
-        data: reading
-      }));
+    if (connection.deviceId === deviceId && connection.ws.readyState === WebSocket.OPEN) {
+      try {
+        connection.ws.send(message);
+        sentCount++;
+      } catch (error) {
+        console.error('Error broadcasting device reading:', error);
+      }
     }
+  }
+  
+  if (sentCount > 0) {
+    console.log(`Broadcast device reading to ${sentCount} clients for device ${deviceId}`);
   }
 }
 
 // Broadcast optimization recommendation to all clients subscribed to a site
 export function broadcastOptimizationRecommendation(siteId: number, recommendation: any) {
+  const message = JSON.stringify({
+    type: 'optimizationRecommendation',
+    data: recommendation,
+    timestamp: Date.now()
+  });
+  
+  let sentCount = 0;
+  
   for (const connection of activeConnections) {
-    if (
-      connection.siteId === siteId && 
-      connection.ws.readyState === WebSocket.OPEN
-    ) {
-      connection.ws.send(JSON.stringify({
-        type: 'optimizationRecommendation',
-        data: recommendation
-      }));
+    if (connection.siteId === siteId && connection.ws.readyState === WebSocket.OPEN) {
+      try {
+        connection.ws.send(message);
+        sentCount++;
+      } catch (error) {
+        console.error('Error broadcasting optimization recommendation:', error);
+      }
     }
+  }
+  
+  if (sentCount > 0) {
+    console.log(`Broadcast optimization recommendation to ${sentCount} clients for site ${siteId}`);
   }
 }
 
 // Send message to a specific client
 export function sendMessageToClient(ws: WebSocket, message: any) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(message));
+  try {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(message));
+    }
+  } catch (error) {
+    console.error('Error sending message to client:', error);
   }
 }
