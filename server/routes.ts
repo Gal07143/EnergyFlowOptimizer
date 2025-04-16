@@ -3,7 +3,10 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WebSocketServer } from 'ws';
 import { initWebSocketServer } from './services/websocketService';
-import { setupAuth } from './auth';
+import { setupAuth, hashPassword } from './auth';
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
@@ -100,14 +103,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Create hash manually
+      const scrypt = require('crypto').scrypt;
+      const randomBytes = require('crypto').randomBytes;
+      const util = require('util');
+      const scryptAsync = util.promisify(scrypt);
+      
+      // Create hash
+      const salt = randomBytes(16).toString("hex");
+      const buf = await scryptAsync('password123', salt, 64);
+      const hashedPassword = `${buf.toString("hex")}.${salt}`;
+      
       // Create a demo admin user with hashed password
       const demoUser = await storage.createUser({
         username: 'admin',
-        password: await hashPassword('password123'),
+        password: hashedPassword,
         email: 'admin@example.com',
-        role: 'admin',
-        isEmailVerified: true
+        role: 'admin'
       });
+      
+      // Set email as verified
+      await db
+        .update(users)
+        .set({ isEmailVerified: true })
+        .where(eq(users.id, demoUser.id));
       
       res.status(201).json({
         message: 'Demo user created successfully',
