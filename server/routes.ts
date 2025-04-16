@@ -7,6 +7,8 @@ import { setupAuth, hashPassword } from './auth';
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
@@ -103,15 +105,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create hash manually
-      const scrypt = require('crypto').scrypt;
-      const randomBytes = require('crypto').randomBytes;
-      const util = require('util');
-      const scryptAsync = util.promisify(scrypt);
-      
-      // Create hash
+      // Create a password hash
+      const scryptAsync = promisify(scrypt);
       const salt = randomBytes(16).toString("hex");
-      const buf = await scryptAsync('password123', salt, 64);
+      const buf = (await scryptAsync('password123', salt, 64)) as Buffer;
       const hashedPassword = `${buf.toString("hex")}.${salt}`;
       
       // Create a demo admin user with hashed password
@@ -122,11 +119,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: 'admin'
       });
       
-      // Set email as verified
-      await db
-        .update(users)
-        .set({ isEmailVerified: true })
-        .where(eq(users.id, demoUser.id));
+      // First create a verification code and then verify it
+      await storage.setVerificationCode(demoUser.id, "123456");
+      await storage.verifyEmail(demoUser.id, "123456");
       
       res.status(201).json({
         message: 'Demo user created successfully',
