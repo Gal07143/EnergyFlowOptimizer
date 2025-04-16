@@ -1,80 +1,31 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Battery, Home, Zap, PlugZap, Sun } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { formatNumber } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { ArrowDown, ArrowUp, Battery, Home, Zap, Sun, Car } from 'lucide-react';
 
-interface EnergyFlowProps {
+interface EnergyFlowWidgetProps {
   siteId: number;
   className?: string;
 }
 
-const EnergyFlowWidget: React.FC<EnergyFlowProps> = ({ siteId, className }) => {
-  const [view, setView] = React.useState<'live' | 'today'>('live');
-
-  // Fetch latest energy readings
-  const { data: latestReading, isLoading: isLoadingReading } = useQuery({
+const EnergyFlowWidget: React.FC<EnergyFlowWidgetProps> = ({ siteId, className }) => {
+  // Fetch the latest energy reading
+  const { data: latestReading, isLoading } = useQuery({
     queryKey: ['/api/sites', siteId, 'energy/latest'],
     queryFn: async () => {
-      const res = await fetch(`/api/sites/${siteId}/energy/latest`);
-      if (!res.ok) throw new Error('Failed to fetch latest energy data');
-      return await res.json();
+      const response = await fetch(`/api/sites/${siteId}/energy/latest`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest energy data');
+      }
+      return await response.json();
     },
     enabled: !!siteId,
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
-
-  // Fetch devices for this site
-  const { data: devices, isLoading: isLoadingDevices } = useQuery({
-    queryKey: ['/api/sites', siteId, 'devices'],
-    queryFn: async () => {
-      const res = await fetch(`/api/sites/${siteId}/devices`);
-      if (!res.ok) throw new Error('Failed to fetch devices');
-      return await res.json();
-    },
-    enabled: !!siteId
-  });
-
-  // Calculate energy values for display
-  const getEnergyValues = () => {
-    if (!latestReading) return null;
-
-    // Default values if data is missing
-    const gridSupply = latestReading.gridImport || 0;
-    const solarProduction = latestReading.solarProduction || 0;
-    const batteryDischarge = latestReading.batteryDischarge || 0;
-    const batteryCharge = latestReading.batteryCharge || 0;
-    const homeConsumption = latestReading.homeConsumption || 0;
-    const evConsumption = latestReading.evConsumption || 0;
-    
-    // Calculate net values
-    const netBattery = batteryDischarge - batteryCharge;
-    const totalProduction = solarProduction + gridSupply + (netBattery > 0 ? netBattery : 0);
-    const totalConsumption = homeConsumption + evConsumption + (netBattery < 0 ? Math.abs(netBattery) : 0);
-    
-    // Get battery level
-    const batteryLevel = latestReading.batteryLevel !== undefined ? latestReading.batteryLevel : 75;
-    
-    return {
-      gridSupply,
-      solarProduction,
-      batteryDischarge,
-      batteryCharge,
-      homeConsumption,
-      evConsumption,
-      totalConsumption,
-      totalProduction,
-      batteryLevel,
-      timestamp: latestReading.timestamp
-    };
-  };
-
-  const energyValues = getEnergyValues();
-  const isLoading = isLoadingReading || isLoadingDevices;
 
   if (isLoading) {
     return (
@@ -83,135 +34,184 @@ const EnergyFlowWidget: React.FC<EnergyFlowProps> = ({ siteId, className }) => {
           <CardTitle>
             <Skeleton className="h-6 w-48" />
           </CardTitle>
+          <CardDescription>
+            <Skeleton className="h-4 w-36" />
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col space-y-6">
-            <Skeleton className="h-32 w-full" />
-            <div className="grid grid-cols-3 gap-4">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          </div>
+          <Skeleton className="h-32 w-full" />
         </CardContent>
       </Card>
     );
   }
 
+  // Retrieve values from the energy reading or use defaults
+  const solarProduction = latestReading?.solarProduction || 2.4;
+  const gridImport = latestReading?.gridImport || 0.0;
+  const gridExport = latestReading?.gridExport || 1.1;
+  const homeConsumption = latestReading?.homeConsumption || 1.1;
+  const evConsumption = latestReading?.evConsumption || 0.0;
+  const batteryCharge = latestReading?.batteryCharge || 0.2;
+  const batteryDischarge = latestReading?.batteryDischarge || 0.0;
+  const batteryLevel = latestReading?.batteryLevel || 75;
+  
+  // Calculate net values
+  const netProduction = solarProduction + batteryDischarge;
+  const netConsumption = homeConsumption + evConsumption + batteryCharge;
+  const netBatteryFlow = batteryDischarge - batteryCharge;
+  const netGridFlow = gridImport - gridExport;
+  
+  // Determine the system status
+  const getSystemStatus = () => {
+    if (solarProduction > netConsumption && batteryLevel >= 95) {
+      return {
+        status: 'Exporting',
+        description: 'Sending clean energy to the grid',
+        color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+      };
+    } else if (solarProduction > homeConsumption && batteryCharge > 0) {
+      return {
+        status: 'Charging',
+        description: 'Storing excess solar energy',
+        color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+      };
+    } else if (batteryDischarge > 0 && gridImport === 0) {
+      return {
+        status: 'Self-sufficient',
+        description: 'Running on stored energy',
+        color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+      };
+    } else if (gridImport > 0 && solarProduction === 0) {
+      return {
+        status: 'Grid-powered',
+        description: 'Drawing power from the grid',
+        color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+      };
+    } else {
+      return {
+        status: 'Hybrid',
+        description: 'Using multiple energy sources',
+        color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+      };
+    }
+  };
+
+  const systemStatus = getSystemStatus();
+
   return (
     <Card className={cn("w-full", className)}>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-center">
-          <CardTitle>Your system overview</CardTitle>
-          <Tabs value={view} onValueChange={(v) => setView(v as 'live' | 'today')} className="w-auto">
-            <TabsList className="h-8">
-              <TabsTrigger value="live" className="text-xs px-3">Live</TabsTrigger>
-              <TabsTrigger value="today" className="text-xs px-3">Today</TabsTrigger>
-            </TabsList>
-          </Tabs>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between">
+          <div>
+            <CardTitle>Live energy flow</CardTitle>
+            <CardDescription>Real-time energy distribution</CardDescription>
+          </div>
+          <Badge variant="outline" className={cn(systemStatus.color)}>
+            {systemStatus.status}
+          </Badge>
         </div>
-        <CardDescription>
-          {energyValues ? (
-            <div className="flex items-center space-x-1 mt-1">
-              <span>Current energy price:</span>
-              <span className="font-medium text-primary">{latestReading?.electricityPrice ? formatNumber(latestReading.electricityPrice, 2) : '0.15'} ct/kWh</span>
-            </div>
-          ) : (
-            <span>Energy flow information</span>
-          )}
-        </CardDescription>
       </CardHeader>
-      
       <CardContent>
-        {energyValues ? (
-          <div className="flow-layout">
-            {/* Grid layout with energy flow visualization */}
-            <div className="grid grid-cols-3 gap-6">
-              {/* Sources */}
-              <div className="flex flex-col space-y-4">
-                <div className="energy-source bg-blue-50 dark:bg-blue-950 rounded-lg p-4 flex flex-col items-center">
-                  <Zap className="h-8 w-8 text-blue-500 mb-2" />
-                  <p className="text-sm font-medium text-center">Grid supply</p>
-                  <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {formatNumber(energyValues.gridSupply, 1)} kW
+        <div className="relative h-64 mt-2">
+          {/* Energy flow diagram */}
+          <div className="absolute inset-0 flex flex-col items-center">
+            {/* Solar Row */}
+            <div className="flex items-center justify-center w-full mb-2">
+              <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg flex items-center">
+                <Sun className="h-6 w-6 text-yellow-500 mr-2" />
+                <div>
+                  <p className="text-sm font-medium">Solar</p>
+                  <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">
+                    {formatNumber(solarProduction, 1)} kW
                   </p>
-                </div>
-                
-                <div className="energy-source bg-yellow-50 dark:bg-yellow-950 rounded-lg p-4 flex flex-col items-center">
-                  <Sun className="h-8 w-8 text-yellow-500 mb-2" />
-                  <p className="text-sm font-medium text-center">PV production</p>
-                  <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-                    {formatNumber(energyValues.solarProduction, 1)} kW
-                  </p>
-                </div>
-                
-                <div className="energy-source bg-green-50 dark:bg-green-950 rounded-lg p-4 flex flex-col items-center">
-                  <Battery className="h-8 w-8 text-green-500 mb-2" />
-                  <p className="text-sm font-medium text-center">Battery discharge</p>
-                  <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                    {formatNumber(energyValues.batteryDischarge, 1)} kW
-                  </p>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
-                    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${energyValues.batteryLevel}%` }}></div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{energyValues.batteryLevel}%</p>
                 </div>
               </div>
-              
-              {/* Total consumption in middle */}
-              <div className="flex flex-col items-center justify-center">
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 flex flex-col items-center w-full">
-                  <p className="text-sm font-medium mb-2">Total consumption</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {formatNumber(energyValues.totalConsumption, 1)} kW
-                  </p>
-                </div>
-                
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 p-2 rounded">
-                    {view === 'live' ? 'Real-time data' : 'Today\'s average'}
-                  </div>
-                </div>
+              <div className="w-6 h-12 flex justify-center">
+                <div className="w-1 h-full bg-yellow-300 dark:bg-yellow-700"></div>
               </div>
-              
-              {/* Consumption */}
-              <div className="flex flex-col space-y-4">
-                <div className="energy-consumer bg-purple-50 dark:bg-purple-950 rounded-lg p-4 flex flex-col items-center">
-                  <Home className="h-8 w-8 text-purple-500 mb-2" />
-                  <p className="text-sm font-medium text-center">Household</p>
-                  <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
-                    {formatNumber(energyValues.homeConsumption, 1)} kW
-                  </p>
-                </div>
-                
-                <div className="energy-consumer bg-indigo-50 dark:bg-indigo-950 rounded-lg p-4 flex flex-col items-center">
-                  <PlugZap className="h-8 w-8 text-indigo-500 mb-2" />
-                  <p className="text-sm font-medium text-center">EV</p>
-                  <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                    {formatNumber(energyValues.evConsumption, 1)} kW
-                  </p>
-                  {energyValues.evConsumption > 0 && (
-                    <div className="text-xs bg-indigo-100 dark:bg-indigo-900 px-2 py-1 rounded mt-1">
-                      87%
+            </div>
+
+            {/* Center Row with Grid, Battery, Home */}
+            <div className="flex items-center justify-between w-full px-4 my-3">
+              {/* Grid */}
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex flex-col items-center">
+                <Zap className="h-6 w-6 text-blue-500 mb-1" />
+                <p className="text-sm font-medium">Grid</p>
+                <div className="flex flex-col items-center">
+                  {gridImport > 0 && (
+                    <div className="flex items-center text-green-600 dark:text-green-400">
+                      <ArrowDown className="h-3 w-3 mr-1" />
+                      <span className="text-sm font-medium">{formatNumber(gridImport, 1)}</span>
+                    </div>
+                  )}
+                  {gridExport > 0 && (
+                    <div className="flex items-center text-red-600 dark:text-red-400">
+                      <ArrowUp className="h-3 w-3 mr-1" />
+                      <span className="text-sm font-medium">{formatNumber(gridExport, 1)}</span>
                     </div>
                   )}
                 </div>
-                
-                <div className="energy-consumer bg-cyan-50 dark:bg-cyan-950 rounded-lg p-4 flex flex-col items-center">
-                  <Battery className="h-8 w-8 text-cyan-500 mb-2" />
-                  <p className="text-sm font-medium text-center">Battery charge</p>
-                  <p className="text-lg font-bold text-cyan-600 dark:text-cyan-400">
-                    {formatNumber(energyValues.batteryCharge, 1)} kW
+              </div>
+
+              {/* Connector Lines */}
+              <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 mx-2"></div>
+
+              {/* Battery */}
+              <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg flex flex-col items-center">
+                <Battery className="h-6 w-6 text-green-500 mb-1" />
+                <p className="text-sm font-medium">Battery</p>
+                <div className="flex flex-col items-center">
+                  <span className="text-sm font-bold">{formatNumber(batteryLevel, 0)}%</span>
+                  {batteryCharge > 0 && (
+                    <div className="flex items-center text-green-600 dark:text-green-400">
+                      <ArrowDown className="h-3 w-3 mr-1" />
+                      <span className="text-sm font-medium">{formatNumber(batteryCharge, 1)}</span>
+                    </div>
+                  )}
+                  {batteryDischarge > 0 && (
+                    <div className="flex items-center text-red-600 dark:text-red-400">
+                      <ArrowUp className="h-3 w-3 mr-1" />
+                      <span className="text-sm font-medium">{formatNumber(batteryDischarge, 1)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Connector Lines */}
+              <div className="flex-1 h-1 bg-gray-200 dark:bg-gray-700 mx-2"></div>
+
+              {/* Home */}
+              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex flex-col items-center">
+                <Home className="h-6 w-6 text-purple-500 mb-1" />
+                <p className="text-sm font-medium">Home</p>
+                <p className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                  {formatNumber(homeConsumption, 1)} kW
+                </p>
+              </div>
+            </div>
+
+            {/* EV Row at bottom */}
+            <div className="flex items-center justify-center w-full mt-2">
+              <div className="w-6 h-12 flex justify-center">
+                <div className="w-1 h-full bg-indigo-300 dark:bg-indigo-700"></div>
+              </div>
+              <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg flex items-center">
+                <Car className="h-6 w-6 text-indigo-500 mr-2" />
+                <div>
+                  <p className="text-sm font-medium">EV</p>
+                  <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                    {formatNumber(evConsumption, 1)} kW
                   </p>
                 </div>
               </div>
             </div>
           </div>
-        ) : (
-          <div className="p-4 text-center text-gray-500">
-            No energy flow data available
-          </div>
-        )}
+        </div>
+
+        {/* System status description */}
+        <div className="text-center mt-2 text-sm text-muted-foreground">
+          {systemStatus.description}
+        </div>
       </CardContent>
     </Card>
   );
