@@ -243,7 +243,32 @@ export const eventLogTypeEnum = pgEnum('event_log_type', [
   'user', 
   'device', 
   'security', 
-  'optimization'
+  'optimization',
+  'demand_response'
+]);
+
+// Demand Response Enums
+export const demandResponseProgramTypeEnum = pgEnum('demand_response_program_type', [
+  'critical_peak_pricing',
+  'peak_time_rebate',
+  'direct_load_control',
+  'capacity_bidding',
+  'emergency_response',
+  'economic_dispatch'
+]);
+
+export const demandResponseEventStatusEnum = pgEnum('demand_response_event_status', [
+  'scheduled',
+  'pending',
+  'active',
+  'completed',
+  'cancelled'
+]);
+
+export const demandResponseParticipationEnum = pgEnum('demand_response_participation', [
+  'opt_in',
+  'opt_out',
+  'automatic'
 ]);
 
 export const eventLogs = pgTable('event_logs', {
@@ -279,6 +304,100 @@ export const gridConnections = pgTable('grid_connections', {
   gridExportEnabled: boolean('grid_export_enabled').default(true),
   gridImportEnabled: boolean('grid_import_enabled').default(true),
   settings: json('settings'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Demand Response Program Tables
+export const demandResponsePrograms = pgTable('demand_response_programs', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  provider: text('provider').notNull(),
+  description: text('description'),
+  programType: demandResponseProgramTypeEnum('program_type').notNull(),
+  startDate: timestamp('start_date'),
+  endDate: timestamp('end_date'),
+  notificationLeadTime: integer('notification_lead_time'), // minutes
+  minReductionAmount: numeric('min_reduction_amount'), // kW
+  maxReductionAmount: numeric('max_reduction_amount'), // kW
+  incentiveRate: numeric('incentive_rate'), // $ per kW or kWh
+  incentiveType: text('incentive_type'), // 'fixed', 'variable', 'tiered'
+  incentiveDetails: json('incentive_details'),
+  terms: text('terms'),
+  isActive: boolean('is_active').default(true),
+  maxEventDuration: integer('max_event_duration'), // minutes
+  maxEventsPerYear: integer('max_events_per_year'),
+  maxEventsPerMonth: integer('max_events_per_month'),
+  defaultParticipation: demandResponseParticipationEnum('default_participation').default('opt_in'),
+  eligibilityRequirements: json('eligibility_requirements'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const demandResponseEvents = pgTable('demand_response_events', {
+  id: serial('id').primaryKey(),
+  programId: integer('program_id').references(() => demandResponsePrograms.id),
+  name: text('name').notNull(),
+  description: text('description'),
+  status: demandResponseEventStatusEnum('status').default('scheduled'),
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  notificationTime: timestamp('notification_time'),
+  targetReduction: numeric('target_reduction'), // kW
+  actualReduction: numeric('actual_reduction'), // kW
+  incentiveModifier: numeric('incentive_modifier').default(1), // multiplier for the incentive
+  notes: text('notes'),
+  isEmergency: boolean('is_emergency').default(false),
+  weatherConditions: json('weather_conditions'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const siteDemandResponseSettings = pgTable('site_demand_response_settings', {
+  id: serial('id').primaryKey(),
+  siteId: integer('site_id').references(() => sites.id).notNull(),
+  isEnrolled: boolean('is_enrolled').default(false),
+  maxReductionCapacity: numeric('max_reduction_capacity'), // kW
+  defaultParticipation: demandResponseParticipationEnum('default_participation').default('opt_in'),
+  autoResponseEnabled: boolean('auto_response_enabled').default(true),
+  notificationEmail: text('notification_email'),
+  notificationSms: text('notification_sms'),
+  notificationPush: boolean('notification_push').default(true),
+  minimumIncentiveThreshold: numeric('minimum_incentive_threshold'), // $ amount below which not to participate
+  devicePriorities: json('device_priorities'), // JSON describing which devices to adjust first
+  responseStrategy: json('response_strategy'), // JSON describing the strategy for responding to events
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const siteEventParticipations = pgTable('site_event_participations', {
+  id: serial('id').primaryKey(),
+  siteId: integer('site_id').references(() => sites.id).notNull(),
+  eventId: integer('event_id').references(() => demandResponseEvents.id).notNull(),
+  participationStatus: demandResponseParticipationEnum('participation_status').default('opt_in'),
+  baselineConsumption: numeric('baseline_consumption'), // kW
+  actualConsumption: numeric('actual_consumption'), // kW
+  reductionAchieved: numeric('reduction_achieved'), // kW
+  incentiveEarned: numeric('incentive_earned'), // $
+  incentiveStatus: text('incentive_status').default('pending'), // 'pending', 'approved', 'paid'
+  notes: text('notes'),
+  feedback: text('feedback'), // User feedback about the event
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const demandResponseActions = pgTable('demand_response_actions', {
+  id: serial('id').primaryKey(),
+  participationId: integer('participation_id').references(() => siteEventParticipations.id).notNull(),
+  deviceId: integer('device_id').references(() => devices.id).notNull(),
+  actionType: text('action_type').notNull(), // 'reduce_load', 'shift_load', 'turn_off', etc.
+  setPoint: numeric('set_point'), // Target setting (thermostat temp, power limit, etc.)
+  startTime: timestamp('start_time').notNull(),
+  endTime: timestamp('end_time').notNull(),
+  estimatedReduction: numeric('estimated_reduction'), // kW
+  actualReduction: numeric('actual_reduction'), // kW
+  status: text('status').default('scheduled'), // 'scheduled', 'in_progress', 'completed', 'failed'
+  errorMessage: text('error_message'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -339,6 +458,8 @@ export const sitesRelations = relations(sites, ({ many }) => ({
   energyReadings: many(energyReadings),
   energyForecasts: many(energyForecasts),
   weatherData: many(weatherData),
+  demandResponseSettings: many(siteDemandResponseSettings),
+  eventParticipations: many(siteEventParticipations),
 }));
 
 export const usersRelations = relations(users, ({ one }) => ({
@@ -458,6 +579,48 @@ export const weatherDataRelations = relations(weatherData, ({ one }) => ({
   site: one(sites, {
     fields: [weatherData.siteId],
     references: [sites.id],
+  }),
+}));
+
+export const demandResponseProgramsRelations = relations(demandResponsePrograms, ({ many }) => ({
+  events: many(demandResponseEvents),
+}));
+
+export const demandResponseEventsRelations = relations(demandResponseEvents, ({ one, many }) => ({
+  program: one(demandResponsePrograms, {
+    fields: [demandResponseEvents.programId],
+    references: [demandResponsePrograms.id],
+  }),
+  participations: many(siteEventParticipations),
+}));
+
+export const siteDemandResponseSettingsRelations = relations(siteDemandResponseSettings, ({ one }) => ({
+  site: one(sites, {
+    fields: [siteDemandResponseSettings.siteId],
+    references: [sites.id],
+  }),
+}));
+
+export const siteEventParticipationsRelations = relations(siteEventParticipations, ({ one, many }) => ({
+  site: one(sites, {
+    fields: [siteEventParticipations.siteId],
+    references: [sites.id],
+  }),
+  event: one(demandResponseEvents, {
+    fields: [siteEventParticipations.eventId],
+    references: [demandResponseEvents.id],
+  }),
+  actions: many(demandResponseActions),
+}));
+
+export const demandResponseActionsRelations = relations(demandResponseActions, ({ one }) => ({
+  participation: one(siteEventParticipations, {
+    fields: [demandResponseActions.participationId],
+    references: [siteEventParticipations.id],
+  }),
+  device: one(devices, {
+    fields: [demandResponseActions.deviceId],
+    references: [devices.id],
   }),
 }));
 
