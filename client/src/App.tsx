@@ -6,6 +6,7 @@ import Devices from "@/pages/Devices";
 import Analytics from "@/pages/Analytics";
 import Optimization from "@/pages/Optimization";
 import Settings from "@/pages/Settings";
+import Weather from "@/pages/Weather";
 import AuthPage from "@/pages/auth-page";
 import EmailVerificationPage from "@/pages/email-verification-page";
 import { useEffect } from "react";
@@ -19,6 +20,7 @@ function Router() {
       <ProtectedRoute path="/devices" component={Devices} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/optimization" component={Optimization} />
+      <ProtectedRoute path="/weather" component={Weather} />
       <ProtectedRoute path="/settings" component={Settings} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/verify-email" component={EmailVerificationPage} />

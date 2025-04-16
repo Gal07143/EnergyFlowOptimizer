@@ -316,7 +316,7 @@ class WeatherService {
     
     try {
       // Save to database
-      const [savedWeather] = await db.insert(weatherData).values(fallbackData).returning();
+      await db.insert(weatherData).values([fallbackData]);
       return fallbackData;
     } catch (error) {
       console.error('Error saving fallback weather data:', error);
