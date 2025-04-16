@@ -81,8 +81,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const site = await storage.createSite({
         name: 'Home Site',
         address: '123 Solar Avenue',
-        maxCapacity: 20,
-        gridConnectionPoint: 11,
+        maxCapacity: '20',
+        gridConnectionPoint: '11',
         timezone: 'UTC'
       });
       
