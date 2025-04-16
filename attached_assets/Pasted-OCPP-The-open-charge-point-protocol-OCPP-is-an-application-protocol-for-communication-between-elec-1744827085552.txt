@@ -1,0 +1,74 @@
+OCPP
+The open charge point protocol (OCPP) is an application protocol for communication between electric vehicle charging stations (EVCS) and complementary central management systems for EVCS. The protocol was originally developed by Joury de Reuver and Franc Buve and is now governed by the Open Charge Alliance – a non-profit organization based in the Netherlands. 
+
+With OCPP operators can monitor, control, configure and update EVCS and also handle payments and billing. The protocol is open, patent and royalty free. As of April 2023 the Open Charge Alliance lists 266 organizations from 45 different countries that promote the OCPP standard.
+
+Benefits
+Due to its widespread adoption, OCPP entails a range of benefits for individual stakeholders as well as the entire ecosystem. The protocol ensures interoperability between different EV charging stations, operators, and management systems, regardless of their manufacturer or software provider.
+
+OCPP includes security and safety features such as encryption, authentication and authorization to ensure that EV charging transactions are reliable.
+
+The protocol is an open and non-proprietary standard that promotes collaboration and innovation in the EV charging industry, making it easier for developers and manufacturers to create new products and services that work with existing systems.
+
+History
+In 2009 ElaadNL was founded by Dutch grid operators as they were looking to build up a charging network. In an effort to avoid dependence on a single vendor, the grid operators started developing an open information exchange protocol for EVCS and named it OCPP. The first version, OCPP 1.0, was first published in 2010. In 2013, the Dutch E-load Foundation, the American Greenlots and the Irish ESB started the Open Charge Alliance to guide the development of OCPP and promote the protocol globally.
+
+OCPP 1.2
+Designed to facilitate the communication between a charge point (CP) and a central management system OCPP has supported the following operations initiated between the CP and the central management system (CMS) ever since OCPP 1.2 was released in 2012:
+
+Authorize: The CMS sends a message to the CP to authorize a particular user to use the CP.
+Boot Notification: The CP sends a message to the CMS to inform it that it is online, share its configuration and signal that it is ready to receive messages.
+Diagnostics Status Notification: The CP sends a message to the CMS to inform it about its diagnostic status.
+Firmware Status Notification: The CP sends a message to the CMS to inform it about its firmware status.
+Heartbeat: The CP sends regular messages to the CMS to inform it that it is still online and functioning.
+Meter Values: The CP sends a message to the CMS to report the current meter values, such as the energy consumed and the time elapsed.
+Reset: The CP can be reset using this operation.
+Start/stop Transaction: The CMS sends a message to the CP to start a charging session for a particular vehicle.‍
+Status Notification: The CP sends a message to the CMS to inform it about its current status, such as whether it is available, busy, or unavailable.
+OCPP 1.5
+OCPP 1.5 was released later in 2012 and introduced further operations including:
+
+Data transfer: Allows the transfer of data not governed by the OCPP standard.
+Local lists: The CP maintains a list of authorized IDs. The CMS can edit this list.
+Reservations: The CMS can reserve a given CP for a specified time.
+OCPP 1.6
+In 2016, the Open Charge Alliance released OCPP 1.6 which is still the most widely used version of OCPP. The release extended the range of statuses. Furthermore, it added operations most notably in the field of smart charging:
+
+Charge profiles: The CMS can provide a profile for a given charging session defining the capacity available for charging at a given time.
+Load balancing: The CMS can control the capacity available for charging and is able to set a fixed limit.
+OCPP 2.0
+The Open Charge Alliance released OCPP 2.0 in 2018. It marked a shift away from the foundation of the previous OCPP versions and emphasized bi-directional communication between CP and CMS. The overhaul guarantees no backward compatibility and thus many chargers that support OCPP 1.6 do not support the 2.0 version. OCPP 2.0 introduced:
+
+Device management: Flexible configuration of the data collected for monitoring which allows for significant reductions in traffic.
+Display and messaging support: Allows the CMS to display messages such as price information on the EV’s display and provide users with additional information.
+Plug and charge: The ISO 15118 standard defines communication between EV and CP and facilitates the authorization of charging sessions.
+Transaction handling: One message type for all transaction-related operations instead of more than 10 different types.
+Setup
+
+OCPP primarily governs the bi-directional communication between a central management system and charging stations. Version 2.0, however, added support for some communication that extends to the charging vehicle.
+
+Implementation
+OCPP can be implemented in two ways:
+
+SOAP: Simple Object Access Protocol (SOAP) is a message protocol that enables the distributed elements of an application to communicate. The protocol relies on XML to exchange data. This can lead to large file sizes rendering the protocol suboptimal for charge point management. Moreover, the protocol requires both the CMS and the EVCS to act as servers and each EVCS is required to have a unique IP address – which means they cannot be group behind the same router.
+JSON: JavaScript Object Notation (JSON) is a data format.  The communication relies on HTTP requests and websockets for communication. The EVCS acts as the client and the CMS as the server.
+Certification
+The Open Charge Alliance operates an OCPP certification program for CPs and CMS. The alliance issues three different types of certificates:
+
+Full certificate: Covering all OCPP functionalities including core, firmware management, smart charging, reservation, list management and remote triggers.
+Subset certificate: Only mandates core functionalities – other OCPP operations are optional.
+Security certificate: Only focuses on the secure implementation of OCPP.
+The certification process is split into two parts:
+
+Conformance tests: The device/system under test is tested against the OCPP Compliance Testing Tool. The tool validates whether the test subject has correctly implemented the OCPP protocol.
+Performance measurement: The test measures how the device/system behaves in a lab setup. The results are summarized in the protocol implementation conformance statement.
+OSCP
+In 2015 the Open Charge Alliance introduced the Open Smart Charging Protocol (OSCP).  The OSCP is designed to communicate predictions on the locally available capacity and enable charge management systems to fit charge profiles to those predicted availabilities. Specifically, the protocol was designed for distribution system operators to communicate capacity.
+
+OSCP 2.0, released in 2020, shifted the focus away from EVs and instead used more generic terms to include other distributed energy resources (DERs) such as photovoltaic (PV) systems, batteries and heat pumps. Moreover, it now also supports forecasts for generation and consumption.
+
+OCPI
+The Open Charge Point Interface (OCPI) is an open protocol maintained by the EVRoaming Foundation. The protocol aims to standardize the communication between charge point operators and service providers. Thereby, it eases roaming for EV drivers by unifying access to chargers by different operators. It supports the communication of CP location, accessibility and pricing.
+
+Trivia
+OCPP is mandated in South Korea and California to receive public funding for charging infrastructure (ElaadNL).

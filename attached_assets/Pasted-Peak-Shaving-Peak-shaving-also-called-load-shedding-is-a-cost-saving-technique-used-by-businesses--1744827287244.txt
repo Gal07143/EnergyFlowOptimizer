@@ -1,0 +1,90 @@
+Peak Shaving
+Peak shaving, also called load shedding, is a cost-saving technique used by businesses to reduce electricity expenses by minimizing peak electricity demand, thereby lowering demand charges.
+
+What is peak shaving?
+Peak shaving, also called load shedding or peak load shaving, is a strategy employed by businesses to trim down their electricity expenses. It is particularly useful in cutting costly demand charges, otherwise known as capacity charges or capacity tariffs. The maximum peak load of electricity consumed determines these capacity charges, which make up a substantial portion of the utility bill.
+
+To reduce these charges, businesses and other large electricity consumers proactively manage their energy usage to minimize short-term spikes in demand. They can effectively shave the peaks by smoothing out their electricity consumption patterns, leading to lower demand charges and significant cost savings.
+
+Why is it necessary?
+why is peak shaving important?
+Many companies have a high energy demand for core activities, such as charging electric vehicles, starting heavy machinery, heating boilers, or operating heat pumps. Commercial and industrial businesses track these consumption surges using a registered load profile, in Germany the Registrierte Leistungsmessung (RLM), which transmits data every 15 minutes.
+
+Unfortunately, these peak loads are detrimental as they lead to increased energy costs and an unstable grid. That’s why load management, such as peak shaving, becomes vital for reducing or avoiding these costly peak loads and their corresponding capacity charges.
+
+What’s the difference between peak shaving and load shifting?
+What’s the difference between peak shaving and load shifting? 
+Peak shaving involves briefly reducing power consumption to prevent spikes. This is achieved by either scaling down production or sourcing additional electricity from local power sources, such as a rooftop photovoltaic (PV) system, batteries or even bidirectional electric vehicles.
+
+On the other hand, load shifting is a tactic where electricity consumption is temporarily reduced and transferred to periods with  lower power prices or grid demand. This is usually suitable for flexible loads that can easily be shifted without affecting operation, such as charging electric vehicles.
+
+How does peak shaving work?  
+Peak shaving can be done through demand-side management or supply-side management. 
+Peak shaving can be done through demand-side management or supply-side management.
+
+The objective of demand-side management is to curtail demand by implementing various strategies. For instance, in the e-mobility use case, an energy management system can automatically limit the power allocated to electric vehicle charging infrastructure. In industrial scenarios, unused or unnecessary heavy machinery can be deactivated.
+
+Supply-side management involves leveraging local power sources to decrease reliance on the electrical grid during peak periods. Integrating energy sources, such as PV systems, batteries or fuel cells, is crucial to enable this. Fossil fuel-powered sources, such as backup generators, can also do the job, but with many more emissions.
+
+Demand- and supply-side management can be applied separately or in tandem. All methods reduce the load at the grid connection point, thereby successfully shaving peaks.
+
+The benefits of peak shaving
+What are the benefits of peak shaving
+Example of an optimized power flow respecting capacity limits
+Lowering grid fees via the 15-minute optimization is the primary benefit of peak shaving. gridX’s peak shaver module optimizes charging events and minimizes fees by shaving peak loads.
+
+The peak shaver algorithm incorporates daily forecasts of local production and consumption and measures in15-minute intervals, which Distribution System Operators (DSO) use to bill peak power consumption. Within the optimization interval, the real-time residual and building load is considered and the power demand of each connected device is dynamically adjusted accordingly.
+
+“The cost-relevant value defining the peak load maximum is based on the average power value for a 15-minute interval. Optimizing power flows during each 15-minute time window therefore minimizes grid fees. The algorithm takes advantage of this flexibility and manages power flows to maximize self-sufficiency, while maintaining the 15-minute average capacity limit and assets’ physical limits,” says Carsten Schäfer, Senior Product Manager at gridX.
+
+“Actual measurements from PV production, electric vehicle charging station (EVCS) power and power flow at the grid connection point (via a smart meter) are continuously accounted for and compared with the average of the current time window. If there is still potential, the charging power is increased temporarily without influencing the capacity limit,” Schäfer adds.
+
+By maintaining steady loads, grid operators can reduce costs. Operators typically determine long-term pricing based on the highest peak within a specific time frame, meaning a single 15-minute period with exceptionally high power demand can establish prices for an entire year.
+
+According to Akash Roshan – Product Manager at gridX – large consumers with >100,000 kWh consumption per year in Germany face a different grid fee model. In addition to the base fee and fee per kWh, they encounter a capacity tariff linked to their peak consumption.
+
+“This highlights the importance of understanding and managing peak power demand for businesses, as it directly impacts their financial obligations pertaining to the energy grid,” adds Roshan. As a result, consumers are often encouraged to adopt peak shaving practices.
+
+Best peak shaving practices
+Evaluate the load profile
+Analyzing the load profile of a site reveals the electricity consumption patterns over time. The precise amount and timing of peak shaving can then be identified based on historical data. Load variability, which indicates the magnitude of demand fluctuations throughout the day, must also be considered. Sites with higher load variability must  leverage a flexible and smart energy management system.
+
+Pick the right energy storage tech
+
+Electric vehicles can be used as a battery storage
+Although an energy storage system is not a prerequisite to shave peaks, it is ideal from a supply-side management side. Cost, performance, life span, safety and environmental impact are some of the variables to factor in when choosing the right energy storage tech.
+
+Batteries are the most popular option for home and small-scale operations due to their versatility and ease of installation; hydrogen storage via electrolysis is increasingly popular for industrial use cases or smart districts and thermal storage is an emerging field that has strong potential.
+
+TIP: EV owners can increase self-sufficiency using their EV as a battery storage.
+
+Define your objectives
+Peak shaving can be configured to achieve different objectives. As such, operators must first set their priorities, whether that is minimizing electricity costs, maximizing grid stability or minimizing emissions. This then defines the logic used in the energy management system's control strategy.
+
+This would then determine, for example, if scheduled control or predictive control is used. Scheduled control adheres to a predetermined charging and discharging schedule based on a site's load profile and tariff structure. Predictive control, on the other hand, uses historical and real-time data, as well as load and grid forecasts to optimize charging and discharging.
+
+Regardless of the specific objectives, all energy assets in the system will be monitored and controlled in real time and loads optimized according to user-defined peak thresholds.
+
+In practice
+The benefits of peak shaving are apparent at sites with significant flexible loads. Consider a prevalent use case: electric vehicle (EV) charging.
+
+Sample peak shaving calculation
+sample calculation and saving breakdown for peak shaving
+User dashboard with the savings KPI Tile
+‍
+
+As previously mentioned, grid operators base their fees on a site’s highest peaks, even if they occur rarely. Our calculations of a high power charging site show that all charge points are utilized for an average of just 11 minutes per day. Yet because grid connections are built for the peaks, this period would set the price.
+
+If a site with six DC chargers, each 150 kilowatts (kW), were to have the rare case of six EVs all charging at the same time, the maximum demand charge that grid operators would charge the site for electricity usage would be 900 kW. Assuming a price of €80/kW, this would result in maximum demand charge of €72,000.
+
+A peak shaving algorithm, however, could reduce the power delivered to each charge point to 100 kW (still plenty of power to ensure they receive their desired charge). Thereby, it could reduce the demand charge by one-third to 600 kW, or €48,000.
+
+As such, EVs can be charged to their maximum power within reduced grid limits so that Charge Point Operators (CPOs) can reduce their power usage fees by around one-third.
+
+High power charging case study
+Fastned is a fast charging operator with charge points of up to 350 kW that provide electric cars up to 300km of range in just 15 minutes. Although convenient, such huge loads threaten to increase grid fees significantly. To minimize their power usage and fees, while ensuring that drivers always receive their desired charge, Fastned leveraged peak shaving on our  XENON platform. This ensures that power is intelligently distributed amongst the charge points to minimize peaks, and with it power usage fees, without compromising user comfort.
+
+The future of peak shaving
+Peak shaving is increasing in popularity not only due to the significant financial wins  it enables, but also due to changing energy regulation.  While it is currently primarily a tool for businesses, this may soon be extended to private households. In Austria, for example, the proposed implementation of grid capacity tariffs for private households indicates a commitment to managing power peaks and optimizing electricity usage. It will be important to monitor the progress of the corresponding legal amendment and assess its potential implications for consumers and the electricity grid.
+
+Meanwhile, in Germany, the new paragraph § 14a in the Energy Industry Act (EnWG)  will provide an additional incentive for operators to act in a grid-optimized way and shift their energy consumption to lower demand periods. This measure is designed to encourage a more stable grid through methods like peak shaving.

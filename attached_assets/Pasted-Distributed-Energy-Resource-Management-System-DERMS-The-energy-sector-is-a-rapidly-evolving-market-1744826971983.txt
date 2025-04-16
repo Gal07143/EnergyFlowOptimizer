@@ -1,0 +1,52 @@
+Distributed Energy Resource Management System (DERMS)
+The energy sector is a rapidly evolving market. The need to decarbonize, couple electrifying sectors (heat and mobility) and meet prosumer’s desire to produce and control their own energy generation and consumption is driving the rise of distributed energy resources (DERs). DERs have thus firmly established themselves as a fundamental part of clean energy systems.
+
+DERs are small-scale energy assets that generate, store or consume energy, most commonly consisting of photovoltaic (PV) systems, electric vehicle charging stations (EVCS), batteries and heat pumps. Connecting different assets to each other and to the grid is immensely challenging as there are a range of manufacturers, protocols and systems that typically do not communicate with each other. They must be interconnected to properly utilize every assets’ full potential. Leveraging the Internet of Things (IoT) technologies makes this seamless communication between the grid and DERs possible. 
+
+
+One way to manage DERs is via a distributed energy resource management system (DERMS). A DERMS is a combination of hardware and software that allows real-time communication and control of multiple DERS. The management system is a foundational step that enables other smart grid concepts, such as virtual power plants (VPPs). Such advanced use cases increase flexibility in decentralized energy systems to enable a more seamless and holistic integration of renewable electricity-generation assets and electricity-consuming assets. The exponential rise of DERs is making balancing supply and demand increasingly important, making DERMS solutions more crucial. 
+
+A distributed energy resource management system usually includes the following capabilities:
+
+Monitoring and visualization of all integrated DERs, including their operating behavior, device status and energy flows
+Forecasting of consumption patterns and weather and integrating these forecasts to optimize supply and demand
+The ability to control device behavior according to individual needs, often via management dashboards
+Using external control signals to optimize DER usage according to the needs of the grid
+Access to live and historical data views, as well as reports and data exports
+Distributed energy resource management system dashboard
+Distributed energy resource management system dashboard
+Evolution of DERMS
+Energy systems are undergoing a radical transformation from a linear supply chain with centralized production to a complex system containing both centralized and decentralized assets. Passive distribution networks are evolving to become active and dynamic distribution systems. The rise of small-scale DERs arouses the need for flexible and efficient demand-side management. Within this context, sector coupling has gained more traction, where different energy sectors are integrated and coordinated with each other to facilitate a more interconnected and efficient use of resources. This highlights that management of all rising DERs becomes increasingly important. DERMS can be split into two main groups: 
+
+Gateway DERMS are systems in which a local IoT gateway is installed on-site that connects assets and optimizes energy flows locally. This guarantees consistently low latency, offline capabilities, the optimization of multiple assets in real time, adaptability via over-the-air updates and more precise data analysis.
+
+Cloud-based DERMS connect, monitor and control assets via the cloud using APIs. A cloud-based DERMS removes the need for local installation, leading to easy commissioning and high cost-efficiency. However, there is also high maintenance and risk involved and more complex use case cases are not possible.
+
+Distributed energy resource management system gateway
+Difference between DERMS and VPPs
+VPPs and DERMS are both aggregations of power generating and storing assets that are linked in one centralized unit. But the concepts operate at different scales and focus on distinct aspects of distributed energy resource management. 
+
+A DERMS serves as the operating system that makes a virtual power plant possible. Its focus is holistic optimization of each connected asset and the grid on a local level. Cloud-based DERMS can have a wider scope but the focus is still optimization of power flows. 
+
+A VPP, on the other hand, focuses on the aspects of grid stabilization and flexibility that can be traded on energy markets. It is not dependent on location and rather focuses on load/demand management of the entire aggregated portfolio.
+
+Distributed energy resource management system versus virtual power plant
+DERMS Vs VPP
+Benefits of a DERMS for energy companies
+Visibility and transparency of each connected asset and its power consumption, generation or storage behavior
+Lower costs due to minimized grid extensions, lower grid tariffs and maximized performance of each asset
+Reduced carbon emissions due to maximization of locally-produced power
+Grid stabilization due to better demand-side management
+Increased self-sufficiency, scalability of clean energy projects and cost-efficiency
+Robust operations and increased agility with extendible digital solutions
+Reduced complexity with a holistic approach and single interface
+Increased profits by tapping into new and future-proof revenue streams
+Benefits of a distributed energy resource management system
+Use cases
+DERMS can be applied to a variety of use cases, such as : 
+
+Home Energy Management Systems (HEMS): monitoring and controlling all energy assets within a household to reduce costs, maximize seld-sufficiency and minimize emissions.
+EV charging: dynamic load management (DLM) evenly distributes power among multiple EV chargers in real time to ensure that each car receives its desired state of charge, while never breaching grid capacity limits. 
+Dynamic tariffs: power flows can be optimized and energy costs minimized by using energy price forecasting and integrating tariffs via open market APIs.
+Smart districts: assets of multiple energy forms are collectively managed, and energy flows are optimized across multipl buildings and sectors.
+A distributed energy resource management system plays a crucial role in enabling a diverse range of sophisticated and modern applications. By empowering the seamless integration and coordination of these cutting-edge technologies, DERMS acts as the first step to future clean energy use cases.

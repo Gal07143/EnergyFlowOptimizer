@@ -1,0 +1,73 @@
+Feed-in tariff
+A feed-in tariff offers a fixed price for each unit of renewable energy fed into the grid to promote the use of renewable solutions. This makes them a central tool for promoting the energy transition.
+
+What is a feed-in tariff?
+Feed-in tariffs (FITs) are policy tools that pay renewable energy providers a fixed price for each unit of generated (renewable) energy that is fed into the electricity grid. These contracts are often fixed for a certain period of time, which in most cases is related to the expected economic lifetime of the renewable energy project. 
+
+How does feed-in tariff work?
+How does feed-in tariff work?
+A feed-in tariff differs from country to country, but anyone who produces renewable energy could be eligible for it. In Germany, it is dependent on the scale of your photovoltaic (PV) system – up to 100 kilowatt peaks (kWp) is eligible for feed-in tariffs. The feed-in tariff (FIT) scheme includes homeowners, business owners or private investors. Technologies that can apply for the accreditation are solutions such as PV systems, wind and micro combined heat and power units (micro CHP). According to analysis and reports of organizations such as the International Energy Agency (IEA) and the European Commission, feed-in tariffs are amongst the most effective mechanisms in order to promote renewable energy. 
+
+In Europe, FITs were a central part of achieving the renewable energy roll-out targets set out in EU directives under the EU Climate and Energy Package (CARE) and following frameworks. By the 2010s, many European countries had introduced FIT schemes, which brought about a significant increase in renewable energy capacity. As of now, feed-in tariffs have been proven to be effective in increasing renewable energy adoption in countries such as Germany, Spain, the United Kingdom and France. 
+
+‍
+
+Feed-in tariff regulation in Europe 
+Feed-in tariff regulation in Europe 
+The setting and regulations of feed-in tariffs vary across Europe. Let’s take a look at some examples: 
+
+Germany: Renewable Energy Act 
+The German Renewable Energy Act (Erneuerbare Energie Gesetz, EEG) has driven a noticeable increase in renewable energy. The feed-in tariff encouraged decentralized, community-led energy projects and progress. Despite criticisms such as rising electricity prices and unequal cost distribution, the EEG has significantly lowered the cost of renewable energy and positioned wind and solar energy as cost-effective sources. Under the EEG, as mentioned before, up to 100 kWp are eligible for FITS for 20 years. Energy producers have to feed the generated electricity into the grid but are prohibited from participating in the energy market with their subsidized plant. 
+
+United Kingdom: FIT scheme closure and SEG introduction
+The UK's FIT scheme, introduced in 2010, provided payments for small-scale renewable energy installations. It was closed to new applicants in 2019 and replaced by the Smart Export Guarantee (SEG), which means that suppliers have to pay for electricity exported to the grid, but without a price guarantee. Despite applications for the scheme ending in 2019, participants will continue to receive payments.
+
+France: Tarifs d’achat for wind and solar energy 
+In France, renewable energies are incentivized through the FIT and the feed-in premium (FIP). Under the FIT, the French electricity supplier EDF (Électricité de France) and the local distribution companies (LDOs) have to buy electricity from renewable sources at  certain rates, such as the Tarifs d’achat. These are purchase tariffs, typically higher than market prices, to incentivize investment in renewable sources. Under the FIP, the producers sell the electricity from renewable sources and receive additional payment from EDF or the LDOs. Both systems are financed by the contribution to the public electricity supply service (CSPE), which is paid by end consumers. Small plants can choose between FIT and FIP, while large plants must participate in tenders to qualify for FIP. To participate in the feed-in tariff scheme,installations must be below 12 megawatt (MW) and the contracts last from 15 to 20 years. Installations over MW can participate in the tenders. 
+
+Spain: From FIT scheme to auctions
+In September 2002, Spain was the first European country to introduce a feed-in tariff for solar thermal electricity, offering a premium of €0.12 per kWh for systems between 100 kW and 50 MW. However, this amount was not the right amount for the first projects and the tariffs were later adjusted for building-integrated systems (0.34€/kWh for systems up to 20 kW) and non-integrated systems (0.32€/kWh for up to 10 MW). Eventually, due to high costs and market saturation, Spain replaced FITs with auctions for new renewable energy projects.
+
+Italy: Conto Energia and beyond
+In Italy, the Conto Energia program offered feed-in tariffs for photovoltaic systems from 2005 to 2013, helping to promote the rapid expansion of solar energy. Due to high costs, the program was closed in 2013 and Italy has since then shifted to solutions such as Scambio Sul Posto (net metering) and tax deductions to encourage self-consumption. More recently, large-scale projects have been subsidized by auctions and contracts for difference, while smaller units benefit from incentives. To participate in the FIT scheme, photovoltaic systems need to oblige the Tradable Green Certificates (TGC). These certificates are issued during the first eight years of the installation's operation.
+
+Challenges and limitations of feed-in tariffs
+While a feed-in tariff is a great tool to incentivize renewable energy usage, there are also some challenges: 
+
+Market risks and policy changes
+Within the feed-in tariff scheme, setting the right tariff rate is a challenging process that demands reliable data on the costs of renewable energy. If the tariffs are set too low, they will not encourage investments. If they are set too high, this can result in overcompensation and increase the cost of public support. Political influence and limited transparency lead to uncertainty for both investors and policy makers, which makes the scheme vulnerable to market risks and inefficiencies.  
+
+Tariff rates declining over time
+To conquer the challenge of declining tariff rates, the FIT schemes are often designed with degression mechanisms, in which tariffs decrease at fixed periods, based on a general rule on the expected reduction in technology costs. These rates aim to support efficiency and cost reductions. But without frequent and precise updates, the rates might not match the real time market conditions or the technology cost reductions. Thus keeping the data close to real time conditions is challenging. 
+
+Feed-in tariffs in evolving energy markets 
+Challenges and limitations of feed-in tariffs
+Feed-in tariff schemes without a dynamic regression mechanism may have difficulties to efficiently integrate renewable energy sources such as distributed energy resources (DER) into the evolving energy market. While costs are decreasing for some technologies, the system may not be reacting quickly enough to market price signals and providing incentives that are aligned with them. While degression mechanisms are designed to help adjust to cost reductions, they may not always adapt properly to the pace of market change, and some energy producers could thus face unfavorable conditions over time. Further, the static nature of feed-in tariffs make it difficult to link to market and grid conditions as the system might encourage feed-ins simply for remuneration. This could lead to an excess of electricity fed into the grid, for example, in times of heightened PV production during low demand.
+
+Upcoming changes to the FIT scheme
+The European Union's Fit for 55 package and the updated Renewable Energy Directive (RED III) will affect amendments to FIT systems across Europe. Upcoming changes include:
+
+Increased market integration: 
+The Fit for 55 package foresees an increase in market integration in which renewable energy providers should participate more directly in market driven mechanisms, instead of focusing on feed-in tariffs. By pushing the renewable energy integration into a more competitive market framework, the EU aims to create more competition and a more efficient pricing system. 
+
+Dynamic Tariff structures
+In line with the goals for the EU renewable energy package is the introduction of time-dependent (time-of-use) and location-dependent pricing tariffs which are based on grid congestion and demand patterns. As renewable energy resources tend to be intermittent in nature, demand and supply orientated energy management is crucial to maintain a high share of renewables while also optimizing the energy usage and price signals. Prioritizing these time and location dependent signals for both consumption and generation will be a crucial part to ensure grid balance while integrating more renewables into the energy system.
+
+Flexibility incentives
+Flexibility plays an important role in the EU’s aims to build a renewable energy infrastructure. Being flexible means that producers are able to adjust their energy output based on grid-requirements. By doing so, more renewable energy can be integrated into the grid without causing congestions and instabilities within the system. 
+
+Benefits of feed-in tariffs 
+Feed-in tariffs offer energy producers secure revenue streams through long-term, government-guaranteed contracts that ensure transparency, reliability and security for investors. This reduces investment risks and financing costs and allows for a faster return on investment for solar and wind power plants. Feed-in tariffs also help decentralize the grid and encourage energy independence by supporting the inclusion of small and medium-sized renewable energy producers. Because they are revenue-based, FITs provide incentives for producers to maximize renewable electricity generation, leading to steady and stable market development, promotion of less developed renewable energy technologies and larger regional benefits.
+
+How energy management systems maximize FIT benefits
+
+Energy management systems (EMS) are important to ensure that the full benefits of evolving FITS are realized. An EMS helps to optimize power generation, consumption and demand using real-time data and foresight analysis. By intelligently balancing energy generation and consumption, an EMS can maximize self-sufficiency while minimizing costs for prosumers. Through the integration of real-time data from smart meters and the prediction of future load and generation patterns, the EMS allows households and businesses to take advantage of dynamic tariffs and fluctuating electricity prices. This flexibility supports efficient energy use, such as charging electric vehicles when costs are low or prioritizing self-consumption when market prices are high. In addition, an EMS helps to improve grid integration by providing real-time feed-in data and making it easier to market surplus energy directly, reducing dependence on traditional feed-in tariffs and generating higher revenues for renewable energy producers while simultaneously enabling systems to behave in a grid-friendly manner that only feeds energy into the grid, if it is needed.
+
+Expert insights on the future of feed-in tariffs in Europe
+Feed-in tariffs remain a crucial element of renewable energy strategy, even though their forms and applications are becoming more diverse in Europe. Adapting to these changes through advanced technologies and market strategies is important for both producers and consumers. At gridX, we consider a dynamic approach to feed-in tariffs to ensure that the system can adapt to changing market conditions and grid requirements. While traditional feed-in tariffs ensure that surplus energy is fed into the grid, they lack a feedback mechanism that incentivizes grid-friendly behavior. By combining dynamic tariffs with an energy management system, the feed-in of energy is only encouraged when it is actually needed and feed-in is curtailed when demand is low or negative - thus avoiding situations where producers have to pay for their energy. In Germany, for example, the direct marketing system allows PV operators to sell surplus energy directly on the market. However, frequent negative prices for the feed-in tariff can lead to potential financial loss for small producers. Instruments such as PV curtailment can address these issues by automatically reducing production when feed-in prices turn negative and balancing production with grid demand in real time.
+
+While dynamic FITs are a good way to introduce a feedback mechanism, they do not address the challenges of the regional grid. As transportation capacity in Germany is limited, situations can occur where there is a surplus of energy in the north while demand in the south continues. The challenge is that Germany operates with a single dynamic feed-in price for the entire country. Therefore, time-variable or dynamic tariffs must be set by the regional distribution system operators (DSOs). These operators are also able to limit feed-in or generate by sending control signals via the smart metering infrastructure, similar to the arrangements in paragraph 14a of the Energy Industry Act. Such control signals can limit a system if the DSO expects problems with over-feeding – in the case of PV systems, for example, this could mean PV curtailment. 
+
+Irene Guerra Gil, Energy Market Expert at gridX states that:
+
+“Static feed-in tariffs have proven to be instrumental in driving renewable adoption, but their lack of feedback mechanisms increasingly challenges grid stability and market efficiency. By integrating dynamic feed-in tariffs, regional grid fees and steering signals, we can transform small-scale renewable installations into proactive, grid-friendly participants. Home energy management systems (HEMS) will play a critical role in automating these interactions, reducing grid stress, and enabling a smarter, more resilient energy system that benefits all stakeholders.”

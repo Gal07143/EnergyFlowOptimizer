@@ -1,0 +1,51 @@
+Kilowatt and kilowatt-hour
+Kilowatt (kW) is a measure of power equal to 1000 watts (W), while kilowatt hour (kWh) is a measure of energy.
+
+In concrete terms, this means that  kilowatt refers to the rate at which a device generates or uses energy at a particular point in time. Kilowatt hour, on the other hand, measures the total amount of electricity used, or the capacity to use it. 
+
+A battery’s capacity, for example, is measured in kWh, while the power of a charging station or a light bulb is measured in kW. Whether you’ve made the switch to an electric car, have taken more interest in your energy bill or you’re working in the energy industry, understanding the distinction between the two terms is crucial. Let’s take a step back and first look at the difference between power and energy.
+
+Difference between power and energy
+It is important to understand the difference because, for example, utilities charge for energy consumption in kWh, but peak power demand in kW. 
+
+Energy can be described as the capacity or ability to create a change, while power is how quickly energy is used or transmitted. In mathematical terms, power is the amount of energy divided by the time it takes to use the energy. Below are some real-life examples of electrical loads with low wattage versus higher wattage.
+
+Low wattage: If you are using a 100-watt device, such as an LED TV, you would have to watch shows on the television for 10 hours to reach 1 kWh of energy consumption.
+High wattage: If you are running a 2,000-watt appliance, such as an electric stove, you only need to cook for 30 minutes to reach 1 kWh.
+
+Power (kW) versus Energy (kWh)
+Why is it important to understand the difference between kW and kWh?
+The difference becomes more important to understand when we look at energy assets that consume or store larger amounts of power, such as a heat pump, battery or electric vehicle charger. At the same time, it is also valuable to understand the difference when looking at your (or your sites’) energy bill. 
+
+Energy bill: How to measure energy consumption and demand
+Energy providers charge for energy consumption in kWh but power demand (or demand charges/grid fees) are in kW. So while energy charges are determined by total energy usage over a billing cycle (for example, in households), demand charges for commercial or industrial sites are based on the intensity of power required at a specific moment, or the highest rate of power consumption during peak periods. Demand charges, or grid fees, increase as certain thresholds increase in order to cover the costs of operating a higher grid capacity. Grid operators usually charge during 15-minute intervals, which is why peak shaving within these periods is so crucial to keep demand changes (kW) to a minimum. 
+
+Electric vehicles
+Electric vehicles (EV) measure their charge and discharge in kW but the amount of energy stored within them is measured in kWh.
+
+When looking at EV charging, EV chargers are sized in kW. A high power charging EV charging station has a power of over 100 kW, while an average charge point (CP) delivers up to 22 kW of power. The amount of time an EV is charged with a specific power determines the energy delivered to the EV battery in kWh. This is why the capacity of an electric vehicle is usually measured in kWh, the average of which today is about 72.5 kWh. The consumption rate of electric vehicles, however, is measured in watt hour per kilometer (Wh/km) and varies depending on the size and make of the car, as well as the driving and road conditions, weather, speed, number of passengers etc. The lower the consumption rate, the more efficient the car. 
+
+A 2023 Tesla Model S, for example, has a battery capacity of 100 kWh and an average consumption rate (or efficiency) of 175 Wh/km.  This can be calculated as such:
+
+100 kWh x 1,000 = 100,000 Wh
+
+100,000 Wh/175 Wh/km = 571.43 km range
+
+This gives the vehicle a range of around 571 kilometers of range. 
+
+Charging a Tesla Model S with an 11 kW charger would take around 10 hours, while a 250 kW CP could charge it fully within 30 minutes.
+
+Batteries
+Residential battery energy storage systems (BESS) follow the same principle in that storage capacity is measured in kWh but power capacity is measured in kW. The home battery sonnenCore, for example, has a nominal power rating of 4.8 kW (meaning this much power can be charged or discharged from the battery at any given point in time) and a usable storage capacity of 10 kWh. The state of charge (SoC) of a battery shows the percentage of energy stored in the system relative to its full capacity (i.e. if the sonnenCore has a SoC of 50%, we can assume that around 5 kWh of energy is stored in the battery). 
+
+Heat pumps
+The energy consumption of a heat pump is measured in kWh, which represents the amount of energy the heating device consumed over a specific period of time. Lower consumption equates to cheaper running costs. The power rating (kW) determines the size of the heat pump required for the specific space that is to be heated. For example, a 6 kW heat pump would, on average, be able to heat a room that is around 40 square meters, depending also on insulation, windows and other factors. Heat pumps can also be measured according to their coefficient of performance.
+
+Photovoltaic systems and kilowatt peak (kWp)
+The nameplate rating of solar PV modules (also known as the peak output capacity) is measured in kilowatt peak (kWp). This shows the peak power of a PV system, or the rate at which they generate peak performance. During operation, solar PV panels convert the sun’s radiance into electrical energy, which is then measured in kWh. A PV panel with a peak power of 10 kWp working at maximum capacity (when the panels receive complete sunlight in ideal conditions) for one hour will produce 10 kWh. The actual power delivered to the load by a PV system is measured in kW, which means this can then be used to power a 10 kW device for one hour or a 5 kW device for 2 hours. The system’s actual power output will fluctuate heavily throughout the day depending on cloud cover and other factors.
+
+Watts, megawatts and gigawatts
+Put simply: kilowatts are one measurement for power and kilowatt hours are one measurement for consumption. The same principles above also apply to watts (W), megawatts (MW), gigawatts (GW) and terawatt hours (TW), as well as their counterparts: watt hours (Wh), megawatt hours (MWh), gigawatt hours (GWh) and terawatt hours (TWh). Below is a table of the different measurements:
+
+
+Kilowatt, Megawatt, Gigawatt and Terawatt

@@ -1,0 +1,114 @@
+In energy, milliseconds can define success or failure for both service providers and end users, making the balance between availability, scalability and affordability essential for smart energy management systems (EMS). With the number of distributed energy resources (DERs) expected to grow exponentially in the coming years, smart EMS solutions will play an increasingly critical role in managing this complexity. EMS enables service providers to integrate, optimize and expand their offerings while supporting the transition to a greener, more efficient energy system. If these systems can’t scale seamlessly, remain affordable or guarantee maximum availability without the fear of connection disruption, energy service providers face challenges in building a viable business case – potentially slowing the broader adoption of renewable technologies.
+
+Huge potential in smart energy management systems
+As stated in our 2023 HEMS Report, the demand for EMS will continue to grow as consumers increasingly embrace electric assets like EVs and heat pumps that offer energy savings and environmental benefits. With Europe’s ambitious 2030 and 2050 climate targets, coupled with the pressing need to address high energy costs and growing energy security concerns, the adoption of home energy management systems (HEMS) to accompany small scale renewable energy assets is expected to surge. 
+
+Emphasizing this further, a recent report by Global Market Insights shows that the worldwide HEMS market was valued at €5.5 bn in 2024. It’s estimated to grow to €11.6 bn by 2034. Europe also added 65.5 GW of solar capacity in 2024, bringing the total installed capacity to 338 GW – a significant step toward its 2030 solar target of 750 GW. At the same time, energy storage capacity is rapidly expanding, with Germany alone achieving nearly 16 GWh of installed storage capacity by mid-2024, encompassing home, commercial and large-scale systems. The sale of electric vehicles likewise grew, although not as much as previous predications would have hoped for. In 2024, nearly 1.8 million fully battery-electric vehicles were sold, accounting for 13.6% of total car sales. 
+
+And the cornerstone of not only the growth of distributed energy resources (DERs), but also the key to maximizing the financial, environmental and energy benefits that accompany them? Integrated HEMS solutions. 
+
+The growing adoption of solar power, energy storage and EVs provides an ideal ecosystem for smart EMSs to flourish, ensuring renewable energy is utilized efficiently and effectively. We’re not saying that the goals of the Paris Agreement rest entirely on smart energy management’s shoulders, but it’s holding a lot of weight. Maintaining the balance between these three pillars – availability, scalability and affordability – is the key to driving faster, more future-proof EMS adoption, supporting DER integration and accelerating the energy transition.
+
+
+The global HEMS market may more than double in the next decade
+The balancing act: Availability, scalability and affordability
+Balancing availability, scalability and affordability in energy management requires careful consideration of each pillar. Availability is essential as it directly impacts an EMS’s ability to optimize energy consumption. For example, when an EMS is unavailable – meaning the connection is offline or lagging, even for a minute – it cannot make the real-time adjustments needed to align with forecasts, market signals or grid conditions. (In the case of gridX’s XENON, our EMS’s local gateway allows the system to still operate and optimize offline for limited periods, but with lower accuracy.) This can then lead to higher costs for providers and end users, plus missed opportunities to reduce peak loads, which poses a risk to grid stability. A dependable EMS allows energy providers to enhance savings and build customer trust, while end users benefit from consistent performance and lower energy bills.
+
+
+This balancing act ensures our EMS allows energy service providers to build resilient systems
+Scalability and affordability must also work in harmony with availability. Scalability enables energy service providers to expand their offerings and manage more energy assets without disruptions, driving profitability and supporting the energy transition through seamless integration of new devices like EVs and heat pumps. Affordability ensures that the system remains sustainable and accessible, achieved through continuous optimization and decoupling infrastructure costs from growth. Balancing these three pillars ensures that the EMS delivers reliable, scalable and cost-effective solutions to meet the needs of energy providers and their customers.
+
+Stability and scalability are non-negotiable in a growing energy market where time costs not only money, but also the environment.” – Marcel Müller, Director of Engineering, gridX
+Ensuring high availability: Delivering 99.998% uptime
+High availability is crucial for energy service providers, as their reputation relies on the reliability of the EMS they offer to their customers. Providers need confidence that the system will deliver the promised uptime; otherwise, dissatisfied end users may switch to more reliable providers. A dependable EMS ensures smooth energy optimization, builds long-term trust and solidifies customer satisfaction. gridX delivers industry-leading availability with a 99.998% uptime, equating to less than one minute of downtime per month.
+
+
+gridX’s utilizes three different data centers to guarantee there is never a disruption in service
+In addition to uptime, latency (the time required to process a request) is also an important factor. Typically, latency is presented in percentiles, such as “p99” for the 99th percentile. A “p99 latency of 500 ms” means that 99% of all requests finished faster than 500 milliseconds. Current metrics from the gridX API for January 8 – 9, 2025, show a p99 latency of 228 ms and a p95 latency of 45 ms.
+
+Surges in traffic against certain parts of the API occur every 15 minutes due to energy market and optimization cycles, which align with the intervals at which price signals and forecast data are checked. These intervals ensure that the system's optimization schedule – designed to balance forecasted energy demand and market prices – remains effective and up-to-date. Even during these high-demand periods, a smart energy management system will ensure stable performance and latency, allowing energy service providers to consistently offer reliable services to customers. This robust architecture guarantees that optimization processes proceed seamlessly without interruptions, maintaining both system integrity and customer trust.
+
+To put things into perspective, the current availability of 99.998%  means the backend API was unavailable  for 52 seconds only during the last month.” – Wolfgang Werner, Team Lead Backend Development, gridX
+
+Stateless services
+
+A key factor in maintaining high availability is the stateless nature of gridX’s services. Stateless services allow multiple service instances to run simultaneously without congestion. Each request may be served by a different instance, even within the scope of a single user session, without the user noticing. Whenever the backend experiences high load, additional instances come online to handle more requests in parallel. When the load goes down, superfluous instances shut down, improving cost efficiency. This design enables our EMS to scale efficiently and handle more gridBoxes without compromising availability or performance.
+
+An example of this: Suppose a gridBox sends operational data to gridX’s backend. The service receiving this data processes it without needing to remember past transmissions. If an instance handling this request shuts down, another instance can handle the next request without issues, as the data is stored securely in a central database.
+
+Another example is recovering from network issues: Imagine multiple households experiencing internet outages caused by their network provider. Once connectivity is restored, all gridBoxes come online again and offload cached measurements to the cloud. This causes the backend to experience a traffic surge. Unmitigated, this might slow down or even overload the backend. This could then cause other clients to time out and retry, further exacerbating the issue. By scaling out in an elastic manner, the surge is handled by spinning up additional instances seamlessly, keeping overall latencies more stable by reducing pressure on each instance.
+
+Streamlined data management
+
+Ensuring availability also requires careful prioritization of data storage. By minimizing unnecessary writes and streamlining database queries, gridX enhances system responsiveness. This optimization supports real-time dashboards, automated alerts and proactive monitoring, ensuring issues are resolved before they escalate.
+
+Advanced observability and alert systems
+
+gridX invests heavily in observability and alert systems. We monitor standard service metrics like CPU usage while maintaining cross-service integrated tracing to detect and resolve unexpected issues. With tools like Grafana, integrated with Loki for logs and Tempo for tracing, gridX ensures comprehensive visibility into system performance. This enables swift action when anomalies occur, maintaining reliability and trust. In some cases, this process happens without any operator in the loop – elastic scaling can occur automatically based on utilization and latency metrics, ensuring the system adapts seamlessly to changing demands without human intervention.
+
+Why is EMS availability so important?
+When end users install an EMS to manage their energy assets, they expect the smart technology to do exactly as the name implies: work intelligently. This means striving for maximum utilization of the DERs to increase cost savings while maintaining the level of comfort household occupants expect. A disruption in availability could result in lost data or temporarily unavailable services, directly impacting an end user's ability to optimize energy usage and potentially costing them money and comfort. For an energy service provider, such interruptions could lead to a poor customer experience and diminish trust in the EMS itself. In a worst-case scenario, convenience would drop and reliance on fossil fuels would increase if dynamic pricing or an asset’s reliability is not trusted. For example, a hitch in availability could lead to an end consumer’s EV not being fully charged when they need to go to work or for their heat pump to not warm up properly during winter. 
+
+Speaking on this in our ‘Watt’s up with energy?’ podcast, Soly’s Global Head of Product, Thijmen van Nijnanten, said: “If you're speaking of the reliability and ease of use, in a lot of energy management use cases for e-mobility, you see that you basically plan when you need your car to be full, and then the energy management system can do whatever beforehand, as long as the battery is full when you need to leave in the morning. I always say you can do that wrong exactly once, and then the customer is out. If you have to go to the office one day in the morning, and your car is not charged, then you have one very, very unhappy customer.”
+
+Small hiccups such as these could discourage end users from leveraging the full benefits of smart energy systems, and could ultimately push them back toward traditional energy usage patterns, where demand dictates production, rather than shifting demand to align with renewable energy availability – a vital element of the energy transition. By balancing robust architecture, real-time monitoring and efficient data practices, gridX’s EMS, XENON, ensures high availability, a cornerstone for scaling EMS solutions alongside the exponential growth of distributed energy resources.
+
+I always say you can do that wrong exactly once, and then the customer is out.” – Thijmen van Nijnanten, Global Head of Product, Soly
+Scalability: Engineering for growth
+To grow in parallel with the rise of DERs and HEMS, scalability is essential for service providers to expand their offerings without compromising performance or reliability. gridX’s EMS platform achieves high scalability through stateless architecture, efficient data handling and proactive optimization, letting providers scale their offerings while supporting the broader energy transition.
+
+
+A stateless architecture supports an EMS’s growth without increasing complexity
+Key strategies for scalability
+Stateless architecture for parallel growth
+
+Just as our stateless design supports high availability, it also allows many service instances to run in parallel. This means that as the number of connected gridBoxes grows, additional service instances can seamlessly absorb the increased load. Even in the rare event of instance failures, no data is lost and operations continue uninterrupted. This architecture supports exponential growth without increasing complexity or compromising availability.
+
+Database load reduction
+
+We reduce redundant operations by only triggering updates when changes occur, such as asset connectivity status. For example, XENON avoids sending constant “everything is operational” alerts, reserving system resources for critical notifications that require immediate action.
+
+Codebase refactoring
+
+By cleaning up inefficient queries and improving internal structures, gridX ensures faster, leaner data processing. This makes our codebase more maintainable and allows for easier implementation of future features, benefiting both providers and end users.
+
+Proactive load testing
+
+Realistic simulations mimic real-world conditions to identify bottlenecks and ensure the system can handle increased demand without impacting performance.
+
+Edge Connector Client (ECC)
+
+The ECC is a recent, transformative addition to gridX’s system architecture that optimizes the way the local gateway communicates with the cloud. It eliminates unnecessary cloud polling by storing a local copy of the system’s state from the cloud within the gridBox. This reduces redundant requests and has minimized traffic between the two by more than 90%, drastically improving performance while cutting costs.
+
+Enhanced observability and tools
+
+gridX's development team has a constant and vigilant watch over everything happening behind the scenes of our EMS to guarantee stable scaling. This observability is supported by robust tools like Grafana, which integrates with Loki for logging and Tempo for tracing. These tools provide real-time insights into system performance, enabling us to optimize operations continuously. Alerts and monitoring systems ensure potential issues are identified and addressed proactively, minimizing disruptions.
+
+We only build for purpose and scale.” – Tobias Mitter, CTO and Co-Managing Director, gridX
+Affordability: Cost-efficient without compromising performance
+Cost-efficiency is about more than saving money – it’s about scaling sustainably while maintaining optimal performance. For energy service providers, this means delivering competitive offerings to their customers without inflating operational costs. At gridX, we have made affordability a key focus, but only after ensuring availability and scalability. By prioritizing these foundational elements, we ensure cost savings do not come at the expense of reliability or growth potential.  
+
+
+Scaling should be exponential, not the costs
+One of the ways gridX achieves cost-efficiency is by decoupling infrastructure costs from customer growth. For example, even as the number of connected assets in our system doubled, our cloud-hosting costs remained stable. Energy providers can therefore expand their offerings without worrying about exponential increases in infrastructure expenses, creating a sustainable financial model for both gridX and its customers.
+
+Key strategies enabling this include:  
+Data lifecycle control: Reducing redundant operations minimizes unnecessary database writes and optimizes data storage. This efficiency lowers computational overhead and supports scalable growth. gridX manages the storage and processing of data more efficiently by archiving or purging data no longer needed for active operations. 
+Targeted architectural improvements: These optimizations streamline system processes, reduce computational overhead and minimize resource wastage.  
+Reducing redundant operations: For example, limiting updates to asset connectivity status to only actual changes minimizes unnecessary database writes, saving storage and computational resources.  
+Elasticity: Guaranteeing stable latencies in the face of changing access patterns (e.g. sudden surges in API requests, as mentioned above) require either overprovisioning resources – keeping more computing power around than necessary on average – or elastic scaling capability based on load. gridX opts for elasticity wherever possible, which helps maintain affordability. This capability requires horizontal scalability, which is commonly achieved through stateless services.
+By combining cost-effectiveness with performance and scalability, gridX empowers providers to grow their businesses without financial strain, driving the energy transition forward.  
+
+Continuous optimization: Development and deployment best practices
+Delivering on availability, scalability and cost-efficiency isn’t a one-time achievement – it’s a continuous journey. Continuous optimization ensures that an EMS evolves seamlessly alongside changing demands, consistently delivering exceptional performance for more advanced use cases, while always maintaining efficiency.
+
+
+Small, incremental updates lead to more security and stability
+Instead of making big software changes a few times a year, we employ the more targeted and controllable practice of frequent, incremental updates. For our cloud services, these updates occur multiple times per day. Having small and various updates enables quick identification and resolution of issues, minimizing potential disruptions. By utilizing a Continuous Integration/Continuous Deployment (CI/CD) pipeline, we ensure that updates are rigorously tested and deployed efficiently, with faster rollbacks when needed. This approach reduces downtime and avoids the risk of a possible blunder in a larger scale update. It also enables continuous improvement in system performance.
+
+At gridX, continuous optimization doesn’t stop within XENON’s code. We consistently find new and improved ways to streamline internal workflows, too. Clear and efficient communication between development and support teams ensures rapid issue resolution. Defined roles and responsibilities enable developers to focus on long-term optimizations while addressing immediate concerns without affecting system reliability. This alignment ensures that customer needs are met while maintaining the EMS’s operational integrity.
+
+Prioritize the balance and enhance your EMS offering
+Balancing the holy trinity of availability, scalability and affordability in an EMS is not just important – it’s essential for energy service providers to succeed both as businesses and as trusted providers to their customers. As the growth of HEMS and DERs continues to accelerate, service providers must ensure their systems can reliably scale to meet increasing demands while remaining cost-efficient. This is not merely a recommendation but an obligation to future-proof operations and actively support the global energy transition. 
+
+But the best news? You don’t have to worry about the hassle of constantly optimizing and securing the infrastructure that makes an EMS powerful and effective, because gridX takes care of it all for you. By prioritizing this balance and building a solution with gridX, you can deliver reliable, scalable and affordable solutions that empower your customers and drive the adoption of smarter, greener energy systems.

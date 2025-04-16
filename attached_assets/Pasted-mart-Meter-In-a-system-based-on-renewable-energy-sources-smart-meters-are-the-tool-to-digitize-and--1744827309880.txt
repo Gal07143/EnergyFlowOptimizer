@@ -1,0 +1,72 @@
+mart Meter
+In a system based on renewable energy sources, smart meters are the tool to digitize and decarbonize our energy systems. The smart meter consists of two parts: a digital electricity meter (modern measuring device) and a communication unit (smart meter gateway). Electricity consumption data can be transmitted via the gateway and both users and companies involved in energy supply (e.g grid operators or energy suppliers) have access to these values.
+
+While analog and digital meters only provide consumers with the meter status, smart meters can provide detailed information about electricity consumption over any period of time and offer both private individuals and companies various advantages.
+
+What is the smart meter gateway (SMGW)?
+A smart meter gateway is the central communication unit of the smart metering system. In addition to meeting BSI certification (a data security protocol) for this purpose, smart meter gateways provide secure and encrypted communication between individual components in an energy system. Through separate interfaces, they can integrate not only electricity meters, but also photovoltaic (PV) systems, electric vehicles, storage heaters and heat pumps into the smart energy grid.
+
+Who is responsible for rolling out smart meters?
+Government incentives are instrumental in encouraging the adoption of smart meters, but energy providers and metering point operators are responsible for the installation, commissioning and maintenance of smart metering systems and enabling other additional energy-related services. 
+
+The metering point operator is generally responsible for providing all users within one grid area with smart metering systems and equipment. However, the customer can choose an alternative operator to take over the commissioning of smart meters and provide further added value – such as the visualization of all measured values on an app or a specific energy portal.
+
+How does a smart meter network work?
+
+The SMGW can communicate in a variety of networks.
+In a smart metering system, also often called intelligent metering system (iMSys), the smart meter gateway (SMGW) is the central component that receives and stores metering data from meters and processes it for market players. The SMGW communicates with different components and participating market players for the transmission of consumption data as well as for its administration.
+
+In the wide area network
+In the wide area network (WAN), the SMGW securely communicates with external market players and with the SMGW administrator. These external players or participants can either be be active or passive: 
+
+Active participants are allowed to send data, specific information or signals to the SMGW e.g forwarding a dimming signal. 
+
+Passive participants in return are allowed to read or receive data or information from the SMGW. For example reading the power consumption.
+
+Another aspect of secure communication is the controllable local system (CLS). This interface is used in the WAN to communicate between SMGW, SM and the control box. The control box is an additional device that is connected via the CLS and is a part of the iMSys. It is the end point or receiver of signals from DSOs and and in turn forwards these to the HEMS via the EEBus protocol. It also has digital and analog outputs, e.g. to control older devices. In addition to electricity and gas meters, other devices and systems such as heat cost allocators, water meters, charging points for electric vehicles and more can be connected to the SMGW via the CLS adapter. This ensures an intelligent and future-proof connection of the building infrastructure.
+
+In the local metrological network
+In the local metrological network (LMN), the SMGW communicates with the connected meters (electricity, gas, water, heat) of one or more end consumers. The meters communicate their measured values to the SMGW via the LMN.
+
+In the home network
+In a consumer's home area network (HAN), the SMGW communicates with the controllable energy consumers or energy generators (e.g. wallboxes, heat pumps, batteries and photovoltaic systems). Furthermore, the service technician or end consumer can access data provided by the SMGW.
+
+Benefits of smart meters
+As smart meters are intelligent metering systems that are able to measure electricity consumption in real time, they offer a variety of advantages compared to traditional electricity meters:
+
+Energy suppliers recognize service problems earlier (two-way communication and constant and accurate information is provided)
+Because smart meters provide real-time consumption data, consumers can better understand their energy usage and are able to control and adapt it to lower costs and emissions.
+The billing process is improved: as smart meters show consumption data in real time this eliminates the need for manual annual meter readings and reduces billing queries.
+Smart meters allow suppliers to offer more flexible tariffs that vary according to the time of day and demand.
+Smart meters allow distribution system operators (DSOs) a better understanding of grid utilization and how to manage power accordingly, resulting in a more reliable and efficient power supply.
+Smart meters as a gateway to more complex use cases
+Smart meters not only offer a variety of benefits, but can also build the foundation for more complex use cases: 
+
+Time-of-use tariffs
+As smart meters record customers' electricity consumption at short intervals, they can build the technical foundation for variable tariffs such as time-of-use tariffs. These tariffs incentivize consumers to shift their loads to off-peak periods with lowered prices which in return relieves pressure on the grid by balancing demand. A smart meter measures the power consumption or feed-in and this information can then be used by a home energy management system (HEMS) to shift energy consumption to cheaper periods and avoid high demand prices.
+
+Grid operator signal integration (e.g. 14a)
+The integration of smart metering systems into grid operators' systems is key to effectively managing energy grids, as noted in Section 14a of the German Energy Industry Act (EnWG). Through this integration, the smart meter gateway can receive real-time signals from grid operators, enabling dynamic responses such as demand response and grid relief. In addition to ensuring regulatory compliance, the 14a regulation mandates seamless communication to optimize grid stability, integrate renewable energy sources, and enhance grid stability. Since the beginning of 2024, households have to agree with their grid operators that grid consumption will be reduced in emergency situations. However, they have the advantage of receiving a reduction in grid charges as a result of the previously defined modules. With a home energy management system, consumers – or prosumers – can view their usage transparently, minimize curtailment and throttling of their devices, and actively control the consumption and generation of their electricity. By utilizing the capabilities supported by the legal framework, smart meters and in this context also HEMSs become important tools for the transition to smarter, greener and more resilient energy systems.
+
+Energy communities
+In energy communities, smart meters are needed to understand consumption patterns. Using data from the smart meter installed by the member's electricity supplier, the communities can test measures based on data proven proposals. The municipality automatically gets this information from the smart metering system. Documents or invoices are not required from members, as the smart meter records real-time data.
+
+Smart meter rollout across Europe
+The smart meter rollout is highly uneven across European countries. While Spain, Italy, Sweden, the Netherlands, Estonia, Finland and Denmark have already reached over 80% smart meter coverage, Germany’s goal for 2023 was reaching one percent coverage. Most EU countries are currently in the process of a full rollout. 
+
+The graph below shows the percentage of households that have smart meters installed by country as of 2022.
+
+
+The SMGW communicates with various components and players in the energy sector.
+As the graph shows, Germany and Greece are well behind Europe’s average smart meter rollout. This is partly due to the fact that Germany initially decided against a smart meter rollout, but in 2023 the government drafted a law that initiates the beginning of rollout for smart meters across the country. From 2025, smart meter rollouts will become mandatory with a deadline of achieving 100% of coverage by 2030. 
+
+Some countries, such as Ireland, France and Portugal, had a delayed and patchy start to the rollout. But in the meantime have achieved about 80% of coverage and a full coverage is aimed to be achieved between 2024 and 2025. 
+
+Each country’s progress is influenced by a combination of factors including regulatory frameworks, technical challenges and logistical issues. Governments must take action and create policies and a legal framework that supports the full rollout.
+
+Data protection and data security for smart meters
+In Germany, the Metering Point Operation Act (Messestellenbetriegsgesetz, MsbG) lays down precise rules on how smart metering is designed to comply with data protection requirements: 
+
+When processing personal data, the purpose of this processing must be clearly defined in advance. Accordingly, the measurement data is only transmitted for applications required by the energy industry.
+The smart meter gateway stores the recorded consumption values depending on the data protection setting.
+From the smart meter gateway, the data only reaches the network in encrypted or pseudonymized form. This means that ‘unauthorized’ third parties cannot view or manipulate the data. Unauthorized remote access is also excluded.

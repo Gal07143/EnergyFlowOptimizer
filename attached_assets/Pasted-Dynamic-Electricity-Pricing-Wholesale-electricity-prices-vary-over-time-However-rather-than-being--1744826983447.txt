@@ -1,0 +1,42 @@
+Dynamic Electricity Pricing
+Wholesale electricity prices vary over time. However, rather than being exposed to these fluctuations, consumers usually pay a fixed rate. This makes things simple, but also means consumers have no incentive to use electricity when prices are low (aka. when supply is high). Flexible electricity-consuming assets, such as electric vehicles and heat pumps, make using electricity when it is cheaper – when abundant energy from renewables is available – much more important for overall system balance. Consequently, dynamic electricity pricing has received a lot of attention from policymakers and industry in recent years.
+
+Technological requirements
+To bill time-variable prices, an energy provider requires information on a consumer's load over time. In practice, this data is usually provided by a smart meter that records consumption and passes the information on to the energy provider.
+
+History
+Germany has known night-time and day-time tariffs since the 1960s. Back then power plant operators wanted to level loads over the course of a day. To increase consumption at night, electricity was sold at a discount, usually between 8pm and 6am. To take advantage of these tariffs, so-called “Nachtstromheizungen” were sold. These radiators would use electricity to heat up overnight and heat the building throughout the day. At the time, this was cheaper than fossil fuel-based heating with gas or oil. Technically, households were equipped with two meters: one for night-time loads, one for day-time loads.
+
+Types of dynamic electricity pricing
+Dynamic electricity pricing is defined by varying prices over time. Price formation, however, varies widely between different types.
+
+Static time-of-use tariffs
+types of dynamic electricity pricing 
+With time-of-use tariffs, prices vary based on the time of day, week or season. The variation is known upfront and follows a given schedule (eg. a night-time and a day-time price, or a weekday and weekend price).
+
+Critical peak tariffs
+Critical peak tariffs
+In critical peak pricing, prices are mostly static but may be increased in periods of extreme peak load, during which a fixed surcharge is applied. Consumers are usually given a notice in advance so they can shift loads away from these periods.
+
+Variable peak tariffs
+one dynamic electricity pricing is variable peak tariffs
+Similar to critical peak pricing, the peak periods are communicated in advance. The surcharge, however, varies depending on current wholesale prices.
+
+Real-time tariffs
+real-time tariffs
+Under real-time pricing, prices reflect current wholesale prices. Usually, the day-ahead market is used for the price formation. Therefore, prices are only known the day before. 
+
+Hedged tariffs
+Hedge tariffs aim to conserve the incentives of real-time tariffs while limiting consumers’ exposure to wholesale price fluctuations. Therefore, consumers are allocated a given volume for each time period. When consumption is below the allocated volume, consumers are reimbursed at the current wholesale price. When consumption exceeds the allocated volume, consumers are charged at current wholesale prices.
+
+Through this mechanism, consumers are not fully exposed to wholesale price surges and are still incentivized to shift loads to low price periods.
+
+Impact
+With flexible loads, consumers can realize significant savings under dynamic tariffs. To illustrate this, the average commuting distance is 16.9km in Germany – so a round trip is 33.8km. Assuming that an EV consumes 20 kWh/100 km, each commute round trip consumes 6.76 kWh of electricity. If this was charged directly upon return from work at 6:30pm the cost would amount to 2.48€. If this was charged at the cheapest price (26.7 ct/kWh) before the next departure at 8am, the cost would only amount to 1.80€ – a cost reduction of 68 cents or 27%. Assuming the consumer commutes to work five times a week for 40 weeks a year. This makes a total of 200 commute round trips each year. Assuming the variance is stable throughout the year, the consumer would save 136€/year by shifting EV charging to low price periods.
+
+In practice
+European Union
+In the directive 2019/994, the European Union mandates member states to ensure that all consumers are able to participate in the power market “in particular by adjusting their consumption according to market signals”. However, as this is a directive, it is only applicable once it has been transposed into national law.
+
+Germany
+From 1st January 2023 energy providers with more than 100,000 customers are obliged to offer dynamic tariffs. This concerns around 70% of all households in Germany. As only around 500,000 smart meters were installed by the end of 2022 only a small percentage of the 41 million households fulfill the technical prerequisites for dynamic tariffs.

@@ -1,0 +1,43 @@
+Demand-Side Flexibility
+Demand-side flexibility, also referred to as demand-side management (DSM) involves programs, policies and technologies that aim to reduce the amount of electricity customers use during times of peak demand, often through the use of financial incentives, load shifting or other measures. Demand-side flexibility is crucial to enable the integration of large shares of variable renewable energy into power systems and better match supply and demand. 
+
+Electricity supply and demand
+Traditionally, linear electricity value chains focused on managing the supply side of electricity generation – ensuring there is enough electricity to meet demand and adjusting production based on consumption levels. With the rise of intermittent renewables, however, electricity production is less flexible, as power must be harnessed from the wind or sun when it is available.
+
+On top of this, the electrification of mobility and heating sectors via the rise of electric vehicles (EVs) and heat pumps is causing electricity demand to surge. But power grids were not built for such heavy electrical loads, and grid capacity is limited. Extending the grid so that it can handle larger loads, however, takes a lot of time and money, which neither companies nor the planet can afford. 
+
+Decentralization and electrification bring about the need for demand-side flexibility – adjusting consumption and generation patterns based on external signals. This allows consumption patterns to be aligned with the availability of clean energy, and demand balanced out to avoid peak loads. Demand-side flexibility is all about providing consumers with energy at the lowest cost in accordance with consistent supply. 
+
+When executed successfully, demand-side flexibility facilitates a more reliable, sustainable and efficient energy system. By reducing demand when grid capacity is scarce, it reduces need for grid extensions, as well as new transmission lines or new large power plants. This also reduces costs and emissions, leading to increased customer satisfaction. Leveling out loads on the existing grid also reduces stress on power systems and makes them less susceptible to overloads.
+
+Small-scale flexibility
+Demand-side flexibility can only be provided by controllable loads, such as smart decentralized energy resources (DERs). The fact that their demand does not have to be met instantly, translates into flexibility:
+
+Batteries are designed to provide flexibility. Their load is completely flexible so that they can operate in response to generation patterns. If generation exceeds demand, they can be charged and, vice versa, discharged if generation fails to meet demand.
+EVs must be sufficiently charged by the time of departure to meet drivers’ mobility needs. So, during the charging session, charging can be adjusted according to external factors, such as price signals, to shift demand to periods with lower prices. Smart charging technology is crucial to ensure that peak loads are minimized without affecting use comfort. With vehicle-to-grid technology, EVs can even “switch” sides and be used like a battery to supply power to the grid.
+Heat pumps can also adjust their operation to external signals. Well insulated buildings can maintain temperatures over several hours meaning that heat pumps can be switched off during peak hours and shift their load to off-peak times.
+Grid-scale flexibility
+Batteries
+Large-scale batteries are also vital in providing grid-scale flexibility. This works in the same way of charging and discharging electricity according to consumption patterns, but with larger amounts of stored energy.
+
+Heat
+Power-to-heat (coupling the heat and power sectors), and smart EV charging strategies can also be used to enhance flexibility in commercial applications. For example, district heating networks can store significant heat energy to be used flexibly in residential, industrial or commercial settings when needed. By using smart charging strategies to charge EVs in commercial buildings and public places, peak loads can be reduced and leveled out, and local PV generation better integrated to cover charging demand.
+
+Power-to-hydrogen
+Power-to-hydrogen, the process of converting electricity into hydrogen through electrolysis and using it as an energy carrier, which can then be used at a later time when needed, is another promising technology for large-scale demand-side flexibility. 
+
+Virtual Power Plants
+Aggregating the flexibility of many DERs and bringing this flexibility to power markets can provide system-wide benefits. This is called a virtual power plant (VPP). Virtual power plants can be used to connect and trade energy between large-scale power plants, to pool EV capacity or to monetize flexibility in smaller-scale residential use cases. This must be combined with forecasts, price signals, asset measurements and constraints, dispatch set-point signals and more, which requires holistic energy management. The first step for this is creating a seamless and sophisticated connection between a local energy management system and the VPP so that all systems work in conjunction with, rather than against, each other. gridX’s XENON platform forms the link between the market and the DERs.
+
+Communication
+Control signals
+Another key tool for system-wide flexibility is integrating signals from distribution system operators (DSOs) to ensure assets behave in a grid-friendly manner. For example, DSOs can provide signals that indicate when there are grid imbalances so that a charging park can adjust EV charging to ensure optimal utilization of the distribution grid’s capacity. Such electric vehicle grid integration is key to ensure that the charging behavior of each charge point can be aligned to the state of the grid.
+
+Price signals
+Dynamic electricity pricing signals enhance demand-side flexibility using financial incentives, primarily in residential settings. Passing on variable electricity prices to consumers incentivizes them to use assets (from a washing machine to an EV) at times when prices are low, which is usually during high generation and low demand. This balances out consumption to avoid sharp peaks, which can overload the grid. 
+
+Benefits of demand-side flexibility
+A comprehensive report from the European association for digital and decentralized energy solutions, SmartEn, found that activating demand-side flexibility unleashes the flexibility from buildings, electric vehicles and industry for the following results:
+
+
+Smart energy management systems that leverage the full flexibility of energy assets is the first step to unlocking these benefits. Regulation that enables more complex use cases is also key to foster future clean energy systems. The first step here is a successful smart meter rollout. While countries like Germany are still far behind, new regulation is now reviving the implementation of smart meters. As a next step, the Energy Industry Act (EnGW) is focusing on incentivizing dynamic tariffs and providing financial benefits to those that market their flexibility on power markets. Such measures are important to encourage smart energy management, which on a larger scale provides significant demand-side flexibility to electricity systems. 

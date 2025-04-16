@@ -1,0 +1,71 @@
+Retrofitting
+Energy efficiency retrofitting is the process of upgrading existing systems, buildings or energy infrastructures with energy-efficient technologies. It involves upgrading older, possibly outdated systems by integrating smart and sustainable solutions that aim to make “dumb” hardware smart while reducing overall energy consumption and costs and improving system performance.
+
+What is energy efficiency retrofitting? 
+What is energy efficient retrofitting
+Retrofitting describes the process of upgrading existing systems, buildings or energy infrastructures with energy-efficient technologies. It involves upgrading older, possibly outdated systems by integrating smart and sustainable solutions that aim to make ‘dumb’ hardware smart while reducing overall energy consumption, lowering costs and improving system performance. Retrofitting can also be described as “smartification” or as the process of “smartifying” old hardware.
+
+Importance of retrofitting
+Importance of retrofitting
+Retrofitting is central to achieving a more sustainable and energy efficient future, especially when integrating renewable energy sources such as photovoltaic (PV). Many older buildings were not designed with today’s energy efficiency standards in mind, resulting in high energy consumption and dependence on fossil fuels. By retrofitting with PV systems, buildings can generate their own clean electricity, reducing reliance on the grid and lowering carbon emissions. Studies have shown that combining PV panels with other retrofit measures such as insulation and energy-efficient glazing can reduce energy consumption by up to 88.68%, making near-zero energy consumption from the grid possible. In the midst of rising energy costs, retrofitting PV systems helps homeowners and businesses achieve long-term savings while supporting overall net zero energy goals.
+
+Retrofitting markets across Europe
+Retrofitting markets across Europe
+Germany
+Germany is Europe's leading solar market with a cumulative PV capacity of 99.2 GW at the end of 2024, 70% of which is accounted for by rooftop systems (69.4 GW). Around 58% of these systems are not equipped with battery storage, which corresponds to a total of 40.28 GW. With an average PV system size of 8.9 kW for private households, this means that over 4,525 households in Germany have PV systems without battery storage, which represents a large potential for retrofitting.
+
+Netherlands
+A total of 26.0 GW of PV capacity is installed in the Netherlands, 75% of which is on roofs (19.5 GW). Of this, 11.31 GW is without battery storage. With an average PV system size of 4.3 kW, around 2,630 households could be retrofitted with battery solutions, making this market one of the most dynamic retrofit markets in Europe.
+
+UK
+Rooftop systems account for 60% of the 18 GW of cumulative PV capacity, a total of 10.8 GW. Around 6.26 GW of this capacity comes from systems without battery storage. With an average PV system size of 5 kW, there are approximately 1,252 households in the UK that could benefit from retrofitting with battery storage solutions.
+
+Nordics
+Sweden
+Sweden is rapidly expanding its solar market, with a cumulative PV capacity of 8.0 GW in 2024, 70% of which is from rooftop installations (5.6 GW). Around 3.25 GW lacks battery storage. Given an average system size of 10 kW, 325,000 households in Sweden could be retrofitted with battery storage solutions.
+
+Denmark
+Denmark has a total PV capacity of 5.5 GW, with 80% coming from rooftop solar (4.4 GW). Around 2.55 GW lacks battery storage. Given an average system size of 6 kW, approximately 425,000 households in Denmark could be retrofitted with battery solutions.
+
+South
+Italy
+Italy has one of the largest rooftop solar markets in Europe, with 36.2 GW of PV capacity, 76% from rooftop installations (27.51 GW). Around 15.96 GW lacks battery storage. With an average system size of 4.7 kW, this represents 3.39 million households that could be upgraded with battery solutions.
+
+Spain
+Spain’s PV market is 46.7 GW, but only 22% comes from rooftop installations (10.27 GW). Around 5.96 GW lacks battery storage. With an average system size of 4.5 kW, 1.32 million households in Spain could be retrofitted with battery storage.
+
+Numbers are from our gridX HEMS report, the EU Market Outlook for Solar Power by SolarPower Europe, PV Magazine UK and the Danish energy agency.
+
+Benefits of retrofitting
+Benefits of retrofitting 
+Retrofit installations offer lots of benefits for end users, manufacturers, installers and wholesalers. Let’s take a look:
+
+For end users
+Retrofitting allows homeowners and businesses to upgrade their PV systems or existing setup without the need of a full replacement. Which means they can, for example, continue using their existing PV solution like solar panels while profiting from enhanced energy management and efficiency.  
+
+By integrating even more assets like battery storage solutions or solar charging systems, users can maximize their self-consumption which reduces reliance on the grid and also lowers energy costs. On top of that, a holistic setup paves the way to integrate future-proof solutions such as dynamic tariffs, which enables optimized electricity pricing based on real-time supply and demand.   
+
+For manufacturers
+Manufacturers benefit from retrofitting as it strengthens the customer loyalty by ensuring that their already existing products remain compatible with fast evolving smart energy solutions and adapting to changes in regulations. Instead of forcing customers to invest in an entirely new setup, manufacturers can offer seamless integration with new solutions while keeping users within their brand. 
+
+Retrofitting also offers a great cost saving potential for customers which will make it more likely for them to stay with the same manufacturer. By allowing their assets to cooperate efficiently with energy management systems, manufacturers can further position themselves in the competitive energy market. 
+
+For installers and wholesalers
+Retrofitting opens up new market opportunities for installers and wholesalers as they can offer smart energy upgrades to customers who already own PV systems. Instead of only targeting new solar installations, they can now reach a wider audience that wants to improve their existing installations. This approach increases the number of installations and makes energy solutions more accessible to a wider variety of users.
+
+Smart solutions to upgrade your energy setup
+smart solutions to upgrade your energy setup
+Retrofitting is a great way to improve existing PV systems by integrating battery storage, electric vehicle (EV) chargers and energy management without replacing the entire system. While many older systems generate solar energy efficiently, they do lack the necessary intelligence to optimize energy flows, store excess power effectively or interact with dynamic tariffs. Retrofitting solves this problem by combining control and automation.
+
+An important part of this upgrade is ensuring seamless communication between different energy systems. Many energy management platforms are based on cloud-only solutions, which can limit the number of connected devices due to compatibility issues between manufacturers. By using a local energy gateway like a gridBox, existing energy assets can be easily integrated into a wider energy system, allowing for real-time optimization without being limited by delays in cloud-to-cloud communication.
+
+Challenges of retrofitting
+Retrofitting comes with several challenges, especially when integrating renewable energy systems into older buildings. One of the main obstacles is the high initial cost, which can deter homeowners and businesses from investing in retrofits. While financial incentives and subsidies are available, access to funding can be complicated and lacking consistency. Technical and structural limitations also play a role, as many older buildings were not designed with energy efficiency in mind, making it harder to install renewable technologies. In some regions, legal barriers and the lack of regulatory energy requirements for buildings are also slowing down widespread adoption. 
+
+Another challenge is ensuring compatibility between new and existing systems. Without proper integration, systems such as PV panels, batteries and heat pumps may not work efficiently together, reducing the benefits of retrofitting. Lastly, consumer awareness and acceptance remains critical – many homeowners are unfamiliar with retrofit options or are hesitant to make changes due to concerns about cost, disruption or long-term benefits.
+
+Future outlook and expert insights
+Retrofitting will play a central role in the future of energy systems, offering huge benefits to homeowners, businesses, manufacturers and installers. Although challenges such as high initial costs, technical limitations and system compatibility remain, the potential for transforming outdated infrastructure into smarter, more efficient systems is great. Tobias Mitter, Chief Technology Officer and Managing Director at gridX, explains: 
+
+“Retrofitting offers the opportunity to transform outdated systems into smart ones – provided we can overcome the communication and security challenges that come with the process.”
+As technology advances and solutions for seamless integration between old and new systems improve, retrofitting is becoming an even more widely accessible and crucial strategy for increasing energy efficiency, reducing costs and supporting the transition to sustainable energy solutions.

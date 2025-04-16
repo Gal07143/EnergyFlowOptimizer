@@ -1,0 +1,53 @@
+Smart Charging
+Smart charging refers to an intelligent approach to electric vehicle (EV) charging that goes beyond replenishing an EV's battery as soon and as fast as possible. Smart charging aligns charging with other factors such as grid utilization, electricity prices and mobility needs. Most applications require communication between the EV, the charger and a management system.
+
+Applications
+Smart charging encompasses a wide range of applications, which can be divided into five categories: load management adjusting loads to local constraints, demand response adjusting loads in response to external signals, remote monitoring and control, billing, and bi-directional charging.
+
+Load management
+Smart charging systems can dynamically adjust the charging rate of individual EVs.
+
+Overload protection: To avoid overloads at the grid connection point (dynamic load management) smart charging systems can reduce the capacity available for charging in case other, non-controllable, loads rise. 
+EV charging strategies: Smart charging can also implement EV charging strategies that prioritize select EVs based on mobility needs or other criteria.
+
+Smart charging systems allow chargers to respond to external signals
+Demand response
+Smart charging systems can adjust charging power in response to external signals such as power prices, availability of renewable energy or grid congestion. This allows for the following use cases:
+
+Price: In case of power prices smart charging allows EV drivers to reduce costs by shifting charging to off-peak hours.
+Availability of renewables: When aligning charging with the availability of renewables carbon emissions can be reduced.
+Grid congestion: Responding to grid congestion helps to stabilize the grid. In case the grid is strained, the charging rate may be reduced.
+Remote monitoring and control
+By connecting charging stations to the internet, smart charging allows operators and consumers to monitor and control charging sessions. 
+
+Remote control: Connected chargers can be controlled remotely allowing users to input preferences from afar.
+Monitoring: Operators can leverage connected charging stations to monitor performance and spot outages early on and thereby reduce downtime.
+Data analysis: Smart charging systems can collect data on charging patterns, and user behavior. This data can be used to optimize charging schedules and improve overall system efficiency.
+
+Remote monitoring of EV charging operations gives users more control
+Billing
+Smart charging systems may also facilitate billing and payment of charging sessions, authenticating users and charging the cost to the associated payment method.
+
+Bi-directional charging
+Bi-directional charging refers to the discharge of an EV’s battery in order to supply electricity to another consumer such as a home (V2H) or the grid (V2G). While the bi-directional charging is deemed very promising due to the sheer volume of EV batteries it has not been adopted at scale yet and only a very limited number of vehicles and chargers support the discharge of the EV’s battery.
+
+
+EV chargers don't easily communicate with management systems or other assets
+Standards
+Many standards have been put forward to facilitate the communication of EV chargers and management systems. These include:
+
+EEBus: a protocol suite aiming to standardize the interface between electrical consumers, producers, storages and management systems.
+Open Automated Demand Response (OpenADR): a two-way information exchange model facilitating automated demand response (DR) actions.
+Open Charge Point Protocol (OCPP): an application protocol for communication between electric vehicle charging stations and complementary central management systems.
+Open Smart Charging Protocol (OSCP): a communication protocol for communication between a charge point management system and an energy management system.
+ISO 15118: international standard defining a communication protocol between EVs and charging stations. The protocol enables plug & charge.
+Regulation
+Many governments require charging stations to support at least some smart charging features in order to qualify for subsidies.
+
+
+Subsidies and new regulation encourage the installation of smart chargers
+Germany
+The German KfW subsidy 442 provides a flat 600€ subsidy for normal chargers. Chargers that support bi-directional charging are granted 1,200€.
+
+United Kingdom
+The UK government requires all government funded electric car charge points to be smart since July 2019, stating: “charge points must be able to be remotely accessed, and capable of receiving, interpreting and reacting to a signal.” The Electric Vehicles (Smart Charge Points) Regulations 2021 extended this to private charge points (in domestic or workplace settings), requiring them to have smart functionality that allows the charging of an electric vehicle when there is less demand on the grid, or when more renewable electricity is available.

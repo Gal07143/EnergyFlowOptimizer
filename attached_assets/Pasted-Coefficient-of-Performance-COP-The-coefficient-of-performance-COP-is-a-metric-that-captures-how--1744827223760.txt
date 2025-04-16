@@ -1,0 +1,80 @@
+Coefficient of Performance (COP)
+The coefficient of performance (COP) is a metric that captures how efficiently a thermodynamic machine (e.g. air conditioner, heat pump, refrigerator) uses electricity to move heat from one place to another. Specifically, the COP is the ratio of energy needed for a system to operate compared to the system’s useful energy output (i.e. heating or cooling).  A higher COP means that less energy is required for the same output. The COP is commonly used to evaluate the efficiency of air conditioning systems, heat pumps and refrigerators.
+
+Calculating the COP of a heat pump
+COP = Q / E
+
+Where:
+
+Q is the heat supplied (heating) or removed (cooling) by the system
+E is the energy needed to operate the system
+The calculation differs depending on whether the system in question heats or cools. This is because opposite ends of the process must be considered. In a residential setup, the heat moved out of (cooling) or moved into (heating) the building is considered. In a heating scenario the building is the heat sink – the part of the cycle to which heat is added. In a cooling scenario, on the other hand, the building is the heat source – heat is removed from it.
+
+In the following, a heat pump is used as an example for the calculation of the COP as it is a common case for both cooling and heating. The same calculations apply to any other thermodynamic machine like a refrigerator or an air conditioner.
+
+Calculation for cooling
+
+Heat pump used for coolling
+In cooling scenarios, the COP is calculated by determining how much heat was removed from the heat source. Therefore, the ratio of heat removed to input energy (i.e. electricity to operate the heat pump) is considered.
+
+COPcooling = Qc / E
+
+Where
+
+Qc is the heat removed from the heat source
+E is the input energy
+Calculation for heating
+
+Heat pump used for heating
+In heating scenarios, one looks at how much heat is moved to the heat sink. This consists of heat taken from the heat source, as well as the energy input. Therefore, the combined value of heat taken plus energy input over the energy input is considered.
+
+COPheating = Qh / E = (Qc + E) / E = COPcooling + 1
+
+Where
+
+Qh is the heat added to the heat sink
+E is the energy input
+The heat moved to the heat sink is greater than the heat taken from the heat source. Therefore, a heat pump’s COP depends on whether the system is used for cooling or heating and the heating COP is greater by one than the cooling CPO.
+
+Applications
+The COP is a crucial metric for evaluating the efficiency of thermodynamic machines. It provides an objective metric to compare different models. A higher COP entails lower operating costs, a reduced environmental impact, higher user comfort and more efficient operation at varying load levels.
+
+Notation
+Many manufacturers detail the COP of their appliances. The common format shows the COP depending on the heat source, the temperature of the heat source and the flow temperature:
+
+[COP value] = [heat source][heat source temperature] / [heat sink] [flow temperature]
+
+The heat source and sink are abbreviated with one letter where:
+
+A stands for air
+B for ground
+W for water
+The temperature values are provided in degrees celsius. 
+
+Under this notation, the following would be noted for a water heat pump (“W”), which with a heat source temperature of 2°C and a flow temperature of 40°C has a COP of 4.0:
+
+COP = 4.0 = W2 / W40
+
+Ratings
+Energy star (USA): To qualify for the Energy Star (a US-efficiency rating), the US Department of Energy quotes the following minimum COP values between 3.1 and 4.1, depending on the type of heat pump:
+
+Geothermal, closed loop water-to-air: 3.6 COP
+Geothermal, open loop water-to-air: 4.1 COP
+Geothermal, closed loop water-to-water: 3.1 COP
+Geothermal, open loop water-to-water: 3.5 COP
+Geothermal, direct geoexchange: 3.6 COP
+
+EU Energy Efficiency Label
+Energy-Related Products (ErP) Directive (EU): Since 2015, heaters sold in the European Union have been required to detail their energy efficiency class ranging from A++ (most efficient) to G (least efficient). The class is determined by a system’s energy efficiency index, a metric which also takes the COP into account.
+
+Influencing factors
+The COP depends heavily on external factors. Therefore, it only captures a system’s efficiency under a specific set of conditions. And the COP may vary if those conditions change. These factors include:
+
+Temperature difference – In general, as the temperature difference between the heat sink and heat source increases, the COP decreases. This is because larger temperature differences require more energy to transfer heat across the gradient.
+Operating conditions – The COP can change based on the load or demand on the system. Systems operating at partial loads (i.e. the system is not operating at full capacity) will have a lower heat output and also likely a lower ratio of heat output to energy input (COP) compared to full-load operation.
+Environmental conditions – Environmental factors, such as humidity, air quality, and altitude, can also influence the COP.
+Related Metrics
+The COP is sometimes considered to be an outdated scale as it gives little indication of the real performance over an entire year. New metrics have been introduced to address this:
+
+Seasonal coefficient of performance (SCOP) – The SCOP takes into account variations in operating conditions over the course of a year. Furthermore, it also considers different operating schedules (e.g. part-load operation, startup and shutdown). This makes the calculation of the SCOP far more complex but also provides a more realistic assessment of the appliance’s performance over the year.‍
+Seasonal energy efficiency ratio (SEER) – The SEER is used for cooling systems to quantify the cooling output per unit of energy input over an entire cooling season. Just like the SCOP, it considers a range of operating conditions and modes. As a result, it allows for realistic comparisons between different cooling systems.

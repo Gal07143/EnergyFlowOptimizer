@@ -1,0 +1,74 @@
+Grid Operator
+A grid operator, also known as a system operator, is a key player in the energy industry, responsible for maintaining the reliable and secure operation of the electrical grid. They constantly monitor the grid’s performance, ensuring it operates within its capacity, while always meeting electricity demand. Moreover, grid operators play a role in balancing and ancillary service markets to ensure demand matches supply and to guarantee system security.
+
+In Europe, grid operators are divided into transmission system operator (TSO) and distribution system operator (DSO).
+
+what is a grid operator
+What is a Transmission System Operator?  
+A Transmission System Operator (TSO) is an organization responsible for the efficient and reliable transmission of electricity from generation plants via the power grid to regional or local electricity distribution operators.
+
+In Europe, transmission grids usually have voltage levels of 220 kilovolts (kV) to 380 kV. TSOs also usually deal with power generation plants with a net generating capacity greater than 100 megawatt (MW).
+
+What is a Transmission System Operator? 
+The German transmission system is divided into four regions or control areas. One TSO is responsible for each of these control areas: Amprion GmbH, TransnetBW GmbH, Tennet TSO GmbH, and 50Hertz Transmission GmbH.  
+
+The European Network of Transmission System Operators (ENTSO-E) serves as the collective voice for 39 electricity transmission system operators from 35 countries across Europe, expanding its influence beyond the European Union borders. It was founded and granted legal mandates by the EU’s Third Package for the Internal Energy Market in 2009, with the overarching goal of democratizing the gas and electricity markets within the EU.
+
+ENTSO-E’s TSO members oversee five synchronous regions and two isolated systems (Cyprus and Iceland). Synchronous regions represent clusters of countries interlinked by their respective power grids. In each region, the system frequency (typically 50 Hertz, with minor variations) is synchronized, meaning an anomaly at any single point in the region will cause issues across the entire zone.
+
+Connecting power grids makes it easier to balance power generation and consumption. Multiple regions have greater flexibility and more fluctuations that equalize each other than if each country had to balance its stand-alone power grid.
+
+
+Map of 5 synchronous regions
+*Please note that on February 9, 2025, RG Baltic successfully synchronized its electricity systems to join RG Continental Europe (UCTE).
+
+Roles and responsibilities of TSOs
+Control and operate the transmission grid and transport electricity to regional or local distribution networks
+Connect networks with neighboring countries and regulate cross-border electricity flows
+Ensure safe, reliable, and efficient energy supply
+Provide non-discriminatory access to networks for all stakeholders
+Manage the networks autonomously, from electricity production to sales
+Supervise system operations, upkeep, and infrastructure expansion according to regulations
+Enact balancing services after markets have closed to ensure the security of energy supply at the least cost. They use balancing energy from frequency restoration reserves to ensure supply is equal to demand and to reduce the need for back-up generation.
+Procure ancillary services to guarantee system security. These can include: black start capability (restarting the grid after a blackout); frequency response (maintaining system frequency); fast reserve (providing additional energy when needed); and so on.
+What is Distribution System Operator
+A Distribution System Operator (DSO) operates, manages, and sometimes owns the local and regional energy distribution networks, which transport electricity to end users. The distribution grid consists of low voltage networks (250-400 V) and medium voltage networks (6-50 kV). Of the 510 GW of renewable energy capacity being added to Europe’s public grid this decade, 70% will be connected to the distribution grid. DSOs are thus responsible for connecting renewables, as well as enabling flexibility, supporting electrification and empowering consumers to engage in an increasingly decentralized energy landscape.
+
+‍
+
+What is distribution system operator
+To propel the Clean Energy Package, an initiative mandated by the European Union to steer Europe’s energy transition, DSO Entity (their ENTSO-E equivalent) was established in June 2021. It unites DSOs to deliver a just energy transition by developing network codes and guidelines, strengthening DSO-TSO cooperation, and sharing the energy industry’s best practices to relevant stakeholders.
+
+As of 2023, DSO Entity has 900+ DSO members from 27 EU member states, covering over 250 million customers.
+
+Roles and Responsibilities of DSOs
+Assist in real time: track grid conditions (congestion, transformer load, voltage, and overall grid health) and promptly deploy local assets in real-time to meet distribution system requirements
+Coordinate local resources: oversee all aspects linked to distributed energy resources (DERs) management and flexible loads within a power supply portfolio. This covers net load forecasting, scheduling, and determining compensation for resource proprietors and aggregators
+Operate overhead and underground cables leading to residences or businesses
+Leverage DERs’ value: enable the integration of local assets into the broader market and monetize them for distribution-level grid services, i.e. capital investments, voltage maintenance, distribution feeder load balancing, peak load mitigation, and backflow control
+Oversee local grid conditions while facilitating intricate interactions among energy resources interconnected with the grid
+How DERs change the roles of TSOs and DSOs
+In conventional centralized power generation, the movement of electricity is uni-directional – it starts from a few big-sized power plants and reaches end consumers via power transmission and distribution networks. However, the decarbonization and decentralization of energy systems is redefining grid operators’ responsibilities, requiring greater collaboration between DSOs and TSOs. This becomes particularly important in systems with more intermittent renewables and distributed energy resources.
+
+The increasing popularity of DERs, such as electric vehicles (EVs), photovoltaic (PV) systems and heat pumps, means that substantial electricity pull during peak demand (for example when commuters arrive home and plug in their EVs), or high feed-in from rooftop solar in the middle of the day can easily overload the grid. TSOs’ limited insights into DERs’ activity can result in inaccuracies in load and generation predictions. These errors can potentially impact the system’s balance of supply and demand.
+
+In the new era of DER-inclusive power grids, DSOs have additional responsibilities, for example, to manage peak loads or network congestion, provide TSOs with reactive power support and procure voltage support. To reduce increased complexity in decentralized energy systems, stakeholders must engage in novel and diverse ways.
+
+‍
+
+How DERs change the roles of TSOs and DSOs
+The need for digitization of the energy industry
+To ensure the efficiency of a power grid with many connected DERs, seamless exchange of information between TSOs and DSOs is crucial. TSOs and DSOs can then more easily identify pain points and discover where interconnected entities can and should intervene to meet the demands of the power system. Creating synergies helps to stabilize frequency, minimize energy fluctuations and keep grid extensions to a minimum.
+
+Extending this information exchange to small-scale energy assets also ensures that DERs are seamlessly integrated into the overall system and that their utilization is maximized. Solutions like a distributed energy resources management system (DERMS) unlock demand-side flexibility to guarantee stability, resilience and cost-effectiveness in renewable power systems.
+
+The Internet of Things (IoT) and sophisticated software solutions lie at the heart of this information exchange, pushing the energy industry to the digital forefront. Integrating signals from different market players, incorporating forecasts, consumption patterns and asset performance into holistic energy management systems and communicating insights to grid operators allows them to maintain balance in an increasingly complex system.
+
+By incorporating grid signals into local energy management systems, DSOs, for instance, gain the capability to effectively oversee and regulate DERs, ensuring their optimal and grid-friendly behavior. This integration facilitates a holistic approach, enabling both self-sufficiency optimization at specific sites, as well as grid stability at a wider level.
+
+In its Grid Operation 4.0 Project, Westnetz, linked 100 local grids to a digital system to optimize usage of the distribution network's capacity. By integrating external signals and adjusting local power limits in response to the state of the grid, Westnetz could adjust flexible loads (multiple EV charging sessions) in response to grid imbalances, and thereby optimally utilize the distribution grid’s capacity.
+
+Another challenge for grid operators is the lack of transparency about the utilization of grids, especially in low voltage networks. Software solutions are crucial to digitally integrate new assets that generate, store and consume energy into the system. envelio's Intelligent Grid Platform is a perfect example of this. It turns power grids into digital, flexible and interactive smart grids. Important processes in grid planning and grid operation management are digitized and automated, ensuring the power grid model is always up to date.
+
+
+As the utilization of intermittent renewables simultaneously expands, the need for intelligent, digitized solutions becomes paramount in maintaining energy resilience and a secure supply. Digital technology serves as the foundation of efficient operation of smart grids and the provision of flexibility through market-oriented mechanisms.

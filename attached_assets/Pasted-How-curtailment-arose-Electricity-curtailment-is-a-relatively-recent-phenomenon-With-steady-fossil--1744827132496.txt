@@ -1,0 +1,40 @@
+How curtailment arose
+Electricity curtailment is a relatively recent phenomenon. With steady fossil fuel production, electricity supply simply followed demand. However, as the penetration of intermittent renewables rises, production takes place when the sun is shining or the wind is blowing, creating a greater mismatch between supply and demand. If it goes unchecked, abundant renewable power production can overwhelm the grid or be so much higher than demand that it leads to financial losses.
+
+Reasons for curtailment
+Electricity generation is usually curtailed for either economic or grid-capacity reasons.
+
+1. Economic reasons for electricity curtailment 
+What: When weather conditions are favorable (i.e. lots of sun) and demand is low, abundant supply offered on electricity markets can cause wholesale prices to go into negative. This means that every additional kilowatt hours (kWh) fed into the grid causes financial losses, encouraging electricity producers to stop production.
+
+Implications: Without demand-side flexibility, these periods of sunshine when electricity is cheaper are not fully leveraged. If more flexibility were added to the grid, costs could be lowered for all parties and less renewable supply would go to waste.
+
+2. Grid capacity reasons for electricity curtailment 
+What: If supply is so high that the amount of electricity being generated threatens to overwhelm the electrical grid’s capacity, grid operators may be forced to block supply. Similarly, in many markets feeding in a home’s excess solar power back to the grid is restricted to avoid grid congestion. 
+
+Implications: This could be seen as a result of limited grid capacity, insufficient links between regions with abundant vs. low renewable energy, and/or a lack of storage potential and flexibility in the system.   
+
+Example
+These two reasons can often be interlinked, as was the case in the Netherlands in April 2023. Net metering has encouraged a huge increase in solar power in the Netherlands, but failed to provide incentives for consumers to support the grid. This means that on sunny days, high production far outstrips consumption needs. This high supply, coupled with insufficient capacity to export electricity to other countries, led day-ahead prices to drop to almost -200€/MWh. 
+
+Reasons for solar curtailment
+Negative electricity prices in Belgium and the Netherlands
+Mitigating PV curtailment
+Without the right incentives and technology in place, potential solar power is not being maximized: excess photovoltaic (PV) power may go to waste during the day and more energy from non-renewable energy sources may be generated as renewable energy was curtailed. Demand-side flexibility and sector coupling are key to better matching supply and demand clean energy systems.
+
+One way to avoid curtailment is to extend grid infrastructure so that more electricity can be transported at any one time. Grid expansion, however, takes a lot of time and money. Other clean technologies and smart energy management solutions can be implemented more quickly to make energy systems more flexible and limit PV curtailment.
+
+Energy storage
+Storing surplus solar energy for later use is key to preventing PV curtailment. Energy produced in peak production hours can be stored in a variety of ways:
+
+Residential batteries: small-scale batteries for households and buildings can store locally-generated solar power for later use when the sun is no longer shining, e.g. at night. 
+Grid-scale batteries: large-scale batteries can be used to store excess power from solar parks (or other energy generation sources such as wind) to be used during periods of bad weather, or even in different seasons.
+Hydrogen: Hydrogen is a key energy storage technology as large amounts of surplus clean electricity can be converted into hydrogen via electrolysis and stored for long durations. This power can then be used in peak demand and provide seasonal energy balancing.
+Electric vehicles with bidirectional charging: vehicle-to-grid (V2G) and vehicle-to-home (V2H) technologies allow electric vehicles to be used as batteries. The car can be charged and discharged according to the needs of the house or grid and thus used to store PV power when supply is low and demand is high.
+Smart energy management
+A smart energy management system (EMS) can optimize the energy flows between the PV system, battery and/or EV to ensure no solar power goes to waste. Beyond this, an EMS enables more sophisticated solutions to further stabilize the grid and reduce costs and emissions:
+
+Peak shaving: shifting consumption to periods when solar production is high is another effective way of minimizing solar curtailment. This can be done on a small-scale level by incentivizing homes or buildings to use more power during the day by offering cheaper prices through time-of-use tariffs. On a larger scale, heavy industry could also shift demand to hours of high solar production.
+Smart PV curtailment: an EMS distributes the otherwise curtailed solar power to other controllable devices – EV, battery and heat pump – in the user’s order of preference and according to both asset constraints and legal requirements.
+Forecast-based energy management: daily energy forecasts of local solar production and consumption can be generated based on historical measurements and intelligent forecasting algorithms that also consider weather forecasts. These can be used to redirect stored power so that no PV power goes to waste.
+Flexibility marketing: excess solar power can be used as an additional source of revenue. Grid operators pay a lot for suppliers to provide balancing power aka. to send surplus solar to the grid. Flexibility can also be traded based on forecasts and, in the case of households, a home energy management system (HEMS) translates the call signal into an actual power flow. Aggregators can also bundle a fleet of HEMS into a virtual power plant (VPP), trade their flexibility and financially compensate HEMS owners.

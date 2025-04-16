@@ -1,0 +1,118 @@
+State of Charge
+The State of Charge (SoC) represents the percentage of energy stored in a battery or energy storage system relative to its full capacity. SoC is a vital metric for evaluating energy availability and overall system performance. It can be applied to grid-scale or residential battery storage, electric vehicles, and even heating rods.
+
+State of charge of different energy assets
+state of charge for different energy assets 
+‍
+
+Battery: the SoC of a battery shows the amount of energy stored in the device and how much it could be charged or discharged according to the energy generation potential or consumption needs at the site. ‍
+Electric vehicle (EV): SoC plays a crucial role in determining the range and performance of the vehicle. Drivers need to monitor the desired state of charge (desired SoC) to plan their trips effectively and avoid running out of power.
+‍
+‍Heating rod: this is an electrical device used to generate heat, typically in applications like water heating. Once the water reservoir has reached a sufficient temperature, the heating element can be switched off. In this case, the SoC shows how much power the heating rod requires to reach its desired temperature.
+state of charge of different energy assets
+State of charge and energy management systems
+Having an accurate state of charge of an energy asset is the first step to being able to control it. Optimizing each device’s state of charge in line with other energy assets is only possible with an energy management system (EMS).
+
+An EMS integrates numerous assets and takes each of their requirements into account to optimize energy flows across the entire system. In a household, for example, locally-generated solar power could be used to charge an EV, and once this has reached its desired state of charge, the heating element could be powered, and any excess solar power could be used to charge a battery. By strategically controlling the charging and the discharging cycles, an EMS enables devices to respond to electricity prices or demand fluctuations, while always meeting local power needs.
+
+Real-time adjustments ensure the EV, battery or heating element reaches its desired SoC without straining the grid or compromising device performance. This approach maximizes the portion of power drawn from local, renewable sources, thereby boosting self-consumption of solar energy and minimizing electricity costs. Such integration improves efficiency, cost-effectiveness and stability of clean energy systems.
+
+State of charge vs state of energy vs state of health
+SoC should not be confused with either state of energy (SoE) or state of health (SoH). SoE represents the battery’s remaining energy under specific operating conditions, which can include variations in load and temperature. Unlike SoC, which focuses on the immediate charge level, SoE provides a more dynamic and context-dependent measure of a battery’s available energy. It takes into account real-time factors that can affect energy availability, making it a valuable parameter for ensuring reliable performance in complex, changing environments.
+
+State of Health (SoH), on the other hand, assesses the overall condition and aging of a battery. It is defined as the ratio of a battery’s maximum charge capacity to its rated capacity when it was brand new. SoH considers the long-term degradation and wear and tear that batteries experience over time.
+
+By measuring SoH, one can gauge how well a battery retains its original capacity and performance compared to when it was new. SoH is crucial for predicting battery lifespan and determining when maintenance or replacement may be necessary, ensuring the reliability and safety of battery systems.
+
+Factors that affect SoC
+Indeed the state of charge of a battery tells you the measure of the stored electrical energy in relation to its full capacity; however there are numerous variables that can potentially influence a battery’s SOC.
+
+factors that affect state of charge
+Charge and discharge current
+The rate at which a battery is charged or discharged affects its SoC. Charging a battery at a higher current (fast charging) will increase the SoC more rapidly, while discharging it at a higher current will deplete the SoC faster.
+
+Charging voltage
+While charging current is the flow of the electric charge (amps) into a battery, charging voltage is the electrical potential (volts) applied during charging. A higher charging voltage will also increase the SoC more quickly, but it must be controlled within safe limits to prevent overcharging.
+
+Temperature
+Battery temperature plays a significant role in SoC. Most batteries have a lower capacity at extreme temperatures, so charging or discharging in very hot or cold conditions can be less effective. Many batteries have built-in temperature compensation mechanisms to cool or warm the battery to avoid these extreme temperatures.  
+
+Type of battery
+There are a number of different types of batteries, such as lithium-ion, lead-acid, and nickel-cadmium, and each has unique characteristics that affect their SoC behavior. The battery chemistry determines factors such as voltage profiles and capacity.
+
+Age and degradation
+As batteries age, their capacity and ability to hold a charge decrease. This means that the maximum SoC of an old battery would likely have less capacity that its  new equivalent, even with the same charging conditions.
+
+C-rate
+The C-rate is a measure of the charge or discharge rate relative to the battery’s capacity. Higher C-rates (rapid charge or discharge) can impact the accuracy of SoC estimation, as some battery chemistries may exhibit non-linear voltage responses at high C-rates.
+
+Self-discharge
+Batteries can lose charge over time even when not in use due to self-discharge, which is dependent on the battery chemistry and can affect SoC, if the battery is stored and not used for an extended period.
+
+Depth of discharge, overcharging and discharging
+How deeply a battery is discharged before recharging can also impact its overall SoC. Repeated deep discharges can reduce the overall capacity and change the battery’s overall behavior and performance. On the other hand, charging a battery beyond its maximum capacity can also damage the battery and affect its SoC accuracy.
+
+User behavior
+How a battery is used by the end user, including charging habits and usage patterns such as constant deep discharging, excessive speed, and rapid acceleration, can impact the SoC and overall battery health.
+
+Battery management systems (BMS)
+Many modern batteries, especially in electric vehicles and consumer electronics, are equipped with BMS. BMS monitors and manages the battery’s state, including SoC, by considering various factors like voltage, current, and temperature.
+
+Energy management systems (EMS)
+The incorporation of a mathematical battery model in a rule-based energy management system can assess voltage and state of charge, optimizing the charging and discharging of a battery. By intelligently regulating the power flow, an EMS can extend battery life, improve efficiency, and maintain a stable state of charge, ensuring optimal performance and longevity of the battery, be it in a residential, industrial, or electric vehicle situation.
+
+Calibration and measurement accuracy  
+The methods used to measure SoC can impact accuracy. Battery management systems and energy management systems use algorithms and voltage/current measurements to estimate SoC, and calibrating it is essential for accuracy.
+
+State of charge calculation
+The most common state of charge calculation looks like this:
+
+𝑆𝑜𝐶(𝑡) = 𝑄𝑟𝑒𝑚𝑎𝑖𝑛𝑖𝑛𝑔(𝑡) ∗ 100 [%] ( 1 ) 𝑄𝑚𝑎𝑥(𝑡)
+
+Battery management systems heavily rely on precise SoC calculation to optimize performance, bolster reliability, and extend battery lifespan.
+
+However, calculating the state of charge of a battery, whether in the context of energy storage systems or electric vehicles, is a challenging yet pivotal task due to the diverse range of battery types and applications and other factors mentioned above. Recent years have witnessed extensive research and development aimed at enhancing the accuracy of SoC estimation, and the following are the most widely used SoC calculation methods.
+
+State of charge calculation methods
+state of charge calculation methods
+SoC calculation methods are crucial for determining the available capacity in a battery. These methods employ diverse techniques (and can be very technical to the untrained mind) to estimate the SoC, ranging from direct measurements to mathematical models. Each approach offers unique advantages and limitations, catering to various applications and battery types.
+
+Ah metrology
+This method calculates state of charge by measuring the ampere-hours (Ah) that have been added to or removed from a battery, allowing for an estimation of the remaining charge.
+
+The open circuit voltage (OCV) method
+This estimates SoC based on the battery’s open circuit voltage, utilizing a voltage versus SoC relationship to determine charge levels.
+
+Ah metrology-OCV combo method
+This combined method enhances SoC estimation accuracy by integrating Ah Metrology and open-circuit voltage (OCV) while correcting for variables like charge/discharge efficiency, aging factors, initial SoC, and battery capacity. Simulation results confirm the effectiveness of this amended model, reducing estimation errors and validating its feasibility and reliability.
+
+Coulomb counting
+This method tracks the flow of electric charge in and out of a battery to accurately determine SoC by integrating current over time.
+
+Internal resistance method
+SoC is calculated by analyzing the battery’s internal resistance, which changes with charge level. Higher internal resistance implies lower SoC.  
+
+Kalman filtering method
+This method employs a mathematical filter, the Kalman filter – a recursive mathematical algorithm used for estimating the state of a dynamic system – to predict SoC based on a combination of measurements and system dynamics, offering a robust and accurate estimation.
+
+State of charge management
+Managing the state of charge of a battery is crucial for efficient and reliable energy storage, especially for those without in-depth knowledge of various SoC calculation methods (which are primarily behind the scenes). Managing the state of charge is one of the functions of an intelligent energy management system.
+
+Setting minimum and maximum SoC
+Managing state of charge (SoC) through an energy management system is pivotal in enabling smart residential battery storage and EV charging strategies. It safeguards EV batteries by keeping the SoC within its ideal limits, thereby promoting efficient energy usage and battery longevity. Ensuring numerous EVs at a site each reach their desired SoC within their parking times without exceeding grid limits requires cutting-edge technology. Measures such as dynamic load management and peak shaving are crucial.
+
+state of charge management
+Smart charging solutions
+An energy management system can efficiently manage the charging and discharging of batteries based on fluctuating electricity prices. Integrated with real-time pricing data, the EMS aligns battery operation with cost-saving opportunities.
+
+During off-peak hours, when electricity rates are low, it schedules battery charging, optimizing cost-effectiveness. Conversely, during peak hours with higher prices, the EMS triggers battery discharge, reducing reliance on the grid and saving on electricity expenses.
+
+Similarly, an EMS plays a pivotal role in enabling bidirectional charging, which transforms an electric vehicle into a flexible asset. By intelligently managing the EV’s state of charge, a home energy management system (HEMS), to be specific, ensures the battery is optimally charged during periods of low electricity demand. This excess energy can be discharged and sent back to the grid or used to power appliances in the home, effectively turning the EV into a mobile energy storage unit and further advancing self-sufficiency optimization.
+
+Therefore, the EMS’s ability to balance SoC, grid conditions, and user preferences maximizes the EV’s value as a versatile asset that supports grid resilience and cost savings.
+
+Virtual capacity expansion
+virtual expansion
+Photovoltaic systems serve as a prime example of how virtual capacity can be introduced into an energy ecosystem behind the meter. PV installations contribute to increased capacity without extending the grid capacity point. And an EMS manages the state of charge of energy storage systems and electric vehicles.
+
+The EMS ensures surplus energy generated by PV panels is efficiently stored in batteries and synchronizes the SoC of EVs with solar energy production. By doing so, the EMS maximizes the utilization of renewable energy during peak generations times, ensuring that EVS are charged when the sun is shining, minimizing grid reliance, and making most of the residential virtual capacity.

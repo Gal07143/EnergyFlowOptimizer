@@ -1,0 +1,53 @@
+Grid-friendly
+If energy assets work in a grid-friendly manner this means their operational behavior supports grid stability and reliability, while reducing grid congestion. This is becoming increasingly important in energy systems with a higher share of renewable energy.
+
+What is grid-friendly behavior? 
+Energy assets or systems are grid-friendly if their operational behavior improves the overall stability, efficiency and reliability of the electrical grid. Grid-friendly distributed energy resources (DERs), such as residential batteries, photovoltaic (PV) systems, electric vehicle (EV) chargers and heat pumps, help to prevent grid congestion and overcome imbalances between supply and demand, which are exacerbated by integrating renewable energy sources into the grid. 
+
+Grid-friendly assets typically achieve this by adapting their behavior to the requirements of the grid by: better matching flexible demand to intermittent supply; responding to signals from grid operators; or providing ancillary services, such as voltage and frequency regulation. One of the key strategies for grid-friendly behavior is demand response, where electricity consumption is shifted to better align with periods of high generation.
+
+
+A key strategy of grid-friendly behavior is shifting electricity consumption to better align with periods of high generation
+Why is grid-friendly behavior important?
+Grid-friendly behavior is key as the demand for electricity continues to increase due to the electrification of heating and mobility. At the same time, the increased penetration of renewable energy generation means that systems are experiencing greater generational spikes, for example when the sun is shining or the wind is blowing. Without proper management, these sharper peaks on both the supply and demand side can lead to grid congestion. Consumption peaks can also lead to overloads or even blackouts. The adoption of smart grid-friendly solutions supports the integration of renewable energy sources by balancing their fluctuations through solutions including demand response, energy storage and flexible generation. These solutions also help to reduce the need for expensive grid infrastructure repairs by optimizing the use of existing grid resources and reducing the load on the system.
+
+Characteristics of grid-friendly systems
+There are a number of specific characteristics that make a system grid friendly:
+
+Flexibility 
+Flexible energy systems can adjust power generation and/or demand in response to grid conditions, electricity prices or constraints in transmission and distribution. By adapting power flows, these systems not only stabilize the grid but also reduce costs for homeowners. For example, systems that utilize Frequency Containment Reserves (FCR) help maintain grid stability by automatically adjusting energy usage or production to counteract frequency deviations, ensuring balance between supply and demand and supporting the grid. 
+
+Connectivity
+A key feature of grid-friendly assets is their ability to communicate with grid operators and other connected devices. By using standardized protocols such as EEBUS, these systems ensure seamless communication and allow real-time adjustments to maintain grid stability.
+
+Local optimization:
+Local optimization ensures that all locally-connected DERs on a site, such as solar systems or heat pumps, are holistically optimized to minimize costs and maximize efficiency. These assets store surplus energy for later use or feed it back into the grid at times of high demand/prices, thus maximizing the usage of self-generated solar power and minimizing reliance on the power grid. This helps to minimize grid congestion.
+
+
+Storing surplus energy helps the grid, service providers and end consumers
+Grid-friendly solutions
+It's important to have a grid-friendly system if your main energy sources are renewable. Fortunately, most grid-friendly solutions are in fact renewable and smart. 
+
+Home energy management systems (HEMS)
+A HEMS manages energy generation, storage and consumption in households to meet energy needs, while minimizing costs and emissions. By optimizing the flexibility of connected assets, a HEMS can shift energy consumption to off-peak periods or feed excess energy into the grid. This reduces stress on the grid, creates stability and increases  participation in demand response programs.
+
+Smart meter 
+Smart meters are intelligent devices that measure real-time electricity consumption and provide households with transparency and insight into their energy consumption. Using this data, DSOs can better understand and manage grid utilization, providing a more reliable and efficient power supply.
+
+Battery storage systems 
+Storage systems for batteries can store excess energy in periods with low demand and can release this stored energy in times of high demand. Thus, they support balancing supply and demand of the grid and improve its stability by reducing the need for power plants, smoothing our fluctuations. By storing energy locally they also reduce strain on the grid’s transmission infrastructure and prevent grid congestion. 
+
+Dynamic load management (DLM)
+Dynamic load management is a grid-friendly solution because it optimizes electricity consumption by adapting the power consumption of the connected systems to the grid conditions in real time. DLM enables users to shift or reduce demand at peak times and thus prevents the grid from being overloaded. Dynamic load management also promotes the integration of renewable energies by matching consumption patterns to the current availability of energy sources.
+
+Regulatory measures to achieve grid-friendliness
+
+Most grid-friendly solutions are in fact renewable and smart
+As the energy transition progresses, governments are recognizing that with the introduction of more and more renewables and a reliance on distributed energy resources (DERs), grid friendliness is a key pillar for a successful energy transition. Therefore, there are certain standards and regulations from authorities to ensure grid stability. Utilities and operators are incentivized to adopt smart technologies and grid-supportive practices. 
+
+Policies like paragraph 14a of the Energy Industry Act (EnWG) is one of those. Revised over the years, the “new” act took effect at the beginning of 2024 in Germany. It allows grid operators to temporarily reduce the output of controllable assets during overloads while consumers benefit from lower grid fees. This revised law mandates the connection of new controllable assets and prohibits delays due to grid capacity and requires operators to actively manage and expand infrastructure.   
+
+Another policy that aims to protect the grid with the evolving adoption of renewables is paragraph 9 of the Renewable Energy Sources Act (EEG). As a part of the ongoing updates of Germany’s energy industry act, §9EEG did become effective already in some parts, while the remaining points will take effect on January 1, 2025. As of then, operators of energy systems and combined heat and power (CHP) plants above 25 kilowatt (kW) are obliged to install smart meter compatible equipment in order to enable grid operators to monitor and control feed-in remotely. For systems that are smaller (7-25 kW) the requirements are similar but depend on grid connections. Larger systems (>100 kW) have to allow full remote control while the in-between ones (25-100 kW) need partial control until smart meters are installed. 
+
+Additionally, the act mandates real-time monitoring of energy feed-in as well as adjustable feed-in power based on the grid’s needs. This applies to installations such as photovoltaic (PV) systems and the CHP plants. The act also includes provisions for retrofitting older systems in order to meet compliance. 
+

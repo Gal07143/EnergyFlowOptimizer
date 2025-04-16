@@ -1,0 +1,21 @@
+Virtual Grid Expansion
+Virtual grid expansion aims to increase the capacity of a site by adding local electricity production or storage capacity. Unlike a physical grid extension, which increases the actual capacity of the grid connection point, a virtual expansion is carried out “behind the meter” and is therefore often quicker and more cost-efficient. In turn, the peak capacity is not available at all times, meaning it is only advisable for sites with flexible or variable demand.
+
+Extending production capacity
+
+Added capacity through on site solar
+Grid expansion through increases in virtual production capacity can be divided into two categories: intermittent renewables and controllable fossil fuel capacity.
+
+Renewables: Solar panels or small-scale wind turbines can be installed on-site to add virtual capacity. As their generation is dependent on weather conditions, they are best suited for use cases with controllable demand, for example, electric vehicle (EV) charging capacity can be managed in response to current production.
+Fossil fuels: Diesel generators can be used to provide additional capacity during peak hours. Diesel, however, is carbon intensive and usually a relatively costly electricity source.
+Extending storage capacity
+
+Add capacity through on site batteries
+Batteries can level loads over time and thereby add capacity during peak hours. To achieve this, the battery is charged when consumption is low and discharged during high consumption. In addition, such storage capacity can also leverage varying electricity prices. Here, batteries are charged during low price periods and discharged during peak prices.
+
+Examples
+A growing number of companies combine batteries and PV systems with EV charging infrastructure to enable high power charging in locations that lack sufficient grid capacity.
+
+gridX: gridX’s XENON platform allows charge point operators (CPOs) to connect charging infrastructure with local PV systems and batteries to extend the grid virtually.
+Kreisel: The Austrian company Kreisel Electric offers an integrated product featuring DC chargers and buffer batteries.‍
+Numbat: The German company operates high power charging (HPC) infrastructure in combination with batteries at supermarket parking lots and fuel stations

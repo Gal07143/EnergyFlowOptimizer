@@ -1,0 +1,64 @@
+Modbus Protocol
+Modbus is a communication protocol that enables data exchange between electronic devices. It is mostly used in industrial environments to transmit signals from instrumentation and control devices to a main controller and vice versa. A system using Modbus could, for example, measure temperature and humidity in a room and send these measurements to a computer. A Modbus communication network can be divided into a Modbus client and several Modbus servers. Based on a request-response model, the Modbus client is requesting or writing data to/from a server. The server answers with the requested data or acknowledges the written data.
+
+What is the Modbus protocol and how does it work?
+Modbus is an open protocol that manufacturers can implement into their equipment without having to pay royalties. When referring to Modbus, it is also important to note that there are stark differences between the Modbus remote terminal unit (RTU) and the Modbus transmission control protocol (TCP). While both variants perform the same function, they differ in accessibility and compatibility, which will be discussed in more detail later on. 
+
+History
+The Modbus protocol was developed in the late 1970s by Modicon (now part of Schneider Electric). It consists of several different variants which include the RTU and the TCP or the internet protocol (IP), which we will discuss further down. Because Modbus is an open protocol, it offers users great flexibility. It is also easy to implement from a technical standpoint. 
+
+Modicon created the protocol to be used with its Programmable Logic Controllers (PLCs), which are used in the manufacturing industry for the automation of industrial electromechanical processes. Since its original inception, the Modbus protocol has been implemented in a variety of devices across many industries. To this day, it remains popular due to its simplicity, open protocol style and ease of implementation. 
+
+Modbus components
+To better understand the structure of the Modbus protocol and how it works, let’s take a look at its components:
+
+Modbus devices
+Modbus devices are the physical devices that use Modbus as its communication protocol. These include temperature sensors, motor controllers, energy meters, inverters and charging stations.
+
+Modbus client
+The client is the initiating device in Modbus communication. It sends the request to the server and receives its response in return. The client is able to communicate with more than one server, and the data it receives can also change from server to server. 
+
+Modbus server
+The server is the device that receives and processes the request from the client. The server does not initiate the communication; its sole task is to respond and process. 
+
+
+The client-server architecture helps ensure all essential data is housed in one central location.
+Data types in a Modbus system
+In Modbus, we differentiate between the following data types: 
+
+Coils are data that is represented by binary code such as “on/off” or “true/false”. It can be written to and read by a Modbus client. 
+Discrete inputs are also represented by binary code but can’t be written to or read. 
+Registers and data models
+The data model is based on a series of different registers. The registers are simple memory locations of the device that can hold and store the data. Here, we differentiate between two type of registers: 
+
+Holding registers that can be read and written to by the client.
+Input registers can, as the name suggests, only receive input, which means the client can only read the information in this register.
+How does the Modbus protocol work?
+As stated, communication via the Modbus protocol is divided into two types of communication partners: the “client” and the “server”. The client executes a specific predetermined command to the server, which, if deemed correct, processes this and returns a response to the client. To configure a proper communication base, the user provides a table describing which information is relevant and available at certain points in time. The client programmer then uses the software to query the required information.
+
+This simple but efficient structure makes Modbus a popular communication protocol. In Modbus RTU only, the signal is transmitted over serial lines between the connected devices. The data is sent as a series of ones and zeros called “bits” (this is similar to binary code, which uses the same mechanism). Each bit is sent as a voltage in which zeros are a positive voltage and the ones are negative. Modbus TCP, however, utilizes modern ethernet cables which ensure an even faster bandwidth of over 8,000,000,000 bauds. 
+
+In addition to allowing access to data that crosses a register boundary, some Modbus clients support references to individual bits within a register. As a result, devices can combine data of all types within the same memory range without having to split binary data into coil and discrete input ranges. In most implementations, a decimal point and a bit index or number are used to reference this.
+
+What are the different types of Modbus protocols and how do they communicate?
+Since its introduction, the standard Modbus protocol has developed into various forms that are not interoperable in the same network compartment and serve different purposes. But which Modbus protocols are available? Let’s take a look: 
+
+Modbus RTU ‍
+Modbus RTU is a common protocol used for serial communication in which the data is transmitted in binary format. Thus, it operates faster than the ASCII variation of Modbus. It operates on point-to-point connections, meaning communication is initiated only through the client. It supports one client and is compatible with up to 247 server devices, which each require a separate port. Modbus RTU is easy to set up, as it doesn’t require network cards, IP configuration or software installation. It is a microprocessor-based electronic device that’s used to connect hardware to either a distributed control system or a supervisory control and data acquisition system. 
+
+Modbus TCP
+Also referred to as Modbus Ethernet, Modbus TCP is an industrial Ethernet protocol which uses TCP/IP to communicate between a single client and multiple servers over an Ethernet network. The messages are packaged in TCP and IP packets for targeted and reliable delivery and routing. It is the more common and modern Modbus application, allowing for faster transmission speed, as it allows for a bandwidth of 8,000,000,000 baud. Modbus TCP communication protocols can connect to network devices on the internet and can also be used in a private computer network such as an intranet or extranet. 
+
+Secure Modbus
+Secure Modbus is a relatively new, enhanced Modbus which introduces security features while leaving the original protocol unchanged. It utilizes Transport Layer Security (TLS) to provide certificate-based authorization (which is product specific) and authentication. It doesn’t change the communication process of any other Modbus protocol type and simply adds a layer of security on top. So far, it is not that widespread, as it requires more data to be transmitted due to the on-top security layer, requiring more costly hardware to cope with it.
+
+The benefits of the Modbus protocol
+Modbus offers its users a variety of benefits: 
+
+Due to its simple structure, it is easy to implement and understand. The structure also allows for easy integration into different systems and devices.
+Because it is a simple protocol, it is widely spread, making it more affordable than other more complex protocols.
+As an open protocol, Modbus can be included in a wide range of device types.
+Modbus: In practice and use cases
+Modbus is often used in various industrial applications to collect data from sensors, controllers and other devices to transmit them to a central control unit or monitoring system. Due to its flexibility, the Modbus protocol can be used by programmable logic controllers to transmit data from connected devices to the clients.
+
+In practice, this means that an energy management system (EMS) hardware equipped with Modbus TCP, such as the gridBox, as the client can be connected to many different servers, such as energy meters or other assets. The gridBox, connected to many different assets that generate or regulate power, can then access this data and visualize this information in a web application ensuring high visibility and fast access to any information for end-users. Thus, Modbus is similar to an excel spreadsheet containing data from many different assets, from which the gridBox can access and work with.

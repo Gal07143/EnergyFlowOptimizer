@@ -1,0 +1,67 @@
+EV Charging Strategies
+An EV charging strategy is the logic used for distributing the available charging capacity among electric vehicles (EVs) charging at a given site. EV charging strategies are applied to deal with scarce capacity. This is essential as charging infrastructure quickly exceeds the capacity of local grid connection points. Thus, uncontrolled charging can lead to overloads, higher costs and carbon emissions, and the inability to fulfil mobility needs.
+
+Goals
+An EV charging strategy may aim at one or more goals, for example:
+
+Minimizing costs
+Minimizing charging time
+Maximizing fairness
+Minimizing emissions
+In practice, these goals often conflict (e.g. faster charging speeds usually increase costs), making it crucial for a charging site operator to select a particular EV charging strategy that suits their specific requirements.
+
+An EV charging strategy for each use case
+Priority charging
+one of the ev charging strategies is priority charging
+Illustration: Priority charging
+Goal: Meeting mobility needs
+
+Logic: As the name suggests, priority charging allows one or more charging points to be given preference. Specific charge points are prioritized in the distribution of available power. This means that vehicles at prioritized charging points receive maximum charging power, while the remaining capacity is distributed among the other charge points in the charging park. Prioritized charge points are also the last to be restricted in the event of bottlenecks – i.e. their charging power will only be affected after all non-prioritized charge points have been completely shut off. With gridX’s energy management, priority charging can easily be switched on or off, according to users’ needs.
+
+In practice: Priority charging is particularly suitable for locations where some EV drivers should have priority. For example, this charging strategy is used in parking garages of office buildings for people with specific mobility needs – for example, employees, who work in the field probably have less time to charge than others. Priority charging is also useful for delivery vehicles that need to make trips at short notice.
+
+Balanced charging
+what is balanced charging 
+Illustration: Balanced charging
+Goal: Maximizing fairness
+
+Logic: In balanced charging, the energy management system distributes the available power evenly to all the connected charge points. It also guarantees balance at the level of each individual electrical phase. If no charging stations are prioritized, the power is distributed evenly among all charge points. If individual charge points are prioritized, the remaining power is evenly distributed among the other charge points. The maximum limits per phase, as well as the total load limits, are always respected. Due to slightly different power modulation at each charging station, small differences between vehicles may occur.
+
+In practice: Balanced charging is a widely used EV charging strategy that can be applied to most types of charging locations. It is particularly suitable when the mobility needs of EV drivers are unknown or when all EVs should have the same priority. Therefore, balanced charging is often used in office buildings, residential complexes or public charging parks.
+
+Series charging
+series charging is one of the ev charing strategies 
+Illustration: Series charging
+Goal: Maximizing charging speed
+
+Logic: "First come, first serve". With series charging, prioritization takes place in a chronological order, where EVs that are plugged into the charging station first, receive more of the available capacity. They then charge as close as possible to their full state of charge, while vehicles connected later only receive the remaining capacity until one of the first vehicles is fully charged. XENON also enables individual prioritization: if a charge point is prioritized, the connected vehicle can be charged with maximum power. Any remaining power is then allocated to the vehicles in the order they were plugged in.
+
+In practice: Semi-public charging parks such as those at hotels, en-route charging on highways, restaurants or supermarkets are perfectly suited for series charging. This is because those who arrive and start charging first, usually also want to leave first. Therefore, the respective EV must be charged as quickly as possible within the limited time period. In addition, series charging is also suitable when the available capacity is extremely limited. In this case, balanced charging would not be possible if the capacity of around three kilowatts required for charging an EV is unavailable.
+
+Proportional charging
+what is proportional charging 
+Illustration: Proportional charging
+Goal: Meeting mobility needs
+
+Logic: Proportional charging requires information, such as departure time and the minimum required state of charge (SoC) from the EV driver, which can be inputted via a user interface. The platform determines a proportionality factor – which is calculated according to the duration of parking and the required energy – thereby determining how much of the available capacity each connected EV receives. For example, if a driver specifies a short idle time but a high desired state of charge (aka. high charging volume), more capacity is automatically allocated to this charge point so that the vehicle has sufficient charge when it departs. Proportional charging thus ensures that the requirements set by drivers for the charging process are met in every case.
+
+In practice:
+
+Fleet operators and logistics centers: Typically, fleet operators such as bus depots or logistics companies have a schedule that includes the departure time, distance, and route that each of their vehicles must travel within a given timeframe. Based on this information, the EVs can be charged proportionally according to their needs.
+
+Workplace: At office locations, employees usually have different arrival and departure times. They also require different ranges at their time of departure. Based on the required range and departure time, which can be specified by employees via a mobile app, an intranet tool or a user interface at the charging station, it is possible to charge EVs intelligently to ensure each employee can also get to where they need to go.
+
+Variations
+PV surplus charging
+Goal: Minimizing emissions
+
+Logic: PV surplus charging uses surplus PV electricity to charge EVs. This charging strategy ensures that locally generated PV power is maximally utilized by only charging electric vehicles when PV surplus is available, thereby lowering costs and emissions. However, to ensure that mobility needs are also met, additional power can be drawn from the grid to ensure that all cars receive their minimum desired state of charge. 
+
+In practice: PV surplus charging can be activated or scheduled during periods of high PV generation that is sufficient to charge connected EVs. This strategy is suitable for locations that prioritize sustainability, such as homes or office buildings.. 
+
+Scheduled charging
+Goal: Minimizing emissions while meeting mobility needs
+
+Logic: Scheduled charging is a suitable strategy for charging EVs at locations, where the charging power must be limited to a fixed kilowatt output. This could be due to dynamic tariffs that create value by charging at night time, the coordination of EV charging with local PV production, or to align with signals from grid operators. Avoiding charging during peak periods to minimize grid fees can also be a motivation for scheduled charging. 
+
+In practice: Scheduled charging is suited to locations where the parking duration of EVs are usually significantly longer, and if the mobility needs, such as departure time, required range (in km) or the required state of charge (in percent), are known. Scheduled charging can also be combined with local PV production, as was successfully implemented in a pilot project with MAINGAU Energie GmbH.

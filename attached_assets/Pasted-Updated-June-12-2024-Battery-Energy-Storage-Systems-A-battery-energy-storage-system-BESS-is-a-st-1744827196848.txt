@@ -1,0 +1,73 @@
+Updated:
+June 12, 2024
+Battery Energy Storage Systems
+A battery energy storage system (BESS) is a storage device used to store energy for later use. A BESS can be charged when local electricity production is high or electricity prices are low and then discharged to power other devices or fed back into the grid during high price periods. In this way, they help households maximize self-sufficiency and also contribute to system-wide grid stability.
+
+Why is battery storage needed?
+Battery storage is a crucial part of clean energy systems. A battery energy storage system (BESS) counteracts the intermittency of renewable energy supply by releasing electricity on demand and ensuring a continuous power flow for utilities, businesses and homes. Due to the falling prices for batteries, battery storage has a high cost-saving potential.
+
+How does a Battery Energy Storage System (BESS) work?
+A BESS is able to capture energy from different sources and store it in rechargeable batteries for later use. In a household, this energy could then be used during periods of peak demand when prices are high or when local production is low or not possible (for example, at night) in order to reduce costs. Grid-scale batteries store larger amounts of energy that can be used as a flexible resource to power wider areas when needed. By discharging stored energy when needed, a BESS is a highly flexible asset that balances energy demand and generation.
+
+Types of energy storage
+Taking a step back, energy storage comes in three main forms: 
+
+Mechanical: Energy is stored via rotational motion, for example a flywheel. Here, a motor generator system rotates at high speeds and converts between mechanical and electrical energy. They have fast response times and high efficiency, but a very limited energy storage time of just 15 minutes.
+Thermal: Electricity is turned into heat using a heat pump and is stored in a hot material such as water or sand inside an insulated tank. When required, the heat is used for either heating purposes or turned back into electricity. While this is highly effective for certain use cases (such as solar water heating), its low efficiency of 50-70% when turned back to electricity means it is not suitable for all applications.
+Chemical: Batteries use chemical potential to store energy. The most common are:some text
+Redox flow batteries: Provide electrical energy from liquid electrolyte solutions, often based on the heavy metal vanadium. This mineral’s high price, combined with flow batteries’ relatively poor efficiency and heavy weight, makes them less suitable for certain applications. 
+Lead-acid batteries: Based on electrochemical charge/discharge reactions that occur between a positive electrode containing lead dioxide and a negative electrode containing spongy lead. They are often used in motive power applications (e.g. forklifts) or as a starter battery. While affordable, they have a low energy density and shorter lifespan than lithium-ion batteries, and require regular maintenance. They also pose environmental hazards.
+Lithium-ion batteries: Consists of two electrical terminals, a cathode and anode, which are separated by a chemical material, an electrolyte. To accept and release energy (charge and discharge), the battery is coupled to an external circuit and electrons and ions move in either direction through the circuit and electrolyte, increasing or decreasing the chemical potential accordingly.
+The most prominent form: Lithium-ion batteries
+Lithium-ion battery storage is not perfect, but it has become the most dominant energy storage solution because it is lightweight, has a high efficiency (80-90%), is the most advanced technology and allows the most diverse, integrated and complex use cases. In addition, the cost of lithium-ion batteries has been steadily decreasing in recent years, making them increasingly cost-effective and attractive.
+
+
+Dr. Lennard Wilkening, CEO & Co-Founder of suena GmbH, said the lithium-ion battery is “the swiss army knife of the energy transition. We can use it for so many different use cases, it has fast reaction times and very good efficiency.”
+
+What is a battery energy storage system?
+A BESS can consist of the following parts: 
+
+The battery is the heart of the BESS. It stores electricity that can be released on demand. It can either be a lithium-ion, lead-acid or flow battery. 
+A power conversion system (PCS) uses a bidirectional inverter to convert the electrical power from direct current (DC) to alternating current (AC) and back. Inverters can either come as stand-alone inverters that work independently from the grid or as grid-tie inverters that are synchronized with the grid, allowing battery-stored electricity to be fed back into the grid. 
+Insulation monitors safeguard earth leakage, detecting undesired leakage values before faults occur. The real-time monitoring supports the early identification of insulation deterioration.
+A DC breaker is a protection device that protects the BESS from direct overcurrent and serves as a controlling device.
+An AC breaker similar to the DC breaker, the AC breaker protects the BESS from active over current.
+The surge protection device (SPD) protects the BESS and all connected assets from overvoltage. 
+Storage enclosures ensure physical protection for batteries and associated electronics, including safety features.
+A battery management system (BMS) is the brain of the BESS with the primary function to ensure that the battery operates within the predetermined ranges for several critical parameters, including the state of charge (SoC), state of health and voltage temperature. 
+Safety systems include fire suppression systems, overcurrent protection and thermal runaway prevention for safe operation.
+An energy management system (EMS) is an optional but important addition to a BESS. It intelligently controls charging and discharging in line with other assets and the grid. The EMS communicates directly with the inverter and the BMS to consider external data points from connected energy generating assets. (More on that below.)
+
+Locations and types of BESS
+The location of battery energy storage systems can be categorized into two main types: 
+
+‍
+
+Front-of-the-Meter systems (FTM) are larger utility-scale BESS directly connected to the power grid that store energy to be dispatched for entire regions or in industrial applications. Their main function is to ease grid congestion, provide seasonal storage or dispatchable backup power in emergency situations. 
+Behind-the-Meter systems (BTM), or small-scale BESS, are installed in houses, at electric vehicle charging sites or in buildings and are notably smaller than FTM systems. Their main function is to increase end user’s energy supply and flexibility, and reduce costs. If the regulatory framework allows it, they can also supply energy back to the grid and serve as an additional revenue stream.
+The future of BESS
+Globally, battery installations tripled from 2022 to 2023. According to the European Battery Alliance, Europe’s battery market is expected to be worth around €250 billion in 2025. They state, “The establishment of a complete domestic battery value chain is imperative for a clean energy transition and a competitive industry”.
+
+For example, in February 2024 a set of new reforms went into effect in the UK that include greater value added tax (VAT) relief on energy saving materials – with particular focus on battery storage. The reform was expanded to grant 20% VAT relief for standalone batteries and retrofit batteries, in addition to the BESS connected to PV that was already included in a previous statement The tax relief makes battery storage options more attractive and marks an important step in the clean energy transition for the UK. 
+
+According to LCP Delta, 2023 was the first year that energy storage deployments by power capacity exceeded 10 GW in Europe. They expect total power capacity to rise from just over 20 GW in 2023 to well over 120 GW by 2030 – a six-fold increase. Residential BESS will play a crucial role here, providing flexibility on both a local and a system-wide level.
+
+
+The benefits of combining BESS and EMS
+BESS and EMS go together like a boat on the ocean. Both can exist on their own, but you can only get the full use of a boat by putting it in water, and you can only appreciate the true vastness of the sea when sailing upon it. So, too, does the combination of a BESS and EMS help the user to appreciate both and get the greatest amount of benefits from their partnership.
+
+‍
+
+The first key step is combining BESS with a photovoltaic (PV) system and electric vehicle (EV). This provides a household with a high level of flexibility to charge the BESS when the sun is shining and discharge when that power is no longer available. This can ensure the vehicle is always charged when the driver needs to use it. However, maximizing the value of these assets requires an EMS to orchestrate such an interplay.
+
+‍
+
+The EMS intelligently manages both the use and storage of electricity in the BESS by holistically and dynamically optimizing power flows to store excess energy when it’s available (i.e. when surplus solar power is available) and likewise distributing it when needed (i.e. peak demand hours). In e-mobility applications, a BESS can virtually expand the capacity of a charging site, while in home energy management systems (HEMS) the battery unlocks huge flexibility potential.
+
+‍
+
+The EMS takes electricity prices, energy forecasting and the real-time load at the site into account to maximize the use of local solar power and minimize costs. For example, different assets can be prioritized, dictating where stored energy is directed, or different EV charging modes can be chosen to ensure specific requirements are always met. 
+
+As a more advanced step in HEMS, batteries also enhance the value of time-of-use tariffs. For example, automatically storing energy from the grid during cheap price periods and feeding this stored energy back into the grid during high price periods, not only allows users to minimize their costs, but it also adds potential to earn revenue. 
+
+Going one step beyond this, batteries are the foundation for advanced explicit flexibility services, such as Frequency Containment Reserves (FCR), imbalance markets or virtual power plants (VPPs). By aggregating the flexibility of multiple BESS into a single dispatchable unit, household batteries also have the potential to contribute to grid stability on a larger scale. These use cases are crucial in enabling a system based on a higher share of intermittent renewable energy.

@@ -1,0 +1,67 @@
+Vehicle-to-Grid (V2G) and Vehicle-to-Home (V2H)
+Electric vehicles (EVs) are parked, standing idle around 95% of the time. Bidirectional charging turns EVs into active components that help balance interconnected energy systems. Vehicle-to-grid (V2G) enables electricity to be drawn from electric vehicles (EVs) and sent back to the grid when additional electricity is needed. Vehicle-to-home (V2H) is a similar concept that allows electricity to be sent to the house to power other devices. V2G and V2H add a huge layer of flexibility to modern energy systems as they allow electric vehicles to be used as additional energy storage. 
+
+Smart Charging vs Bidirectional Charging
+Smart charging vs bidirectional charging 
+Smart charging vs bidirectional charging
+Smart charging (or V1G) is inherently unidirectional – power travels in one direction from the grid or another power source to charge the EV. Smart charging allows the time at which the EV is charged to be altered, enabling flexible loads to be shifted to non-peak periods to balance out consumption.
+
+Charging processes and preferences, such as departure/arrival time and required range, can also be adapted according to the owner’s or operator’s requirements. In addition, smart charging can maximize flexibility by charging in line with time-of-use (ToU) tariffs.
+
+Bidirectional charging, on the other hand, enables power to travel in the other direction so that the EV charging and discharging can be arranged according to the needs of the grid or the house. This helps to increase the self-sufficiency of households and holds the potential to enhance grid stability on a larger scale.
+
+Vehicle-to-Grid (V2G)
+what is Vehicle-to-Grid (V2G)
+With V2G, the EV is connected to the local power grid and its stored energy can be used in periods of low power supply. Thus, the EV battery can be charged or discharged according to the needs of the grid to balance out supply and demand. The batteries of connected vehicles, such as electric fleets, can also be aggregated to provide a greater storage supply when electricity is needed. These cars can then be fully charged when demand is low so that they are able to operate at full capacity when needed.
+
+Vehicle-to-home (V2H)
+what is Vehicle-to-home (V2H)
+The concept of vehicle-to-home (V2H) is similar to V2G. However, the EV does not feed the electricity directly back into the local grid, but into a connected household to power other electrical devices. As a result, homeowners can use EVs as a temporary storage unit by utilizing surplus energy from their electric vehicles for their own demand.
+
+For example, if the weather conditions are not optimal for local solar generation, electricity stored in the EV can be fed into the house to power a heat pump or household appliances. Then when the sun is shining, the EV can be recharged with solar energy ready for its next drive. Thus, self-sufficiency is maximized as homeowners are less dependent on the power grid, allowing them to minimize costs, without compromising on mobility.
+
+Vehicle-to-everything (V2X)
+what is vehicle-to-everything v2x
+Vehicle-to-everything (V2X) offers a variety of use-cases, as it allows communication between vehicles and any connected device. This also includes the concepts of V2G and V2H. Thus, vehicle-to-everything can be described as the subordinate term for any form of communication between vehicles and grid-connected devices.
+
+Technical requirements
+V2g and V2H Technical Requirements
+Certain technical requirements must be met to enable V2G and V2H and ensure that the full potential of EVs are leveraged: 
+
+The right charging plug has to be designed to be able to let electricity flow both ways. There are two main types that are most commonly used for this case – the CHAdeMo-plug and the CCS plug.
+Not all EVs are bidirectional vehicles, as only certain car manufacturers support V2G capabilities. Nissan, Hyundai, Mitsubishi, Ford, Genesis and Kia are some of the well-known automakers with bidirectional cars, while many others, such as Volkswagen, BMW and Volvo, are expected to release V2G-compatible EVs in the near future.
+A comprehensive Energy Management System (EMS) allows seamless communication between connected assets. Only with an EMS can the EV charging infrastructure communicate with the grid and other assets within a building or house to know when it should optimally be charged and discharged in order to optimize savings and maximize efficiency.
+Communication protocols help to regulate the bidirectional communication between a vehicle and a charging station - this can be done through OCPP 2.0, ISO 15118 and/or IEC 15118.
+An Electric Vehicle Charging Station (EVCS) that supports V2X functionality is crucial.
+Benefits of bidirectional charging
+what are the benefits of bidirectional charging
+Enhanced utilization of EVs by allowing them to cover electricity demand and lower grid congestion during peak load periods.
+Maximized self-sufficiency by using the vehicle as a battery that stores surplus power to use during periods of low production.
+Reduced costs as less power needs to be drawn from the grid. There is also potential to sell energy stored in the EV back to the grid during peak demand and create extra revenue.
+Improved grid stability by better integrating EVs into power grids and turning them into a flexible asset that can react to sudden changes in supply or demand.
+Reduced emissions by maximizing the utilization of clean energy to power EVs and making intermittent renewables more reliable.
+Dubbed as a storage on wheels, EVs move from one location to another and can flexibly support the electricity demand at its current location. 
+Seamless charging experience for the EV owner. The driver has to specify his/her charging requirements/conditions such as charge as cheap as possible, charge with lowest CO2 emissions, minimum range and time of departure etc., and everything else is taken care of by the EMS in the background.
+Further improves the value of the Total Cost of Ownership (TCO) for the EV owner by having the opportunity to increase self sufficiency, taking part in flexibility services in different energy markets and charging/discharging EVs according to flexible tariffs.
+Barriers and challenges to V2G/V2H
+what are the barriers and challenges to V2G/V2H
+Battery degradation: this can be accelerated by an increased number of charging and discharging cycles, resulting from an external entity controlling the battery.
+Potential energy loss: while bidirectional charging can reach an efficiency of 90%, energy is lost when converted from charging to discharging, and vice versa.
+Immature regulation and standards: although the technology enabling bidirectional charging already exists, the framework to fully integrate V2G/V2H technology into the EU market has not yet been fully implemented. Comprehensive regulation, public funding and unified standards are still preventing V2G/V2H from reaching mass adoption. 
+Lack of incentives: Time of use tariffs (ToUs) encourage users to take full advantage of fluctuating electricity prices by charging during off-peak and discharging during peak periods to save money and reduce strain on the grid. However, regulatory frameworks for such incentives that complement V2G/V2H are also lacking, discouraging bidirectional charging from taking off.‍
+A diverse range of stakeholders are involved in implementing bidirectional charging – automotive manufacturers, energy providers, grid operators, charge point operators, EV drivers, and government/legislative bodies, to name a few. They must collaborate and mutually agree on requirements and standards to ensure V2G/V2H is a win-win situation for all parties. This leads to further complications and delays in rolling out bidirectional charging as a market-ready functionality.
+Bidirectional Charging in Practice
+“Bidirectional Charging Management - BDL” is a joint research project by BMW and E.ON subsidiaries Bayernwerk and E.ON Energie Deutschland to showcase the holistic approach of interconnected vehicles, charging infrastructure and power grids with a focus on renewable energy. 50 EVs with V2G capabilities were provided to customers and, according to feedback, were easy to integrate into everyday life and were found to be useful.
+
+The project has shown that bidirectional charging is an effective way to increase renewable energy consumption, underlining the importance of e-mobility in the energy transition. The results of the project are being incorporated into a customer offering, ’Connected Home Charging’, which is the first pan-European ecosystem for intelligent charging at home. gridX’s XENON platform provides the technological foundation for the solution.
+
+Another great example on how bidirectional charging contributes to grid stability is the xSite project, a collaboration between FIEGE, E.ON, EBZ, gridX and RSW Technik. gridX’s XENON platform controls EV charging processes according to real-time energy loads at the FIEGE site to optimally use available power.
+
+Two bidirectional charge points allow EVs sitting idle for extended periods to be used as batteries by feeding energy back from the car batteries to be put to use elsewhere. “With FIEGE and our project partners, we are now successfully bringing an innovative, intelligent charging solution into the practical phase, which protects the climate and reduces costs for our customers.
+
+According to joint calculations, full utilization of the twelve charging points can save around 6,000 to 13,000 euros per year," says Mathias Wicher, Vice President eMobility at E.ON SE.
+
+Future Outlook of V2G and V2H
+V2G and V2H are already technically possible. However, a lack of standardization and immature regulation is holding back their true potential. With an exponentially increasing number of EVs on our streets and a rising number of real-life use cases, however, it is clear that bidirectional charging will bring a huge amount of flexibility to clean energy systems.
+
+Watch this video to learn how bidirectional charging at home helps users on a day-to-day basis in the pilot project Bi-ClEVer, an initiative between E.ON, BMW and gridX:

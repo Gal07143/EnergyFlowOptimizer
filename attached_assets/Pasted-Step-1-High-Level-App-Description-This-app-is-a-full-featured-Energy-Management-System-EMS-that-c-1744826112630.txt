@@ -1,0 +1,86 @@
+Step 1: High-Level App Description
+This app is a full-featured Energy Management System (EMS) that connects and controls EV chargers, battery storage (BMS), solar inverters (PV), and energy meters. It provides real-time monitoring, smart control, forecasting, AI optimization, and dynamic tariff response. It supports web and mobile, and is used by energy site operators, fleet managers, and utilities.
+
+🗂 Step 2: Main Features and Pages
+1. Dashboard
+Real-time energy flow (PV → BMS → EV / Grid)
+
+Power usage charts (live & historical)
+
+Alerts & site health summary
+
+2. Device Management
+Add/edit/remove devices (EVSE, BMS, PV, meters)
+
+View device status, telemetry, and control options
+
+OTA updates and configuration
+
+3. Energy Optimization
+AI suggestions (peak shaving, smart charging)
+
+Manual or automatic mode
+
+Forecasts for load, generation, price
+
+4. Site Settings
+Configure tariffs (ToU, fixed, net metering)
+
+DLM strategy
+
+Rules for backup power, EV charging priority
+
+5. Reports
+Export usage, savings, and forecasts
+
+Carbon footprint stats
+
+Billing/invoice logic (optional)
+
+6. Admin & Users
+Multi-user access
+
+Roles: Admin, Technician, Viewer
+
+🧩 Step 3: Tech Stack & Architecture
+Frontend: React (Vite) or Next.js (if SSR needed)
+
+Backend: FastAPI or Node.js
+
+Database: Supabase (PostgreSQL)
+
+Real-Time: MQTT + Supabase Realtime or WebSocket
+
+IoT Communication: Modbus, OCPP, HTTP APIs
+
+AI Engine: Python scripts for forecasting, control
+
+Deployment: Docker (for full stack), can run on Replit, Raspberry Pi, or Cloud VM
+
+🧱 Step 4: Database Schema (Supabase)
+devices: id, type, site_id, status, config, last_seen
+
+sites: id, name, location, owner_id
+
+telemetry: id, device_id, timestamp, metric, value
+
+users: id, name, email, role
+
+optimizations: id, site_id, action, timestamp, result
+
+register_maps: id, device_id, modbus_map, ocpp_map, bms_map
+
+🔌 Step 5: Data Flow & Connections
+Devices send real-time telemetry via MQTT → Backend → Supabase
+
+AI engine listens to Supabase → makes decisions → sends control commands
+
+UI fetches data via REST & WebSocket/MQTT for live updates
+
+User actions (e.g., change tariff, schedule charging) are stored and pushed to edge devices
+
+🚀 Step 6: How to Explain to Replit
+You can tell Replit:
+
+"I want to build an EMS web app using React + Supabase + MQTT. It will connect to EV chargers, solar panels, batteries, and meters. It needs a dashboard, device pages, optimization engine, user management, and reporting. I’ll use Supabase for DB and real-time updates, and MQTT for telemetry from hardware. The backend will be in FastAPI or Node.js. Please scaffold the project with all the above features and set up a Supabase DB with the described schema."
+

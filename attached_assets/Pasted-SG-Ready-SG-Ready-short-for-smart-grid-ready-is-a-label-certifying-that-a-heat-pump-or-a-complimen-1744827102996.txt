@@ -1,0 +1,51 @@
+SG Ready
+SG Ready (short for smart grid ready) is a label certifying that a heat pump or a complimentary management technology can respond to defined external control signals. The label was introduced in 2012 by the German heat pump association (Bundesverband Wärmepumpe, BWP) together with 17 heat pump manufacturers. The label aims to promote the external control of heat pumps so that they can be operated in response to price signals and the state of the grid. This allows heat pumps to support the power grid, have a lower carbon footprint and be more cost-effective to operate.
+
+SG ready heat pumps
+Communication flow
+Operating modes
+SG Ready supports four different operating modes for heat pumps. These modes are communicated via two binary switches (indicated in brackets below):
+
+Mode 1 – Blocked operation (1:0): The operation for the heat pump is blocked for a maximum of two hours per day.
+Mode 2 – Normal operation (0:0): The heat pump runs in energy-efficient normal mode.
+Mode 3 – Encouraged operation (0:1): The operation of the heat pump is encouraged to increase electricity consumption for heating and warm water.
+Mode 4 – Ordered operation (1:1): The heat pump is ordered to run. This state supports two variants which must be adjustable on the controller for different tariff and utilization models:
+i) the heat pump is switched on
+ii) the heat pump is switched on AND the warm water temperature is raised
+Requirements
+Certification is handled by the BWP and differs depending on the device: it is applicable to heat pumps, hot water heat pumps and interface-compatible system components.
+
+Heat pumps
+Heat pumps include devices with or without domestic hot water heating that source heat from water, the air or the ground. 
+
+Heat pumps must support all four operating modes. As an added option, room temperature can be included as a variable for controlling the system temperature i.e. return temperature. The use of a thermostat to block the heat pump, however, does not suffice. Additionally, documents detailing the setup of the heat pump for load management are required.
+
+Hot water heat pumps
+Hot water heat pumps must have a controller that supports the increase of the set temperature to make use of thermal storage. This corresponds to operating mode 4.
+
+Interface-compatible system components
+Interface-compatible system components are devices that can transmit digital control signals to a heat pump in accordance with the SG Ready operating modes. This may include inverters, energy management systems or other automation technology systems.
+
+Interface-compatible system components must support at least two of the four operating modes. 
+
+Additionally, documentation for the setup is required. The component must also ensure that: 
+
+The blocking signal (mode 1) is active for at least 10 minutes and can only be reactivated 10 minutes after it was last active.
+The blocking signal (mode 1) is only applied for a maximum of 2 hours.
+The blocking signal (mode 1) is switched no more than 3 times a day.
+As soon as the signal for mode 3 or 4 is set, it remains active for at least 10 minutes and can only be reactivated 10 minutes after it was last active.
+Use cases
+Self-sufficiency optimization
+In combination with local electricity production (e.g. a photovoltaic system) the heat pump can be operated in response to the availability of locally produced clean energy. This allows the operation of the heat pump to fill up warm water tanks as thermal energy storage when surplus solar energy is available. As a result, homeowners can increase their self-consumption and self-sufficiency.
+
+Price-sensitive operation
+When combined with dynamic electricity prices, heat pumps can be scheduled to operate during low price periods to reduce energy costs.
+
+Grid-supportive operation
+Heat pumps can be operated to stabilize the grid. If grid frequency is too high, heat pumps can be ordered to increase their electricity consumption; vice versa they can be blocked from operation for limited time to increase the grid frequency.
+
+Regulation
+While most heat pump manufacturers that are active in Europe are also compliant with the SG Ready requirements, it is not a requirement in any country. In Germany, however, heat pumps have been required to be open to external control signals to qualify for federal subsidies since the beginning of 2023. The SG Ready label suffices for this.
+
+In practice
+The SG Ready label has become a de-facto standard feature for heat pumps. As of June 2023, the BWP lists 103 compliant manufacturers on its website
