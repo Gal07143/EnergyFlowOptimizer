@@ -13,11 +13,16 @@ import {
   X,
   LogOut,
   Cloud,
+  Users,
+  MapPin,
+  MessageSquare,
+  Heart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
+import Logo from '@/components/ui/Logo';
 
 interface SidebarProps {
   isMobile?: boolean;
@@ -41,6 +46,8 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/partners', label: 'Partners', icon: Users },
+    { path: '/locations', label: 'Locations', icon: MapPin },
     { path: '/devices', label: 'Energy Assets', icon: Zap },
     { path: '/analytics', label: 'Analytics', icon: BarChart2 },
     { path: '/optimization', label: 'Optimization', icon: Lightbulb },
@@ -48,24 +55,22 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
     { path: '/settings', label: 'Settings', icon: Settings },
   ];
 
-  const deviceItems = [
-    { path: '/devices/battery', label: 'Battery Storage', icon: BatteryCharging },
-    { path: '/devices/ev', label: 'EV Chargers', icon: PlugZap },
-    { path: '/devices/solar', label: 'Solar PV', icon: Sun },
-    { path: '/devices/meter', label: 'Smart Meters', icon: Gauge },
+  const bottomItems = [
+    { path: '/events', label: 'Events', icon: MessageSquare },
+    { path: '/support', label: 'Support', icon: Heart },
   ];
 
   const containerClasses = cn(
     'flex flex-col',
     isMobile
-      ? 'fixed left-0 right-0 top-16 bottom-0 z-50 bg-white dark:bg-gray-900 overflow-y-auto'
+      ? 'fixed left-0 right-0 top-16 bottom-0 z-50 bg-white dark:bg-gray-800 overflow-y-auto'
       : 'hidden md:flex md:w-64 md:flex-col h-full'
   );
 
   return (
     <div className={containerClasses}>
-      <div className="flex flex-col flex-grow bg-white dark:bg-gray-900 pt-5 pb-4 overflow-y-auto border-r border-gray-200 dark:border-gray-800">
-        <div className="flex items-center flex-shrink-0 px-4 mb-5">
+      <div className="flex flex-col flex-grow bg-white dark:bg-gray-800 pt-5 pb-4 overflow-y-auto border-r border-gray-100 dark:border-gray-700">
+        <div className="flex items-center flex-shrink-0 px-6 mb-8">
           {isMobile && (
             <Button
               variant="ghost"
@@ -76,16 +81,11 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
               <X className="h-4 w-4" />
             </Button>
           )}
-          {!isMobile && (
-            <span className="text-2xl font-bold text-primary dark:text-primary-foreground">
-              EnergySage
-            </span>
-          )}
         </div>
         
-        <nav className="mt-5 flex-1 px-2 space-y-1">
+        <nav className="px-3 space-y-1 flex-1">
           {navItems.map((item) => (
-            <div key={item.path} className="w-full">
+            <div key={item.path} className="w-full mb-1">
               <Link
                 href={item.path}
                 onClick={() => onClose?.()}
@@ -93,16 +93,16 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <div
                   className={cn(
                     isActive(item.path)
-                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
-                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer'
+                      ? 'bg-primary text-white'
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
+                    'group flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors'
                   )}
                 >
                   <item.icon className={cn(
                     isActive(item.path)
-                      ? 'text-primary-500 dark:text-primary-400'
-                      : 'text-gray-400 dark:text-gray-500',
-                    'mr-3 h-5 w-5'
+                      ? 'text-white'
+                      : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300',
+                    'mr-3 h-4 w-4 flex-shrink-0'
                   )} />
                   {item.label}
                 </div>
@@ -110,54 +110,46 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
             </div>
           ))}
           
-          <div className="pt-4 pb-2">
-            <div className="border-t border-gray-200 dark:border-gray-800"></div>
-          </div>
+          <div className="pt-6 mt-6 border-t border-gray-100 dark:border-gray-700"></div>
           
-          <div className="px-2 space-y-1">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Device Management
-            </span>
-            
-            {deviceItems.map((item) => (
-              <div key={item.path} className="w-full">
-                <Link
-                  href={item.path}
-                  onClick={() => onClose?.()}
+          {bottomItems.map((item) => (
+            <div key={item.path} className="w-full mb-1">
+              <Link
+                href={item.path}
+                onClick={() => onClose?.()}
+              >
+                <div
+                  className={cn(
+                    isActive(item.path)
+                      ? 'bg-primary text-white'
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
+                    'group flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors'
+                  )}
                 >
-                  <div
-                    className={cn(
-                      isActive(item.path)
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800',
-                      'group flex items-center px-2 py-2 text-sm font-medium rounded-md cursor-pointer'
-                    )}
-                  >
-                    <item.icon className={cn(
-                      isActive(item.path)
-                        ? 'text-primary-500 dark:text-primary-400'
-                        : 'text-gray-400 dark:text-gray-500',
-                      'mr-3 h-5 w-5'
-                    )} />
-                    {item.label}
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
+                  <item.icon className={cn(
+                    isActive(item.path)
+                      ? 'text-white'
+                      : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300',
+                    'mr-3 h-4 w-4 flex-shrink-0'
+                  )} />
+                  {item.label}
+                </div>
+              </Link>
+            </div>
+          ))}
         </nav>
       </div>
       
-      <div className="flex-shrink-0 flex border-t border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-900">
+      <div className="flex-shrink-0 flex border-t border-gray-100 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
         <div className="flex-shrink-0 w-full group block">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Avatar>
+              <Avatar className="border border-gray-200 dark:border-gray-600">
                 <AvatarFallback>{user?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
               </Avatar>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{user?.username || 'Guest'}</p>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-500">{user?.role || 'Not logged in'}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">{user?.role || 'Not logged in'}</p>
               </div>
             </div>
             <Button 
@@ -167,7 +159,7 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
               disabled={logoutMutation.isPending}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
