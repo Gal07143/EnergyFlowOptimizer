@@ -9,6 +9,7 @@ import { setupAuth } from './auth';
 import * as deviceController from './controllers/deviceController';
 import * as energyController from './controllers/energyController';
 import * as optimizationController from './controllers/optimizationController';
+import * as authController from './controllers/authController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -20,6 +21,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setupAuth(app);
   
   // API routes
+  
+  // Email verification routes
+  app.post('/api/verify-email', authController.verifyEmail);
+  app.post('/api/resend-verification', authController.resendVerificationCode);
+  app.get('/api/email-verification-status', authController.checkEmailVerification);
   
   // Site routes
   app.get('/api/sites', async (req, res) => {

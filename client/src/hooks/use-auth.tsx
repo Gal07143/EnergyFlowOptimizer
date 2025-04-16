@@ -9,13 +9,30 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
+// Verification schemas
+const verifyEmailSchema = z.object({
+  userId: z.number(),
+  code: z.string().length(6, "Verification code must be 6 digits")
+});
+
+const resendVerificationSchema = z.object({
+  email: z.string().email("Please enter a valid email address")
+});
+
+type VerifyEmailData = z.infer<typeof verifyEmailSchema>;
+type ResendVerificationData = z.infer<typeof resendVerificationSchema>;
+
 type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
   error: Error | null;
+  isEmailVerified: boolean;
+  isEmailVerificationLoading: boolean;
   loginMutation: UseMutationResult<Omit<SelectUser, "password">, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<Omit<SelectUser, "password">, Error, RegisterData>;
+  verifyEmailMutation: UseMutationResult<{ message: string }, Error, VerifyEmailData>;
+  resendVerificationMutation: UseMutationResult<{ message: string }, Error, ResendVerificationData>;
 };
 
 const loginSchema = z.object({
@@ -54,6 +71,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
     },
+  });
+  
+  // Check if email is verified
+  const {
+    data: emailVerificationData,
+    isLoading: isEmailVerificationLoading,
+  } = useQuery<{ verified: boolean }, Error>({
+    queryKey: ["/api/email-verification-status"],
+    queryFn: async () => {
+      try {
+        if (!user) return { verified: false };
+        const res = await apiRequest("GET", "/api/email-verification-status");
+        if (!res.ok) {
+          return { verified: false };
+        }
+        return await res.json();
+      } catch (error) {
+        return { verified: false };
+      }
+    },
+    enabled: !!user, // Only run this query if user is logged in
   });
 
   const loginMutation = useMutation({
@@ -131,6 +169,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+  
+  // Email verification mutations
+  const verifyEmailMutation = useMutation({
+    mutationFn: async (data: VerifyEmailData) => {
+      const res = await apiRequest("POST", "/api/verify-email", data);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Verification failed");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      // Invalidate email verification status
+      queryClient.invalidateQueries({ queryKey: ["/api/email-verification-status"] });
+      toast({
+        title: "Email verified successfully",
+        description: data.message || "Your email has been verified. You can now access all features of the application.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Verification failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const resendVerificationMutation = useMutation({
+    mutationFn: async (data: ResendVerificationData) => {
+      const res = await apiRequest("POST", "/api/resend-verification", data);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to resend verification code");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Verification code sent",
+        description: data.message || "A new verification code has been sent to your email.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to resend verification code",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <AuthContext.Provider
@@ -138,9 +227,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: user ?? null,
         isLoading,
         error,
+        isEmailVerified: emailVerificationData?.verified ?? false,
+        isEmailVerificationLoading,
         loginMutation,
         logoutMutation,
         registerMutation,
+        verifyEmailMutation,
+        resendVerificationMutation,
       }}
     >
       {children}
@@ -156,4 +249,4 @@ export function useAuth() {
   return context;
 }
 
-export { loginSchema, registerSchema };
+export { loginSchema, registerSchema, verifyEmailSchema, resendVerificationSchema };
