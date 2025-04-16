@@ -113,5 +113,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/weather/api-key', weatherController.setApiKey);
   app.get('/api/weather/api-key/status', weatherController.checkApiKey);
 
+  // Demand Response routes
+  app.get('/api/sites/:siteId/demand-response/programs', demandResponseController.getDemandResponsePrograms);
+  app.get('/api/demand-response/programs/:id', demandResponseController.getDemandResponseProgram);
+  app.post('/api/demand-response/programs', demandResponseController.createDemandResponseProgram);
+  app.put('/api/demand-response/programs/:id', demandResponseController.updateDemandResponseProgram);
+  
+  app.get('/api/sites/:siteId/demand-response/events', demandResponseController.getDemandResponseEvents);
+  app.get('/api/demand-response/events/:id', demandResponseController.getDemandResponseEvent);
+  app.post('/api/demand-response/events', demandResponseController.createDemandResponseEvent);
+  app.put('/api/demand-response/events/:id', demandResponseController.updateDemandResponseEvent);
+  
+  app.get('/api/sites/:siteId/demand-response/settings', demandResponseController.getSiteDemandResponseSettings);
+  app.post('/api/demand-response/settings', demandResponseController.createSiteDemandResponseSettings);
+  app.put('/api/sites/:siteId/demand-response/settings', demandResponseController.updateSiteDemandResponseSettings);
+  
+  app.get('/api/sites/:siteId/demand-response/participations', demandResponseController.getSiteEventParticipations);
+  app.get('/api/demand-response/participations/:id', demandResponseController.getSiteEventParticipation);
+  app.post('/api/demand-response/participations', demandResponseController.createSiteEventParticipation);
+  app.put('/api/demand-response/participations/:id', demandResponseController.updateSiteEventParticipation);
+  
+  app.get('/api/demand-response/events/:eventId/actions', demandResponseController.getDemandResponseActions);
+  app.post('/api/demand-response/actions', demandResponseController.createDemandResponseAction);
+
   return httpServer;
 }

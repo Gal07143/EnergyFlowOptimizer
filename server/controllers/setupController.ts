@@ -3,6 +3,7 @@ import { db } from '../db';
 import { storage } from '../storage';
 import { users } from '@shared/schema';
 import { hashPassword } from '../auth';
+import { createDemoDemandResponseData } from './demandResponseController';
 
 /**
  * Create demo admin user
@@ -167,6 +168,7 @@ export const createDemoData = async (req: Request, res: Response) => {
       vppEnabled: false,
       p2pEnabled: false,
       aiRecommendationsEnabled: true,
+      demandResponseEnabled: true,
       schedules: {
         batteryCharge: [
           { start: '00:00', end: '06:00', priority: 'high' }
@@ -188,7 +190,8 @@ export const createDemoData = async (req: Request, res: Response) => {
       importRate: 0.20,
       exportRate: 0.05,
       isTimeOfUse: false,
-      currency: 'USD'
+      currency: 'USD',
+      dataIntervalSeconds: 60
     });
     
     // Create current energy reading
@@ -258,6 +261,9 @@ export const createDemoData = async (req: Request, res: Response) => {
       temperature: null
     });
     
+    // Create demand response demo data
+    const demandResponseData = await createDemoDemandResponseData(site.id);
+    
     res.status(201).json({
       message: 'Demo data created successfully',
       site,
@@ -275,7 +281,8 @@ export const createDemoData = async (req: Request, res: Response) => {
         battery: batteryReading,
         ev: evReading,
         meter: meterReading
-      }
+      },
+      demandResponse: demandResponseData
     });
   } catch (error: any) {
     console.error('Error setting up demo data:', error);
