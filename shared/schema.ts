@@ -36,6 +36,9 @@ export const optimizationModeEnum = pgEnum('optimization_mode', [
   'grid_relief'
 ]);
 
+export const userRoles = ['admin', 'manager', 'viewer'] as const;
+export const UserRoleSchema = z.enum(userRoles);
+
 // Sites
 export const sites = pgTable('sites', {
   id: serial('id').primaryKey(),
