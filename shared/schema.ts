@@ -313,6 +313,7 @@ export const gridConnections = pgTable('grid_connections', {
 // Demand Response Program Tables
 export const demandResponsePrograms = pgTable('demand_response_programs', {
   id: serial('id').primaryKey(),
+  siteId: integer('site_id').references(() => sites.id),
   name: text('name').notNull(),
   provider: text('provider').notNull(),
   description: text('description'),
@@ -338,6 +339,7 @@ export const demandResponsePrograms = pgTable('demand_response_programs', {
 
 export const demandResponseEvents = pgTable('demand_response_events', {
   id: serial('id').primaryKey(),
+  siteId: integer('site_id').references(() => sites.id),
   programId: integer('program_id').references(() => demandResponsePrograms.id),
   name: text('name').notNull(),
   description: text('description'),
@@ -461,6 +463,8 @@ export const sitesRelations = relations(sites, ({ many }) => ({
   energyForecasts: many(energyForecasts),
   weatherData: many(weatherData),
   demandResponseSettings: many(siteDemandResponseSettings),
+  demandResponsePrograms: many(demandResponsePrograms),
+  demandResponseEvents: many(demandResponseEvents),
   eventParticipations: many(siteEventParticipations),
 }));
 
@@ -589,6 +593,10 @@ export const demandResponseProgramsRelations = relations(demandResponsePrograms,
 }));
 
 export const demandResponseEventsRelations = relations(demandResponseEvents, ({ one, many }) => ({
+  site: one(sites, {
+    fields: [demandResponseEvents.siteId],
+    references: [sites.id],
+  }),
   program: one(demandResponsePrograms, {
     fields: [demandResponseEvents.programId],
     references: [demandResponsePrograms.id],

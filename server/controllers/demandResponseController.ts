@@ -349,7 +349,7 @@ export async function createDemoDemandResponseData(siteId: number) {
         siteId,
         name: "Peak Demand Reduction Program",
         provider: "Grid Utility Co.",
-        programType: "peak_shaving",
+        programType: "peak_time_rebate",
         description: "Voluntary program for reducing electricity usage during peak demand periods.",
         incentiveRate: 0.25,
         isActive: true,
