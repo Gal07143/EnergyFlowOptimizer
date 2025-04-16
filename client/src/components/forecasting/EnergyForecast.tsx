@@ -428,7 +428,7 @@ export default function EnergyForecast({ siteId }: EnergyForecastProps) {
                         <li className="flex items-start gap-2">
                           <Sun className="h-4 w-4 mt-0.5 text-yellow-500" />
                           <span className="text-sm">
-                            {Number(summaryStats.gridExport) > Number(summaryStats.gridImport) * 1.5
+                            {Number(summaryStats.gridExportRaw) > Number(summaryStats.gridImportRaw) * 1.5
                               ? "You're exporting significant excess energy. Consider time-shifting loads to increase self-consumption."
                               : "Your solar production is well-balanced with your consumption patterns."}
                           </span>
