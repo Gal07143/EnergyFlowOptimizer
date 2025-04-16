@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import { generateVerificationCode, sendVerificationEmail } from "./services/emailService";
 
 declare global {
   namespace Express {
@@ -84,16 +85,39 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      // Check if email already exists
+      if (req.body.email) {
+        const existingEmail = await storage.getUserByEmail(req.body.email);
+        if (existingEmail) {
+          return res.status(400).json({ message: "Email already exists" });
+        }
+      }
+
       const user = await storage.createUser({
         ...req.body,
         password: await hashPassword(req.body.password),
       });
 
+      // If user has email, generate and send verification code
+      if (user.email && process.env.SENDGRID_API_KEY) {
+        // Generate verification code
+        const verificationCode = generateVerificationCode();
+        
+        // Save verification code to user record
+        await storage.setVerificationCode(user.id, verificationCode);
+        
+        // Send verification email
+        await sendVerificationEmail(user.email, verificationCode);
+      }
+
       req.login(user, (err) => {
         if (err) return next(err);
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
+        res.status(201).json({
+          ...userWithoutPassword,
+          requiresEmailVerification: !!(user.email && process.env.SENDGRID_API_KEY)
+        });
       });
     } catch (error) {
       console.error('Error during registration:', error);

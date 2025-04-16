@@ -28,7 +28,11 @@ export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  setVerificationCode(userId: number, code: string): Promise<boolean>;
+  verifyEmail(userId: number, code: string): Promise<boolean>;
+  isEmailVerified(userId: number): Promise<boolean>;
 
   // Site operations
   getSite(id: number): Promise<Site | undefined>;
@@ -78,10 +82,68 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user || undefined;
   }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+  
+  async setVerificationCode(userId: number, code: string): Promise<boolean> {
+    // Set expiry time to 30 minutes from now
+    const expiryTime = new Date(Date.now() + 30 * 60 * 1000);
+    
+    try {
+      await db
+        .update(users)
+        .set({ 
+          verificationCode: code,
+          verificationCodeExpiry: expiryTime 
+        })
+        .where(eq(users.id, userId));
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to set verification code:', error);
+      return false;
+    }
+  }
+  
+  async verifyEmail(userId: number, code: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    
+    if (!user) {
+      return false;
+    }
+    
+    // Check if code matches and hasn't expired
+    if (user.verificationCode === code && 
+        user.verificationCodeExpiry && 
+        new Date(user.verificationCodeExpiry) > new Date()) {
+      
+      // Update user to mark email as verified and clear verification code
+      await db
+        .update(users)
+        .set({ 
+          isEmailVerified: true,
+          verificationCode: null,
+          verificationCodeExpiry: null
+        })
+        .where(eq(users.id, userId));
+      
+      return true;
+    }
+    
+    return false;
+  }
+  
+  async isEmailVerified(userId: number): Promise<boolean> {
+    const user = await this.getUser(userId);
+    return user?.isEmailVerified || false;
   }
 
   // Site operations

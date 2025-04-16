@@ -65,6 +65,9 @@ export const users = pgTable("users", {
   role: text('role').default('viewer'),
   siteId: integer('site_id').references(() => sites.id),
   createdAt: timestamp('created_at').defaultNow(),
+  isEmailVerified: boolean('is_email_verified').default(false),
+  verificationCode: text('verification_code'),
+  verificationCodeExpiry: timestamp('verification_code_expiry'),
 });
 
 export const usersRelations = relations(users, ({ one }) => ({
@@ -201,7 +204,13 @@ export const insertSiteSchema = createInsertSchema(sites, {
   gridConnectionPoint: z.string().or(z.number()).transform(val => String(val))
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ 
+  id: true, 
+  createdAt: true, 
+  isEmailVerified: true, 
+  verificationCode: true, 
+  verificationCodeExpiry: true 
+});
 
 export const insertDeviceSchema = createInsertSchema(devices, {
   capacity: z.string().or(z.number()).optional().transform(val => val ? String(val) : undefined)
