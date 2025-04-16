@@ -47,7 +47,7 @@ export const getCurrentTariffRate = async (req: Request, res: Response) => {
     const now = new Date();
     
     // Default to the regular import rate
-    let rate = tariff.importRate;
+    let rate = Number(tariff.importRate);
     let period = 'Standard Rate';
     
     // If it's a time-of-use tariff, determine the current rate based on time of day
@@ -73,13 +73,13 @@ export const getCurrentTariffRate = async (req: Request, res: Response) => {
       
       if (seasonSchedule) {
         if (hours >= 17 && hours < 22) {
-          rate = seasonSchedule.peak || rate;
+          rate = Number(seasonSchedule.peak) || Number(rate);
           period = 'Peak (17:00-22:00)';
         } else if ((hours >= 7 && hours < 17) || (hours >= 22 && hours < 23)) {
-          rate = seasonSchedule.shoulder || rate;
+          rate = Number(seasonSchedule.shoulder) || Number(rate);
           period = 'Shoulder (7:00-17:00, 22:00-23:00)';
         } else {
-          rate = seasonSchedule.offPeak || rate;
+          rate = Number(seasonSchedule.offPeak) || Number(rate);
           period = 'Off-Peak (23:00-7:00)';
         }
       }

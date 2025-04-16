@@ -148,9 +148,9 @@ export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
               </Button>
             </div>
             
-            {showTouDetails && tariff.schedule && (
+            {showTouDetails && tariff.scheduleData && (
               <div className="mt-3 space-y-3 text-sm">
-                {Object.entries(tariff.schedule).map(([period, rates]) => (
+                {Object.entries(tariff.scheduleData as Record<string, Record<string, number>>).map(([period, rates]) => (
                   <div key={period} className="border rounded-md p-2">
                     <div className="font-medium mb-1">{period}</div>
                     <ul className="space-y-1 pl-2">
