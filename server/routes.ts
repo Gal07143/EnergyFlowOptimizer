@@ -225,7 +225,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         energy: 12.4,
         voltage: 230,
         current: 24.3,
-        temperature: 42.5
+        temperature: 42.5,
+        stateOfCharge: null,
+        frequency: null
       });
       
       const batteryReading = await storage.createDeviceReading({
@@ -236,7 +238,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stateOfCharge: 82,
         voltage: 48.2,
         current: 58.1,
-        temperature: 32.8
+        temperature: 32.8,
+        frequency: null
       });
       
       const evReading = await storage.createDeviceReading({
@@ -246,7 +249,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         energy: 11.1,
         voltage: 230,
         current: 32.2,
-        stateOfCharge: 67
+        stateOfCharge: 67,
+        frequency: null,
+        temperature: null
       });
       
       const meterReading = await storage.createDeviceReading({
