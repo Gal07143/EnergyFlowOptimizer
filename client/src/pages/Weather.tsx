@@ -8,11 +8,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+interface Site {
+  id: number;
+  name: string;
+  address: string;
+}
+
 export default function Weather() {
   const [selectedSiteId, setSelectedSiteId] = useState<number | null>(null);
 
   // Fetch sites
-  const { data: sites, isLoading, error, refetch } = useQuery({
+  const { data: sites, isLoading, error, refetch } = useQuery<Site[]>({
     queryKey: ['/api/sites'],
     queryFn: async () => {
       const response = await fetch('/api/sites');
@@ -25,7 +31,7 @@ export default function Weather() {
 
   // Auto-select the first site if none is selected yet
   React.useEffect(() => {
-    if (!selectedSiteId && sites?.length > 0) {
+    if (!selectedSiteId && sites && sites.length > 0) {
       setSelectedSiteId(sites[0].id);
     }
   }, [sites, selectedSiteId]);
@@ -109,7 +115,7 @@ export default function Weather() {
                 <SelectValue placeholder="Select a site" />
               </SelectTrigger>
               <SelectContent>
-                {sites?.map((site) => (
+                {sites?.map((site: Site) => (
                   <SelectItem key={site.id} value={site.id.toString()}>
                     {site.name}
                   </SelectItem>
