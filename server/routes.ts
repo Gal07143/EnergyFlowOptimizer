@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WebSocketServer } from 'ws';
 import { initWebSocketServer } from './services/websocketService';
+import { setupAuth } from './auth';
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
@@ -14,6 +15,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Initialize WebSocket server
   const wss = initWebSocketServer(httpServer);
+  
+  // Setup authentication
+  setupAuth(app);
   
   // API routes
   

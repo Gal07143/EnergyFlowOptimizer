@@ -1,26 +1,27 @@
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
-import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Devices from "@/pages/Devices";
 import Analytics from "@/pages/Analytics";
 import Optimization from "@/pages/Optimization";
 import Settings from "@/pages/Settings";
+import AuthPage from "@/pages/auth-page";
 import { useEffect } from "react";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/devices" component={Devices} />
-        <Route path="/analytics" component={Analytics} />
-        <Route path="/optimization" component={Optimization} />
-        <Route path="/settings" component={Settings} />
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/devices" component={Devices} />
+      <ProtectedRoute path="/analytics" component={Analytics} />
+      <ProtectedRoute path="/optimization" component={Optimization} />
+      <ProtectedRoute path="/settings" component={Settings} />
+      <Route path="/auth" component={AuthPage} />
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
@@ -34,10 +35,10 @@ function App() {
   }, []);
 
   return (
-    <>
+    <AuthProvider>
       <Router />
       <Toaster />
-    </>
+    </AuthProvider>
   );
 }
 
