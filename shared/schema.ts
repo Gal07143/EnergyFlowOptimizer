@@ -146,6 +146,7 @@ export const optimizationSettings = pgTable('optimization_settings', {
   v2gEnabled: boolean('v2g_enabled').default(false),
   vppEnabled: boolean('vpp_enabled').default(false),
   p2pEnabled: boolean('p2p_enabled').default(false),
+  demandResponseEnabled: boolean('demand_response_enabled').default(false),
   aiRecommendationsEnabled: boolean('ai_recommendations_enabled').default(true),
   schedules: json('schedules'),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -161,6 +162,7 @@ export const tariffs = pgTable('tariffs', {
   exportRate: numeric('export_rate'),
   isTimeOfUse: boolean('is_time_of_use').default(false),
   scheduleData: json('schedule_data'),
+  dataIntervalSeconds: integer('data_interval_seconds').default(60), // Set to 60 seconds as requested
   currency: text('currency').default('USD'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -673,7 +675,8 @@ export const insertOptimizationSettingsSchema = createInsertSchema(optimizationS
 
 export const insertTariffSchema = createInsertSchema(tariffs, {
   importRate: z.string().or(z.number()).transform(val => val === null ? null : Number(val)),
-  exportRate: z.string().or(z.number()).transform(val => val === null ? null : Number(val))
+  exportRate: z.string().or(z.number()).transform(val => val === null ? null : Number(val)),
+  dataIntervalSeconds: z.string().or(z.number()).optional().transform(val => val ? Number(val) : 60)
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
 // New insert schemas
@@ -729,6 +732,40 @@ export const insertWeatherDataSchema = createInsertSchema(weatherData, {
   longitude: z.string().or(z.number()).transform(val => val === null ? null : Number(val)),
 }).omit({ id: true });
 
+// Demand Response insert schemas
+export const insertDemandResponseProgramSchema = createInsertSchema(demandResponsePrograms, {
+  minReductionAmount: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  maxReductionAmount: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  incentiveRate: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  maxEventDuration: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  maxEventsPerYear: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  maxEventsPerMonth: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertDemandResponseEventSchema = createInsertSchema(demandResponseEvents, {
+  targetReduction: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  actualReduction: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  incentiveModifier: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertSiteDemandResponseSettingsSchema = createInsertSchema(siteDemandResponseSettings, {
+  maxReductionCapacity: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  minimumIncentiveThreshold: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertSiteEventParticipationSchema = createInsertSchema(siteEventParticipations, {
+  baselineConsumption: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  actualConsumption: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  reductionAchieved: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  incentiveEarned: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertDemandResponseActionSchema = createInsertSchema(demandResponseActions, {
+  setPoint: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  estimatedReduction: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  actualReduction: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
 // Export Types
 export type Site = typeof sites.$inferSelect;
 export type InsertSite = z.infer<typeof insertSiteSchema>;
@@ -772,3 +809,19 @@ export type InsertRemoteCommand = z.infer<typeof insertRemoteCommandSchema>;
 
 export type WeatherData = typeof weatherData.$inferSelect;
 export type InsertWeatherData = z.infer<typeof insertWeatherDataSchema>;
+
+// Demand Response types
+export type DemandResponseProgram = typeof demandResponsePrograms.$inferSelect;
+export type InsertDemandResponseProgram = z.infer<typeof insertDemandResponseProgramSchema>;
+
+export type DemandResponseEvent = typeof demandResponseEvents.$inferSelect;
+export type InsertDemandResponseEvent = z.infer<typeof insertDemandResponseEventSchema>;
+
+export type SiteDemandResponseSetting = typeof siteDemandResponseSettings.$inferSelect;
+export type InsertSiteDemandResponseSetting = z.infer<typeof insertSiteDemandResponseSettingsSchema>;
+
+export type SiteEventParticipation = typeof siteEventParticipations.$inferSelect;
+export type InsertSiteEventParticipation = z.infer<typeof insertSiteEventParticipationSchema>;
+
+export type DemandResponseAction = typeof demandResponseActions.$inferSelect;
+export type InsertDemandResponseAction = z.infer<typeof insertDemandResponseActionSchema>;
