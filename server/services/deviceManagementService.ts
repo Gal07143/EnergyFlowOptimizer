@@ -7,7 +7,7 @@ import { getOCPPManager, OCPPDevice } from '../adapters/ocppAdapter';
 import { getEEBusManager, EEBusDevice } from '../adapters/eebusAdapter';
 import { getSunSpecManager, SunSpecDevice } from '../adapters/sunspecAdapter';
 import { getTCPIPManager, TCPIPDevice } from '../adapters/tcpipAdapter';
-import { getGatewayManager, GatewayDevice } from '../adapters/gatewayAdapter';
+import { getGatewayManager, GatewayDevice, GatewayDeviceType } from '../adapters/gatewayAdapter';
 
 // Device types supported by the system
 export type DeviceType = 'solar_pv' | 'battery_storage' | 'ev_charger' | 'smart_meter' | 'heat_pump' | 'gateway' | 'generic';
@@ -211,7 +211,7 @@ class DeviceRegistry {
     }
     
     const mockDevices: Device[] = [];
-    const deviceTypes: DeviceType[] = ['solar_pv', 'battery_storage', 'ev_charger', 'smart_meter', 'heat_pump'];
+    const deviceTypes: DeviceType[] = ['solar_pv', 'battery_storage', 'ev_charger', 'smart_meter', 'heat_pump', 'gateway', 'generic'];
     const manufacturers = ['SMA', 'Tesla', 'ABB', 'Fronius', 'Schneider', 'Delta', 'SolarEdge', 'ChargePoint', 'Enphase', 'Siemens'];
     
     for (let i = 0; i < count; i++) {
@@ -235,6 +235,12 @@ class DeviceRegistry {
           break;
         case 'heat_pump':
           model = `ThermalPro-${Math.floor(Math.random() * 10) + 1}`;
+          break;
+        case 'gateway':
+          model = `GatewayPro-${Math.floor(Math.random() * 5) + 1}`;
+          break;
+        case 'generic':
+          model = `Device-${1000 + Math.floor(Math.random() * 9000)}`;
           break;
       }
       
@@ -304,6 +310,93 @@ class DeviceRegistry {
             };
           }
           break;
+        case 'gateway':
+          protocol = 'gateway';
+          // Gateway device handling multiple child devices
+          const gatewayPort = 502 + i;
+          const childCount = 1 + Math.floor(Math.random() * 3); // 1-3 child devices
+          const childDevices = [];
+          
+          // Generate child devices
+          for (let j = 0; j < childCount; j++) {
+            // Determine child device type
+            const childTypes: GatewayDeviceType[] = ['meter', 'inverter', 'battery', 'sensor', 'controller'];
+            const childType = childTypes[Math.floor(Math.random() * childTypes.length)];
+            const childProtocol = Math.random() > 0.5 ? 'modbus' : 'tcpip';
+            
+            // Create mappings for the child device
+            const mappings = [];
+            mappings.push({
+              name: 'power',
+              address: 100 + j * 10,
+              dataType: 'float',
+              unit: 'W',
+              scale: 1,
+              access: 'read' as const
+            });
+            mappings.push({
+              name: 'energy',
+              address: 102 + j * 10,
+              dataType: 'float',
+              unit: 'kWh',
+              scale: 0.1,
+              access: 'read' as const
+            });
+            mappings.push({
+              name: 'status',
+              address: 104 + j * 10,
+              dataType: 'integer',
+              access: 'read-write' as const
+            });
+            
+            // Add child device
+            childDevices.push({
+              id: 1000 + i * 10 + j, // Ensure unique ID
+              name: `Child ${childType} ${j+1}`,
+              type: childType,
+              address: 1 + j,
+              protocol: childProtocol,
+              pollInterval: 10000 + j * 1000,
+              manufacturer,
+              model: `Child-${childType}-${100 + j}`,
+              serialNumber: `CHILD${i}${j}${Date.now().toString(36)}`,
+              mappings
+            });
+          }
+          
+          protocolConfig = {
+            connection: {
+              type: 'modbus_gateway',
+              host: '192.168.1.' + (100 + i),
+              port: gatewayPort,
+              reconnectInterval: 30000,
+              heartbeatInterval: 60000,
+              mockMode: true
+            },
+            childDevices
+          };
+          break;
+        case 'generic':
+          protocol = 'tcpip';
+          // Generic device with TCP/IP connection
+          protocolConfig = {
+            connection: {
+              host: '192.168.1.' + (200 + i),
+              port: 8000 + i,
+              dataFormat: 'json',
+              connectionTimeout: 5000,
+              reconnectInterval: 10000,
+              keepAlive: true,
+              mockMode: true
+            },
+            pollInterval: 15000,
+            commands: {
+              status: 'STATUS\r\n',
+              restart: 'RESTART\r\n',
+              getData: 'GET_DATA\r\n'
+            }
+          };
+          break;
         default:
           // For other device types, randomly assign modbus or mqtt
           protocol = Math.random() > 0.5 ? 'mqtt' : 'modbus';
@@ -350,9 +443,10 @@ class DeviceRegistry {
       
       mockDevices.push(mockDevice);
       
-      // If it's a Modbus device, add it to the Modbus manager in development mode
-      if (protocol === 'modbus') {
-        try {
+      // Initialize device with the appropriate adapter in development mode
+      try {
+        if (protocol === 'modbus') {
+          // Initialize Modbus device
           const modbusManager = getModbusManager();
           const modbusDevice: ModbusDevice = {
             id: mockDevice.id,
@@ -365,9 +459,40 @@ class DeviceRegistry {
           modbusManager.addDevice(modbusDevice).catch(err => {
             console.error(`Error adding mock Modbus device ${mockDevice.id}:`, err);
           });
-        } catch (error) {
-          console.error(`Error initializing Modbus manager for mock device ${mockDevice.id}:`, error);
+        } else if (protocol === 'tcpip') {
+          // Initialize TCP/IP device
+          const tcpipManager = getTCPIPManager();
+          const tcpipDevice: TCPIPDevice = {
+            id: mockDevice.id,
+            deviceId: mockDevice.id.toString(),
+            connection: mockDevice.protocolConfig.connection,
+            pollInterval: mockDevice.protocolConfig.pollInterval,
+            commands: mockDevice.protocolConfig.commands
+          };
+          
+          tcpipManager.addDevice(tcpipDevice).catch(err => {
+            console.error(`Error adding mock TCP/IP device ${mockDevice.id}:`, err);
+          });
+        } else if (protocol === 'gateway') {
+          // Initialize Gateway device
+          const gatewayManager = getGatewayManager();
+          const gatewayDevice: GatewayDevice = {
+            id: mockDevice.id,
+            name: mockDevice.name,
+            connection: mockDevice.protocolConfig.connection,
+            manufacturer: mockDevice.manufacturer,
+            model: mockDevice.model,
+            serialNumber: mockDevice.serialNumber,
+            firmware: mockDevice.firmwareVersion,
+            childDevices: mockDevice.protocolConfig.childDevices
+          };
+          
+          gatewayManager.addGateway(gatewayDevice).catch(err => {
+            console.error(`Error adding mock Gateway device ${mockDevice.id}:`, err);
+          });
         }
+      } catch (error) {
+        console.error(`Error initializing device manager for mock device ${mockDevice.id} with protocol ${protocol}:`, error);
       }
     }
     
@@ -431,6 +556,10 @@ class DeviceRegistry {
         return ['power_measurement', 'energy_measurement', 'voltage_measurement', 'frequency_measurement', 'bidirectional_metering'];
       case 'heat_pump':
         return ['power_measurement', 'energy_measurement', 'temperature_control', 'schedule_operation', 'mode_control'];
+      case 'gateway':
+        return ['device_management', 'protocol_translation', 'data_aggregation', 'remote_configuration', 'device_discovery'];
+      case 'generic':
+        return ['remote_control', 'telemetry', 'status_monitoring'];
       default:
         return [];
     }
@@ -870,6 +999,8 @@ export class DeviceManagementService {
         return ['power_measurement', 'energy_measurement', 'voltage_measurement', 'frequency_measurement', 'bidirectional_metering'];
       case 'heat_pump':
         return ['power_measurement', 'energy_measurement', 'temperature_control', 'schedule_operation', 'mode_control'];
+      case 'generic':
+        return ['remote_control', 'telemetry', 'status_monitoring'];
       case 'gateway':
         return ['device_management', 'protocol_translation', 'data_aggregation', 'remote_configuration', 'device_discovery'];
       default:

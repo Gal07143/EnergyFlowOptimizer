@@ -29,6 +29,8 @@ import * as setupController from './controllers/setupController';
 import * as initController from './controllers/initController';
 import { weatherController } from './controllers/weatherController';
 import * as aiOptimizationController from './controllers/aiOptimizationController';
+import { VPPController } from './controllers/vppController';
+import { initVPPService } from './services/vppService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -300,6 +302,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/optimization/apply/:siteId', aiOptimizationController.applyLastOptimization);
   app.post('/api/optimization/feedback', aiOptimizationController.submitOptimizationFeedback);
   app.post('/api/optimization/test/:siteId', aiOptimizationController.testOptimizationAI);
+  
+  // Initialize VPP service
+  const vppService = initVPPService();
+  
+  // VPP Program routes
+  app.get('/api/vpp/programs', VPPController.getAllPrograms);
+  app.get('/api/vpp/programs/active', VPPController.getActivePrograms);
+  app.get('/api/vpp/programs/:id', VPPController.getProgramById);
+  app.post('/api/vpp/programs', requireManager, VPPController.createProgram);
+  app.put('/api/vpp/programs/:id', requireManager, VPPController.updateProgram);
+  app.delete('/api/vpp/programs/:id', requireAdmin, VPPController.deleteProgram);
+  
+  // VPP Enrollment routes
+  app.get('/api/vpp/sites/:siteId/enrollments', VPPController.getSiteEnrollments);
+  app.get('/api/vpp/programs/:programId/enrollments', VPPController.getProgramEnrollments);
+  app.post('/api/vpp/enrollments', requireManager, VPPController.enrollSite);
+  app.put('/api/vpp/enrollments/:id', requireManager, VPPController.updateEnrollment);
+  app.delete('/api/vpp/enrollments/:id', requireManager, VPPController.unenrollSite);
+  
+  // VPP Event routes
+  app.get('/api/vpp/events', VPPController.getAllEvents);
+  app.get('/api/vpp/events/active', VPPController.getActiveEvents);
+  app.get('/api/vpp/events/upcoming', VPPController.getUpcomingEvents);
+  app.get('/api/vpp/sites/:siteId/events', VPPController.getSiteEvents);
+  app.get('/api/vpp/programs/:programId/events', VPPController.getProgramEvents);
+  app.post('/api/vpp/events', requireManager, VPPController.createEvent);
+  app.put('/api/vpp/events/:id', requireManager, VPPController.updateEvent);
+  app.post('/api/vpp/events/:id/cancel', requireManager, VPPController.cancelEvent);
+  
+  // VPP Participation routes
+  app.post('/api/vpp/events/:eventId/sites/:siteId/accept', VPPController.acceptEvent);
+  app.post('/api/vpp/events/:eventId/sites/:siteId/reject', VPPController.rejectEvent);
+  app.get('/api/vpp/events/:eventId/participations', VPPController.getEventParticipations);
+  app.get('/api/vpp/sites/:siteId/participations', VPPController.getSiteParticipations);
+  
+  // VPP Metrics routes
+  app.get('/api/vpp/participations/:participationId/metrics', VPPController.getParticipationMetrics);
+  app.get('/api/vpp/participations/:participationId/metrics/latest', VPPController.getLatestParticipationMetrics);
 
   return httpServer;
 }
