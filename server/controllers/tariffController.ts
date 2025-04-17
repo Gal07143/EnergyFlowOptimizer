@@ -201,39 +201,40 @@ export const createIsraeliTariffData = async (siteId: number) => {
       return existingIsraeliTariff;
     }
     
-    // Israeli tariff data with seasonal time-of-use rates
+    // Israeli tariff data with Time-of-Use (TOU) rates
+    // Updated April 2025 rates for Israeli Electric Corporation
     const israeliTariffData = {
       siteId,
-      name: 'Israeli Electricity Tariff',
+      name: 'Israeli Electricity Tariff (TOU)',
       provider: 'Israel Electric Corporation',
-      importRate: 0.55, // Base rate in ILS
-      exportRate: 0.23, // Feed-in tariff for solar in ILS
+      importRate: 0.58, // Base rate in ILS for Low Voltage
+      exportRate: 0.24, // Updated feed-in tariff for solar in ILS
       isTimeOfUse: true,
       currency: 'ILS',
       dataIntervalSeconds: 60,
       scheduleData: {
-        // Summer rates (June-September)
+        // Summer rates (June-September) - Higher due to AC usage
         summer: {
-          peak: 0.85,     // Peak: 17:00-22:00
-          shoulder: 0.55, // Shoulder: 7:00-17:00, 22:00-23:00
-          offPeak: 0.31   // Off-peak: 23:00-7:00
+          peak: 0.92,     // Peak: 17:00-22:00 (High demand period)
+          shoulder: 0.58, // Shoulder: 7:00-17:00, 22:00-23:00
+          offPeak: 0.32   // Off-peak: 23:00-7:00
         },
         // Winter rates (December-February)
         winter: {
-          peak: 0.65,     // Peak: 17:00-22:00
-          shoulder: 0.48, // Shoulder: 7:00-17:00, 22:00-23:00
-          offPeak: 0.28   // Off-peak: 23:00-7:00
+          peak: 0.68,     // Peak: 17:00-22:00 (Evenings with heating)
+          shoulder: 0.49, // Shoulder: 7:00-17:00, 22:00-23:00
+          offPeak: 0.29   // Off-peak: 23:00-7:00
         },
         // Transition seasons (March-May, October-November)
         spring: {
-          peak: 0.57,     // Peak: 17:00-22:00
-          shoulder: 0.45, // Shoulder: 7:00-17:00, 22:00-23:00
-          offPeak: 0.26   // Off-peak: 23:00-7:00
+          peak: 0.59,     // Peak: 17:00-22:00
+          shoulder: 0.46, // Shoulder: 7:00-17:00, 22:00-23:00
+          offPeak: 0.27   // Off-peak: 23:00-7:00
         },
         autumn: {
-          peak: 0.57,     // Peak: 17:00-22:00
-          shoulder: 0.45, // Shoulder: 7:00-17:00, 22:00-23:00
-          offPeak: 0.26   // Off-peak: 23:00-7:00
+          peak: 0.59,     // Peak: 17:00-22:00
+          shoulder: 0.46, // Shoulder: 7:00-17:00, 22:00-23:00
+          offPeak: 0.27   // Off-peak: 23:00-7:00
         }
       }
     };
