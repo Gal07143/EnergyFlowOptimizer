@@ -223,6 +223,7 @@ export default function DevicesPage() {
       ipAddress: '',
       capacity: '',
       protocol: 'modbus',
+      deviceCatalogId: null
     });
     setShowAddDeviceDialog(false);
     
@@ -508,13 +509,54 @@ export default function DevicesPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="device-model">Model/Manufacturer</Label>
-                <Input 
-                  id="device-model" 
-                  placeholder="Enter model or manufacturer" 
+                <Label htmlFor="device-manufacturer">Manufacturer <span className="text-destructive">*</span></Label>
+                <Select 
                   value={newDevice.manufacturer}
-                  onChange={(e) => handleNewDeviceChange('manufacturer', e.target.value)}
-                />
+                  onValueChange={(value) => handleNewDeviceChange('manufacturer', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select manufacturer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">SolarEdge</SelectItem>
+                    <SelectItem value="2">Tesla</SelectItem>
+                    <SelectItem value="3">LG Energy Solution</SelectItem>
+                    <SelectItem value="4">Fronius</SelectItem>
+                    <SelectItem value="5">ABB</SelectItem>
+                    <SelectItem value="6">Schneider Electric</SelectItem>
+                    <SelectItem value="7">BYD</SelectItem>
+                    <SelectItem value="8">ChargePoint</SelectItem>
+                    <SelectItem value="9">Daikin</SelectItem>
+                    <SelectItem value="10">Mitsubishi Electric</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="device-model">Model <span className="text-destructive">*</span></Label>
+                {availableModels.length > 0 ? (
+                  <Select
+                    value={newDevice.deviceCatalogId?.toString() || ""}
+                    onValueChange={handleModelSelect}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select device model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableModels.map(model => (
+                        <SelectItem key={model.id} value={model.id.toString()}>
+                          {model.name} - {model.modelNumber}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input 
+                    id="device-model" 
+                    placeholder="Enter model number" 
+                    value={newDevice.model}
+                    onChange={(e) => handleNewDeviceChange('model', e.target.value)}
+                  />
+                )}
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="device-location">Location</Label>

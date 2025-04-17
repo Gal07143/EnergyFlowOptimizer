@@ -5,7 +5,7 @@ import { WebSocketServer } from 'ws';
 import { initWebSocketServer } from './services/websocketService';
 import { initWebSocketPublisher } from './services/websocketPublisher';
 import { setupAuth, hashPassword } from './auth';
-import { users } from "@shared/schema";
+import { users, deviceCatalog } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -115,6 +115,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/devices', requireManager, deviceController.addDevice);
   app.put('/api/devices/:id', requireManager, deviceController.updateDevice);
   app.delete('/api/devices/:id', requireAdmin, deviceController.deleteDevice);
+  
+  // Device catalog routes
+  app.get('/api/device-catalog', async (req, res) => {
+    try {
+      const manufacturerId = req.query.manufacturer as string;
+      const deviceType = req.query.type as string;
+      
+      // Build the query based on the provided parameters
+      let query = db.select().from(deviceCatalog);
+      
+      if (manufacturerId) {
+        query = query.where(eq(deviceCatalog.manufacturerId, parseInt(manufacturerId)));
+      }
+      
+      if (deviceType) {
+        query = query.where(eq(deviceCatalog.type, deviceType));
+      }
+      
+      const devices = await query;
+      res.json(devices);
+    } catch (error) {
+      console.error('Error fetching device catalog:', error);
+      res.status(500).json({ message: 'Failed to fetch device catalog' });
+    }
+  });
   
   // Protocol-specific device endpoints
   app.post('/api/devices/:id/ocpp/start', async (req, res) => {
