@@ -161,6 +161,7 @@ export const createDemoData = async (req: Request, res: Response) => {
     const optimizationSettings = await storage.createOptimizationSettings({
       siteId: site.id,
       mode: 'self_sufficiency',
+      priority: 7,
       peakShavingEnabled: true,
       peakShavingTarget: 5,
       selfConsumptionEnabled: true,
@@ -169,6 +170,14 @@ export const createDemoData = async (req: Request, res: Response) => {
       vppEnabled: false,
       p2pEnabled: false,
       aiRecommendationsEnabled: true,
+      aiOptimizationEnabled: true,
+      aiModel: 'gpt-4o',
+      reinforcementLearningEnabled: true, 
+      constraints: {
+        minBatterySoC: 20,
+        reserveCapacity: 10,
+        maxGridImport: 10
+      },
       demandResponseEnabled: true,
       schedules: {
         batteryCharge: [
@@ -180,7 +189,9 @@ export const createDemoData = async (req: Request, res: Response) => {
         evCharging: [
           { start: '10:00', end: '15:00', priority: 'medium', mode: 'solar_only' }
         ]
-      }
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
     
     // Create tariff

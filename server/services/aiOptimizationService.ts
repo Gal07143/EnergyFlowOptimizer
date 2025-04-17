@@ -40,7 +40,8 @@ interface OptimizationState {
 
 // Define the action space
 interface OptimizationAction {
-  batteryChargePower: number; // Positive for charge, negative for discharge
+  batteryChargePower: number; // Positive value for charging
+  batteryDischargePower: number; // Positive value for discharging
   evChargePower: number;
   heatPumpPower: number;
   deferredLoads: {
@@ -115,10 +116,12 @@ export class AIOptimizationService {
       let batteryDischargePower = 0;
       
       if (batteryDevice) {
-        const [latestBatteryReading] = await db.select()
+        const latestBatteryReadings = await db.select()
           .from(deviceReadings)
           .where(eq(deviceReadings.deviceId, batteryDevice.id))
-          .orderBy(deviceReadings.timestamp).desc();
+          .orderBy(deviceReadings.timestamp);
+        
+        const latestBatteryReading = latestBatteryReadings.length > 0 ? latestBatteryReadings[latestBatteryReadings.length - 1] : null;
         
         if (latestBatteryReading) {
           batteryStateOfCharge = latestBatteryReading.stateOfCharge || 0;
@@ -137,10 +140,12 @@ export class AIOptimizationService {
       // Get solar readings
       let solarProduction = 0;
       if (solarDevice) {
-        const [latestSolarReading] = await db.select()
+        const solarReadings = await db.select()
           .from(deviceReadings)
           .where(eq(deviceReadings.deviceId, solarDevice.id))
-          .orderBy(deviceReadings.timestamp).desc();
+          .orderBy(deviceReadings.timestamp);
+          
+        const latestSolarReading = solarReadings.length > 0 ? solarReadings[solarReadings.length - 1] : null;
         
         if (latestSolarReading) {
           solarProduction = latestSolarReading.power || 0;
@@ -150,10 +155,12 @@ export class AIOptimizationService {
       // Get EV charger readings
       let evChargingPower = 0;
       if (evChargerDevice) {
-        const [latestEVReading] = await db.select()
+        const evReadings = await db.select()
           .from(deviceReadings)
           .where(eq(deviceReadings.deviceId, evChargerDevice.id))
-          .orderBy(deviceReadings.timestamp).desc();
+          .orderBy(deviceReadings.timestamp);
+          
+        const latestEVReading = evReadings.length > 0 ? evReadings[evReadings.length - 1] : null;
         
         if (latestEVReading) {
           evChargingPower = latestEVReading.power || 0;
@@ -166,10 +173,12 @@ export class AIOptimizationService {
       let homeConsumption = 0;
       
       if (smartMeterDevice) {
-        const [latestMeterReading] = await db.select()
+        const meterReadings = await db.select()
           .from(deviceReadings)
           .where(eq(deviceReadings.deviceId, smartMeterDevice.id))
-          .orderBy(deviceReadings.timestamp).desc();
+          .orderBy(deviceReadings.timestamp);
+          
+        const latestMeterReading = meterReadings.length > 0 ? meterReadings[meterReadings.length - 1] : null;
         
         if (latestMeterReading && latestMeterReading.additionalData) {
           const meterData = latestMeterReading.additionalData as any;
@@ -183,10 +192,12 @@ export class AIOptimizationService {
       }
       
       // Get energy tariff information
-      const [siteEnergyData] = await db.select()
+      const energyData = await db.select()
         .from(energyReadings)
         .where(eq(energyReadings.siteId, siteId))
-        .orderBy(energyReadings.timestamp).desc();
+        .orderBy(energyReadings.timestamp);
+        
+      const siteEnergyData = energyData.length > 0 ? energyData[energyData.length - 1] : null;
       
       let gridElectricityPrice = 0.15; // Default price
       let feedInTariff = 0.05; // Default feed-in tariff
