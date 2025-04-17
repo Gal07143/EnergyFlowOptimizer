@@ -15,6 +15,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import AuthPage from "@/pages/auth-page";
 import EmailVerificationPage from "@/pages/email-verification-page";
 import DeviceRegistryPage from "@/pages/DeviceRegistryPage";
+import ElectricalDiagramPage from "@/pages/electrical-diagram-page";
 import { WebSocketStatus } from "@/components/ui/websocket-status";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -51,6 +52,8 @@ function Router() {
       <ProtectedPageWithLayout path="/devices" component={DevicesPage} />
       <ProtectedPageWithLayout path="/devices/:id" component={DeviceDetail} />
       <ProtectedPageWithLayout path="/device-registry" component={DeviceRegistryPage} />
+      <ProtectedPageWithLayout path="/electrical-diagrams" component={ElectricalDiagramPage} />
+      <ProtectedPageWithLayout path="/electrical-diagrams/:id" component={ElectricalDiagramPage} />
       <ProtectedPageWithLayout path="/locations" component={LocationsPage} />
       <ProtectedPageWithLayout path="/energy-flow" component={EnergyFlowPage} />
       <ProtectedPageWithLayout path="/optimization" component={OptimizationDashboard} />
