@@ -58,6 +58,23 @@ interface OptimizationResult {
   projectedSavings: number;
   confidence: number;
   reasoning: string;
+  id?: string; // Unique identifier for tracking
+}
+
+// Define feedback data for reinforcement learning
+interface OptimizationFeedback {
+  optimizationId: string;
+  timestamp: string;
+  actualSavings: number;
+  success: boolean;
+  metrics: {
+    costReduction?: number;
+    selfConsumption?: number;
+    peakReduction?: number;
+    batteryHealth?: number;
+    carbonReduction?: number;
+    userComfort?: number;
+  };
 }
 
 // Class for AI-driven optimization service
