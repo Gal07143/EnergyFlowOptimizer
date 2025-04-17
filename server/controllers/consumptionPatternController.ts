@@ -309,8 +309,23 @@ export class ConsumptionPatternController {
         return res.status(400).json({ error: 'Energy readings are required' });
       }
 
+      console.log("Detecting anomalies for site:", siteId, "with readings:", JSON.stringify(req.body.readings));
+      
       const consumptionPatternService = getConsumptionPatternService();
+      
+      // Check if patterns exist for this site
+      const patterns = consumptionPatternService.getPatternsBySite(siteId);
+      console.log(`Found ${patterns.length} patterns for site ${siteId}`);
+      
+      if (patterns.length > 0) {
+        // Log the time range of patterns
+        patterns.forEach(pattern => {
+          console.log(`Pattern ${pattern.id}: ${pattern.name}, timeframe: ${pattern.timeFrame}, time range: ${pattern.startTimestamp} to ${pattern.endTimestamp}`);
+        });
+      }
+      
       const anomalies = await consumptionPatternService.detectAnomalies(siteId, req.body.readings);
+      console.log("Anomaly detection results:", JSON.stringify(anomalies));
       
       res.status(200).json(anomalies);
     } catch (error) {

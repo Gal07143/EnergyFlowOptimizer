@@ -1036,8 +1036,10 @@ export class ConsumptionPatternService {
     
     // Group readings by pattern and sort by time for trend analysis
     const groupedReadings = readings.sort((a, b) => {
-      const dateA = new Date(typeof a.timestamp === 'string' ? a.timestamp : a.timestamp);
-      const dateB = new Date(typeof b.timestamp === 'string' ? b.timestamp : b.timestamp);
+      const dateA = new Date(typeof a.timestamp === 'string' ? a.timestamp : 
+                            (a.timestamp instanceof Date ? a.timestamp.toISOString() : new Date().toISOString()));
+      const dateB = new Date(typeof b.timestamp === 'string' ? b.timestamp : 
+                            (b.timestamp instanceof Date ? b.timestamp.toISOString() : new Date().toISOString()));
       return dateA.getTime() - dateB.getTime();
     });
     
