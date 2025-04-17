@@ -102,10 +102,12 @@ export default function AnalyticsPage() {
       }
       
       const dayData = dayMap.get(day);
-      dayData.solar += item.solar;
-      dayData.consumption += item.consumption;
-      dayData.grid += item.grid;
-      dayData.battery += item.battery;
+      if (dayData) {
+        dayData.solar += item.solar;
+        dayData.consumption += item.consumption;
+        dayData.grid += item.grid;
+        dayData.battery += item.battery;
+      }
     });
     
     dayMap.forEach(value => {
@@ -123,7 +125,7 @@ export default function AnalyticsPage() {
   };
   
   // Create hourly data view
-  const getHourlyData = () => {
+  const getHourlyData = (): HourlyData[] => {
     return forecastData.map(item => ({
       time: format(item.timestamp, 'HH:mm'),
       solar: item.solar,
