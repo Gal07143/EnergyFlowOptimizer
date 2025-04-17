@@ -31,6 +31,8 @@ import { weatherController } from './controllers/weatherController';
 import * as aiOptimizationController from './controllers/aiOptimizationController';
 import { VPPController } from './controllers/vppController';
 import { initVPPService } from './services/vppService';
+import { ConsumptionPatternController } from './controllers/consumptionPatternController';
+import { initConsumptionPatternService } from './services/consumptionPatternService';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -340,6 +342,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // VPP Metrics routes
   app.get('/api/vpp/participations/:participationId/metrics', VPPController.getParticipationMetrics);
   app.get('/api/vpp/participations/:participationId/metrics/latest', VPPController.getLatestParticipationMetrics);
+  
+  // Initialize Consumption Pattern Service
+  const consumptionPatternService = initConsumptionPatternService();
+  
+  // Consumption Pattern routes
+  app.get('/api/sites/:siteId/consumption-patterns', ConsumptionPatternController.getPatternsBySite);
+  app.get('/api/consumption-patterns/:id', ConsumptionPatternController.getPatternById);
+  app.get('/api/sites/:siteId/consumption-patterns/timeframe/:timeFrame', ConsumptionPatternController.getPatternsByTimeframe);
+  app.get('/api/sites/:siteId/consumption-patterns/category/:category', ConsumptionPatternController.getPatternsByCategory);
+  app.get('/api/sites/:siteId/consumption-patterns/source/:source', ConsumptionPatternController.getPatternsBySource);
+  app.post('/api/consumption-patterns', requireManager, ConsumptionPatternController.createPattern);
+  app.put('/api/consumption-patterns/:id', requireManager, ConsumptionPatternController.updatePattern);
+  app.delete('/api/consumption-patterns/:id', requireAdmin, ConsumptionPatternController.deletePattern);
+  app.post('/api/consumption-patterns/:id/train', requireManager, ConsumptionPatternController.trainPatternModel);
+  app.get('/api/consumption-patterns/:id/predictions', ConsumptionPatternController.generatePredictions);
+  app.post('/api/sites/:siteId/consumption-patterns/anomalies', ConsumptionPatternController.detectAnomalies);
+  app.get('/api/sites/:siteId/consumption-features', ConsumptionPatternController.getConsumptionFeatures);
 
   return httpServer;
 }
