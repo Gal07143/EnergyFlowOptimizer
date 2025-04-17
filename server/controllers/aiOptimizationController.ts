@@ -140,7 +140,7 @@ export async function updateOptimizationSettings(req: Request, res: Response) {
           mode: settings.mode,
           priority: settings.priority,
           constraints: settings.constraints || {},
-          active: settings.active,
+          aiOptimizationEnabled: settings.active, // Map to the correct column
           updatedAt: new Date()
         })
         .where(eq(optimizationSettings.siteId, settings.siteId));

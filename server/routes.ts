@@ -25,6 +25,7 @@ import * as profileController from './controllers/profileController';
 import * as setupController from './controllers/setupController';
 import * as initController from './controllers/initController';
 import { weatherController } from './controllers/weatherController';
+import * as aiOptimizationController from './controllers/aiOptimizationController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -177,6 +178,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/demand-response/events/:eventId/actions', demandResponseController.getDemandResponseActions);
   app.post('/api/demand-response/actions', demandResponseController.createDemandResponseAction);
+
+  // AI Optimization routes
+  app.post('/api/optimization/run/:siteId', aiOptimizationController.runOptimization);
+  app.get('/api/optimization/last/:siteId', aiOptimizationController.getLastOptimization);
+  app.get('/api/optimization/settings/:siteId', aiOptimizationController.getOptimizationSettings);
+  app.put('/api/optimization/settings', aiOptimizationController.updateOptimizationSettings);
+  app.get('/api/optimization/status', aiOptimizationController.getOptimizationStatus);
+  app.post('/api/optimization/apply/:siteId', aiOptimizationController.applyLastOptimization);
+  app.post('/api/optimization/test/:siteId', aiOptimizationController.testOptimizationAI);
 
   return httpServer;
 }
