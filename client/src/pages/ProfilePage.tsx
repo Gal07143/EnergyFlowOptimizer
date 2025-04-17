@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { useProfile, ProfileFormData, PasswordFormData } from '@/hooks/use-profile';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,38 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useToast } from '@/hooks/use-toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LoaderCircle } from 'lucide-react';
-import { apiRequest } from '../lib/queryClient';
 import { AlertTriangle, Mail, User, Lock } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-// Define the form schemas
-const profileFormSchema = z.object({
-  username: z.string().min(3, { message: 'Username must be at least 3 characters' }).optional(),
-  email: z.string().email({ message: 'Please enter a valid email address' }).optional(),
-});
-
-const passwordFormSchema = z.object({
-  currentPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  newPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-}).refine(data => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type ProfileFormData = z.infer<typeof profileFormSchema>;
-type PasswordFormData = z.infer<typeof passwordFormSchema>;
+import { profileFormSchema, passwordFormSchema } from '@/hooks/use-profile';
 
 const ProfilePage = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<string>('profile');
+  const { profile, isLoading, updateProfile, isUpdating, changePassword, isChangingPassword } = useProfile();
 
   // Profile form setup
   const profileForm = useForm<ProfileFormData>({
@@ -48,6 +27,16 @@ const ProfilePage = () => {
       email: user?.email || '',
     },
   });
+
+  // Update form defaults when profile data loads
+  useEffect(() => {
+    if (profile) {
+      profileForm.reset({
+        username: profile.username || '',
+        email: profile.email || '',
+      });
+    }
+  }, [profile, profileForm]);
 
   // Password form setup
   const passwordForm = useForm<PasswordFormData>({
@@ -59,56 +48,20 @@ const ProfilePage = () => {
     },
   });
 
-  // Profile update mutation
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: ProfileFormData) => {
-      const res = await apiRequest('PUT', '/api/profile', data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Profile updated',
-        description: 'Your profile has been updated successfully.',
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Failed to update profile',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Password change mutation
-  const changePasswordMutation = useMutation({
-    mutationFn: async (data: PasswordFormData) => {
-      const res = await apiRequest('POST', '/api/change-password', data);
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Password changed',
-        description: 'Your password has been changed successfully.',
-      });
-      passwordForm.reset();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Failed to change password',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
   const onProfileSubmit = (data: ProfileFormData) => {
-    updateProfileMutation.mutate(data);
+    updateProfile(data, {
+      onSuccess: () => {
+        // Form will be reset with new data via the useEffect
+      }
+    });
   };
 
   const onPasswordSubmit = (data: PasswordFormData) => {
-    changePasswordMutation.mutate(data);
+    changePassword(data, {
+      onSuccess: () => {
+        passwordForm.reset();
+      }
+    });
   };
 
   if (!user) {
@@ -203,10 +156,10 @@ const ProfilePage = () => {
                   <div className="pt-4">
                     <Button 
                       type="submit" 
-                      disabled={updateProfileMutation.isPending || !profileForm.formState.isDirty}
+                      disabled={isUpdating || !profileForm.formState.isDirty}
                       className="flex gap-2"
                     >
-                      {updateProfileMutation.isPending && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                      {isUpdating && <LoaderCircle className="h-4 w-4 animate-spin" />}
                       Update Profile
                     </Button>
                   </div>
@@ -275,10 +228,10 @@ const ProfilePage = () => {
                   <div className="pt-4">
                     <Button 
                       type="submit" 
-                      disabled={changePasswordMutation.isPending || !passwordForm.formState.isDirty}
+                      disabled={isChangingPassword || !passwordForm.formState.isDirty}
                       className="flex gap-2"
                     >
-                      {changePasswordMutation.isPending && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                      {isChangingPassword && <LoaderCircle className="h-4 w-4 animate-spin" />}
                       Change Password
                     </Button>
                   </div>

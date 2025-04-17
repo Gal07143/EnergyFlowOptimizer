@@ -164,17 +164,16 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
               </div>
             </Link>
             <div className="flex">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => {
-                  onClose?.();
-                  window.location.href = '/profile';
-                }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 mr-1"
-              >
-                <UserCog className="h-5 w-5" />
-              </Button>
+              <Link href="/profile">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => onClose?.()}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 mr-1"
+                >
+                  <UserCog className="h-5 w-5" />
+                </Button>
+              </Link>
               <Button 
                 variant="ghost" 
                 size="icon" 
