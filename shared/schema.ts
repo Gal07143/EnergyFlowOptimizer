@@ -104,38 +104,113 @@ export const devices = pgTable('devices', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Device Readings
+// Device Readings - Enhanced Time-Series Data
+export const samplingRateEnum = pgEnum('sampling_rate', [
+  'real_time',    // Sub-second sampling (typically for critical readings)
+  'high',         // 1-5 second sampling (for active operations)
+  'medium',       // 15-60 second sampling (for regular monitoring)
+  'low',          // 5-15 minute sampling (for trend analysis)
+  'very_low'      // 1 hour+ sampling (for historical records)
+]);
+
+export const dataQualityEnum = pgEnum('data_quality', [
+  'raw',           // Direct from device without validation
+  'validated',     // Passed basic validation checks
+  'corrected',     // Corrected for known issues
+  'estimated',     // Estimated to fill gaps
+  'aggregated'     // Derived from multiple readings
+]);
+
 export const deviceReadings = pgTable('device_readings', {
   id: serial('id').primaryKey(),
   deviceId: integer('device_id').notNull().references(() => devices.id),
   timestamp: timestamp('timestamp').defaultNow(),
+  
+  // Core electrical measurements
   power: numeric('power'),
   energy: numeric('energy'),
   stateOfCharge: numeric('state_of_charge'),
   voltage: numeric('voltage'),
   current: numeric('current'),
   frequency: numeric('frequency'),
+  
+  // Environmental readings
   temperature: numeric('temperature'),
+  humidity: numeric('humidity'),
+  pressure: numeric('pressure'),
+  
+  // Status information
+  operationalMode: text('operational_mode'),
+  statusCode: integer('status_code'),
+  
+  // Sampling metadata
+  samplingRate: samplingRateEnum('sampling_rate').default('medium'),
+  dataQuality: dataQualityEnum('data_quality').default('validated'),
+  
+  // Storage tier marker (helps for data lifecycle management)
+  storageTier: text('storage_tier').default('hot'),
+  retentionCategory: text('retention_category').default('standard'),
+  
+  // Processing & aggregation info
+  isAggregated: boolean('is_aggregated').default(false),
+  aggregationPeriod: text('aggregation_period'),
+  aggregationMethod: text('aggregation_method'),
+  sourceReadings: json('source_readings'),
+  
+  // Extended data
   additionalData: json('additional_data'),
+  processingMetadata: json('processing_metadata'),
 });
 
-// Energy Readings
+// Energy Readings - Enhanced Time-Series Data
 export const energyReadings = pgTable('energy_readings', {
   id: serial('id').primaryKey(),
   siteId: integer('site_id').notNull().references(() => sites.id),
   timestamp: timestamp('timestamp').defaultNow(),
+  
+  // Power flows (kW)
   gridPower: numeric('grid_power'),
   solarPower: numeric('solar_power'),
   batteryPower: numeric('battery_power'),
   evPower: numeric('ev_power'),
   homePower: numeric('home_power'),
+  
+  // Cumulative energy (kWh)
   gridEnergy: numeric('grid_energy'),
   solarEnergy: numeric('solar_energy'),
   batteryEnergy: numeric('battery_energy'),
   evEnergy: numeric('ev_energy'),
   homeEnergy: numeric('home_energy'),
-  selfSufficiency: numeric('self_sufficiency'),
-  carbon: numeric('carbon'),
+  
+  // Performance metrics
+  selfSufficiency: numeric('self_sufficiency'), // Percentage (0-100)
+  carbon: numeric('carbon'), // CO2 emissions (kg)
+  efficiency: numeric('efficiency'), // System efficiency percentage
+  peakPower: numeric('peak_power'), // Peak power for the interval
+  
+  // Financial metrics
+  costSaving: numeric('cost_saving'), // Cost saving during this interval
+  gridCost: numeric('grid_cost'), // Cost of energy from grid during this interval
+  
+  // Sampling metadata (matching deviceReadings)
+  samplingRate: samplingRateEnum('sampling_rate').default('medium'),
+  dataQuality: dataQualityEnum('data_quality').default('validated'),
+  
+  // Storage tier marker
+  storageTier: text('storage_tier').default('hot'),
+  retentionCategory: text('retention_category').default('standard'),
+  
+  // Processing & aggregation info
+  isAggregated: boolean('is_aggregated').default(false),
+  aggregationPeriod: text('aggregation_period'),
+  aggregationMethod: text('aggregation_method'),
+  sourceReadings: json('source_readings'),
+  
+  // Weather conditions during this period
+  weatherData: json('weather_data'),
+  
+  // Extended data
+  additionalData: json('additional_data'),
 });
 
 // Optimization Settings
@@ -252,13 +327,29 @@ export const energyForecasts = pgTable('energy_forecasts', {
 
 // Event logging table
 export const eventLogTypeEnum = pgEnum('event_log_type', [
-  'system', 
-  'user', 
-  'device', 
-  'security', 
-  'optimization',
-  'demand_response',
-  'ai_optimization'
+  'system',           // System startup, shutdown, configuration changes
+  'user',             // User login, logout, settings changes
+  'device',           // Device connection, disconnection, mode changes
+  'security',         // Failed login attempts, permission changes
+  'optimization',     // Optimization strategy changes, execution
+  'demand_response',  // DR event notifications, participation changes
+  'ai_optimization',  // AI-based decisions and recommendations
+  'alarm',            // Critical system alarms
+  'warning',          // Non-critical warnings
+  'state_transition', // Device state changes
+  'command',          // Remote commands sent to devices
+  'data_quality',     // Data validation issues
+  'communication'     // Communication protocol events
+]);
+
+export const eventCategoryEnum = pgEnum('event_category', [
+  'informational',    // Normal operation events
+  'operational',      // Operational changes 
+  'maintenance',      // Maintenance-related events
+  'security',         // Security-related events
+  'performance',      // Performance monitoring events
+  'error',            // Error conditions
+  'audit'             // For compliance and tracking
 ]);
 
 // AI Optimization Results table
@@ -308,17 +399,42 @@ export const demandResponseParticipationEnum = pgEnum('demand_response_participa
   'automatic'
 ]);
 
+// Enhanced Event Logging for comprehensive tracking of all events
 export const eventLogs = pgTable('event_logs', {
   id: serial('id').primaryKey(),
   timestamp: timestamp('timestamp').defaultNow(),
   eventType: eventLogTypeEnum('event_type').notNull(),
+  eventCategory: eventCategoryEnum('event_category').default('informational'),
   message: text('message').notNull(),
+  
+  // Related entity references
   userId: integer('user_id').references(() => users.id),
   deviceId: integer('device_id').references(() => devices.id),
   siteId: integer('site_id').references(() => sites.id),
+  
+  // Event details
   metadata: json('metadata'),
   severity: text('severity').default('info'),
   sourceIp: text('source_ip'),
+  
+  // Action tracking
+  relatedAction: text('related_action'),
+  actionId: integer('action_id'),
+  actionResult: text('action_result'),
+  
+  // For correlation
+  correlationId: text('correlation_id'),
+  parentEventId: integer('parent_event_id').references(() => eventLogs.id),
+  
+  // Storage tier info
+  storageTier: text('storage_tier').default('hot'),
+  retentionPeriodDays: integer('retention_period_days').default(365),
+  
+  // For searchability and filtering
+  tags: json('tags'),
+  isAcknowledged: boolean('is_acknowledged').default(false),
+  acknowledgedBy: integer('acknowledged_by').references(() => users.id),
+  acknowledgedAt: timestamp('acknowledged_at'),
 });
 
 // Device Catalog Enums
@@ -488,6 +604,91 @@ export const remoteCommands = pgTable('remote_commands', {
 });
 
 // Weather data schemas
+
+// *** MULTI-TIERED STORAGE SYSTEM ***
+
+// Storage Tier Management
+export const storageTierEnum = pgEnum('storage_tier', [
+  'hot',       // For frequently accessed real-time data (Redis, in-memory)
+  'warm',      // For medium-term data (PostgreSQL)
+  'cold',      // For historical data (Object storage)
+  'archive'    // For compliance and audit data (Long-term archive)
+]);
+
+export const dataLifecycleEnum = pgEnum('data_lifecycle', [
+  'active',    // Currently being used
+  'aging',     // Starting to age out 
+  'dormant',   // Rarely accessed
+  'expired'    // Ready for deletion
+]);
+
+export const storagePolicyRules = pgTable('storage_policy_rules', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  
+  // What data this rule applies to
+  dataType: text('data_type').notNull(), // 'device_readings', 'energy_readings', 'event_logs', etc.
+  entityType: text('entity_type'), // 'site', 'device', 'user', etc. (optional filter)
+  entityId: integer('entity_id'), // Specific entity ID (optional filter)
+  
+  // Time-based rules
+  retentionPeriodDays: integer('retention_period_days').notNull(), // How long to keep data
+  promotionThresholdDays: integer('promotion_threshold_days'), // When to move to next tier
+  
+  // Tier settings
+  sourceTier: storageTierEnum('source_tier').notNull(), 
+  destinationTier: storageTierEnum('destination_tier').notNull(),
+  
+  // Action to take
+  action: text('action').notNull(), // 'move', 'copy', 'compress', 'delete'
+  compressionType: text('compression_type'), // If action is 'compress'
+  
+  // Sampling/aggregation for data reduction
+  aggregationEnabled: boolean('aggregation_enabled').default(false),
+  aggregationPeriod: text('aggregation_period'), // e.g., '1h', '1d', '1m'
+  aggregationFunction: text('aggregation_function'), // e.g., 'avg', 'min', 'max', 'sum'
+  
+  isEnabled: boolean('is_enabled').default(true),
+  priority: integer('priority').default(10),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  lastExecutedAt: timestamp('last_executed_at'),
+  executionFrequencyHours: integer('execution_frequency_hours').default(24),
+});
+
+export const dataTransferJobs = pgTable('data_transfer_jobs', {
+  id: serial('id').primaryKey(),
+  policyRuleId: integer('policy_rule_id').references(() => storagePolicyRules.id),
+  status: text('status').default('pending').notNull(), // pending, in_progress, completed, failed
+  startTime: timestamp('start_time').defaultNow(),
+  endTime: timestamp('end_time'),
+  recordsProcessed: integer('records_processed').default(0),
+  bytesProcessed: integer('bytes_processed').default(0),
+  errorMessage: text('error_message'),
+  sourceTier: storageTierEnum('source_tier').notNull(),
+  destinationTier: storageTierEnum('destination_tier').notNull(),
+  metadataSnapshot: json('metadata_snapshot'), // Snapshot of the data moved
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const storageTierMetrics = pgTable('storage_tier_metrics', {
+  id: serial('id').primaryKey(),
+  tier: storageTierEnum('tier').notNull(),
+  dataType: text('data_type').notNull(), // device_readings, energy_readings, etc.
+  recordCount: integer('record_count').default(0),
+  storageBytes: integer('storage_bytes').default(0),
+  oldestRecord: timestamp('oldest_record'),
+  newestRecord: timestamp('newest_record'),
+  avgAccessesPerDay: numeric('avg_accesses_per_day').default(0),
+  lastAccessedAt: timestamp('last_accessed_at'),
+  lastUpdatedAt: timestamp('last_updated_at').defaultNow(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ** END OF MULTI-TIERED STORAGE SYSTEM **
+
 // Device Catalog Tables
 export const deviceManufacturers = pgTable('device_manufacturers', {
   id: serial('id').primaryKey(),
@@ -818,6 +1019,18 @@ export const remoteCommandsRelations = relations(remoteCommands, ({ one }) => ({
   user: one(users, {
     fields: [remoteCommands.userId],
     references: [users.id],
+  }),
+}));
+
+// Storage tier system relations
+export const storagePolicyRulesRelations = relations(storagePolicyRules, ({ many }) => ({
+  transferJobs: many(dataTransferJobs),
+}));
+
+export const dataTransferJobsRelations = relations(dataTransferJobs, ({ one }) => ({
+  policyRule: one(storagePolicyRules, {
+    fields: [dataTransferJobs.policyRuleId],
+    references: [storagePolicyRules.id],
   }),
 }));
 
