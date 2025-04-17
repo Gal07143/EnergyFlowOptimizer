@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { getMqttService } from './mqttService';
 import { OpenAI } from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources';
 import { eq } from 'drizzle-orm';
 import { sites, devices, deviceReadings, energyReadings, optimizationSettings, tariffs } from '@shared/schema';
 
@@ -82,6 +83,9 @@ export class AIOptimizationService {
   private openai: OpenAI | null = null;
   private isInitialized = false;
   private lastOptimizations: Map<number, OptimizationResult> = new Map();
+  private optimizationHistory: Map<string, OptimizationResult> = new Map(); // History for reinforcement learning
+  private feedbackHistory: Map<string, OptimizationFeedback> = new Map(); // Feedback for reinforcement learning
+  private recentOptimizations: Map<number, {results: OptimizationResult[], feedbacks: OptimizationFeedback[]}> = new Map(); // Store recent optimizations per site
   
   constructor() {
     this.initOpenAI();
@@ -307,16 +311,34 @@ export class AIOptimizationService {
       // Format the prompt for OpenAI
       const prompt = this.createOptimizationPrompt(state, strategy);
       
+      // Get recent optimization learning examples
+      const recentOptimizationsForSite = this.recentOptimizations.get(state.siteId);
+      const learningExamples = this.prepareReinforcementLearningExamples(recentOptimizationsForSite);
+      
+      // Prepare message array with correct types
+      const messages: ChatCompletionMessageParam[] = [
+        {
+          role: "system",
+          content: `You are an advanced energy management AI that optimizes battery storage, EV charging, and flexible loads based on real-time data and forecasts. 
+You continuously learn from the outcomes of your past recommendations through reinforcement learning.
+Provide specific numerical actions based on the energy state and optimization goals.
+Always output your response in JSON format.`
+        },
+        { role: "user", content: prompt }
+      ];
+      
+      // Include learning examples if available
+      if (learningExamples.length > 0) {
+        messages.splice(1, 0, {
+          role: "system",
+          content: `Here are the outcomes of your recent optimizations to learn from: ${JSON.stringify(learningExamples)}`
+        });
+      }
+      
       // Call OpenAI API
       const completion = await this.openai.chat.completions.create({
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-        messages: [
-          {
-            role: "system",
-            content: "You are an advanced energy management AI that optimizes battery storage, EV charging, and flexible loads based on real-time data and forecasts. Provide specific numerical actions based on the energy state and optimization goals. Output response in JSON format."
-          },
-          { role: "user", content: prompt }
-        ],
+        messages: messages,
         response_format: { type: "json_object" }
       });
       
@@ -622,6 +644,111 @@ Format your response as JSON with the following structure:
     };
   }
   
+  // Prepare reinforcement learning examples from historical data
+  private prepareReinforcementLearningExamples(siteHistory?: {
+    results: OptimizationResult[],
+    feedbacks: OptimizationFeedback[]
+  }): any[] {
+    if (!siteHistory || !siteHistory.results.length || !siteHistory.feedbacks.length) {
+      return [];
+    }
+
+    // Create learning examples by matching optimization results with feedback
+    const examples = [];
+    
+    for (const feedback of siteHistory.feedbacks) {
+      // Find the matching optimization result
+      const matchingResult = siteHistory.results.find(r => r.id === feedback.optimizationId);
+      if (!matchingResult) continue;
+      
+      // Create a learning example
+      examples.push({
+        action: {
+          batteryChargePower: matchingResult.actions.batteryChargePower,
+          batteryDischargePower: matchingResult.actions.batteryDischargePower,
+          evChargePower: matchingResult.actions.evChargePower,
+          heatPumpPower: matchingResult.actions.heatPumpPower
+        },
+        projectedSavings: matchingResult.projectedSavings,
+        actualSavings: feedback.actualSavings,
+        successRating: feedback.success ? "success" : "failure",
+        metrics: feedback.metrics,
+        learningPoints: this.deriveLearningPoints(matchingResult, feedback)
+      });
+    }
+    
+    // Limit to the 5 most recent examples
+    return examples.slice(-5);
+  }
+  
+  // Derive learning points from comparing projected vs actual results
+  private deriveLearningPoints(result: OptimizationResult, feedback: OptimizationFeedback): string[] {
+    const learningPoints = [];
+    
+    // Check if savings prediction was accurate
+    const savingsDifference = Math.abs(result.projectedSavings - feedback.actualSavings);
+    const savingsPercentDiff = result.projectedSavings > 0 
+      ? (savingsDifference / result.projectedSavings) * 100 
+      : 100;
+    
+    if (savingsPercentDiff > 30) {
+      learningPoints.push(`Savings prediction was off by ${savingsPercentDiff.toFixed(1)}%. Adjust forecasting model.`);
+    }
+    
+    // Check if optimization was successful overall
+    if (!feedback.success) {
+      learningPoints.push("Optimization failed to meet expectations. Consider more conservative actions.");
+    }
+    
+    // Check individual metrics
+    if (feedback.metrics.costReduction !== undefined && feedback.metrics.costReduction < 0) {
+      learningPoints.push("Cost increased instead of decreasing. Reconsider pricing model assumptions.");
+    }
+    
+    if (feedback.metrics.selfConsumption !== undefined && feedback.metrics.selfConsumption < 50) {
+      learningPoints.push("Self-consumption was lower than expected. Better align battery usage with solar production.");
+    }
+    
+    if (feedback.metrics.peakReduction !== undefined && feedback.metrics.peakReduction < 10) {
+      learningPoints.push("Peak reduction was minimal. Consider more aggressive load shifting during peak periods.");
+    }
+    
+    if (feedback.metrics.batteryHealth !== undefined && feedback.metrics.batteryHealth < 70) {
+      learningPoints.push("Battery health impact was significant. Reduce deep cycling or extreme charge rates.");
+    }
+    
+    return learningPoints;
+  }
+
+  // Process optimization feedback for reinforcement learning
+  public processFeedback(siteId: number, feedback: OptimizationFeedback): boolean {
+    try {
+      // Store feedback in history
+      this.feedbackHistory.set(feedback.optimizationId, feedback);
+      
+      // Update recent optimizations tracking
+      let siteHistory = this.recentOptimizations.get(siteId);
+      if (!siteHistory) {
+        siteHistory = { results: [], feedbacks: [] };
+        this.recentOptimizations.set(siteId, siteHistory);
+      }
+      
+      // Add to recent feedbacks
+      siteHistory.feedbacks.push(feedback);
+      
+      // Keep only the 10 most recent entries
+      if (siteHistory.feedbacks.length > 10) {
+        siteHistory.feedbacks = siteHistory.feedbacks.slice(-10);
+      }
+      
+      console.log(`Processed feedback for optimization ${feedback.optimizationId} at site ${siteId}. Success: ${feedback.success}`);
+      return true;
+    } catch (error) {
+      console.error(`Error processing optimization feedback:`, error);
+      return false;
+    }
+  }
+
   // Public method to optimize a site's energy usage
   public async optimizeSite(siteId: number): Promise<OptimizationResult | null> {
     try {
@@ -643,7 +770,27 @@ Format your response as JSON with the following structure:
       
       // Store the result for future reference
       if (result) {
+        // Generate a unique ID for this optimization
+        result.id = `opt-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        
+        // Store in maps
         this.lastOptimizations.set(siteId, result);
+        this.optimizationHistory.set(result.id, result);
+        
+        // Add to recent optimizations tracking
+        let siteHistory = this.recentOptimizations.get(siteId);
+        if (!siteHistory) {
+          siteHistory = { results: [], feedbacks: [] };
+          this.recentOptimizations.set(siteId, siteHistory);
+        }
+        
+        // Add to recent results
+        siteHistory.results.push(result);
+        
+        // Keep only the 10 most recent entries
+        if (siteHistory.results.length > 10) {
+          siteHistory.results = siteHistory.results.slice(-10);
+        }
         
         // Publish optimization result to MQTT
         try {

@@ -186,6 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/optimization/settings', aiOptimizationController.updateOptimizationSettings);
   app.get('/api/optimization/status', aiOptimizationController.getOptimizationStatus);
   app.post('/api/optimization/apply/:siteId', aiOptimizationController.applyLastOptimization);
+  app.post('/api/optimization/feedback', aiOptimizationController.submitOptimizationFeedback);
   app.post('/api/optimization/test/:siteId', aiOptimizationController.testOptimizationAI);
 
   return httpServer;

@@ -295,6 +295,79 @@ export async function applyLastOptimization(req: Request, res: Response) {
   }
 }
 
+// Submit feedback for reinforcement learning
+export async function submitOptimizationFeedback(req: Request, res: Response) {
+  try {
+    // Define feedback schema for validation
+    const feedbackSchema = z.object({
+      optimizationId: z.string(),
+      siteId: z.number().int().positive(),
+      actualSavings: z.number(),
+      success: z.boolean(),
+      metrics: z.object({
+        costReduction: z.number().optional(),
+        selfConsumption: z.number().optional(),
+        peakReduction: z.number().optional(),
+        batteryHealth: z.number().optional(),
+        carbonReduction: z.number().optional(),
+        userComfort: z.number().optional(),
+      }).optional().default({}),
+    });
+    
+    // Validate request
+    const validationResult = feedbackSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      return res.status(400).json({ 
+        message: 'Invalid feedback data', 
+        errors: validationResult.error.errors 
+      });
+    }
+
+    const feedback = validationResult.data;
+    
+    // Initialize the service if needed
+    try {
+      getAIOptimizationService();
+    } catch {
+      initAIOptimizationService();
+    }
+    
+    // Process feedback
+    const optimizationService = getAIOptimizationService();
+    
+    // Add timestamp if not provided
+    const feedbackWithTimestamp = {
+      ...feedback,
+      timestamp: new Date().toISOString()
+    };
+    
+    const processed = optimizationService.processFeedback(
+      feedback.siteId, 
+      feedbackWithTimestamp
+    );
+    
+    if (!processed) {
+      return res.status(500).json({ 
+        message: 'Failed to process optimization feedback',
+        optimizationId: feedback.optimizationId 
+      });
+    }
+    
+    // Return success
+    return res.status(200).json({
+      message: 'Optimization feedback processed successfully',
+      optimizationId: feedback.optimizationId,
+      metrics: Object.keys(feedback.metrics).length
+    });
+  } catch (error) {
+    console.error('Error submitting optimization feedback:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error',
+      error: (error as Error).message 
+    });
+  }
+}
+
 // Debug function to test AI response generation
 export async function testOptimizationAI(req: Request, res: Response) {
   try {
