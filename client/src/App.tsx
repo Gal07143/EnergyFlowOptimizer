@@ -5,6 +5,7 @@ import NotFound from "@/pages/not-found";
 import DashboardPage from "@/pages/DashboardPage";
 import DevicesPage from "@/pages/DevicesPage";
 import DeviceDetail from "@/pages/DeviceDetail";
+import LocationsPage from "@/pages/LocationsPage";
 import EnergyFlowPage from "@/pages/EnergyFlowPage";
 import OptimizationDashboard from "@/pages/OptimizationDashboard";
 import Settings from "@/pages/Settings";
@@ -48,6 +49,7 @@ function Router() {
       <ProtectedPageWithLayout path="/" component={DashboardPage} />
       <ProtectedPageWithLayout path="/devices" component={DevicesPage} />
       <ProtectedPageWithLayout path="/devices/:id" component={DeviceDetail} />
+      <ProtectedPageWithLayout path="/locations" component={LocationsPage} />
       <ProtectedPageWithLayout path="/energy-flow" component={EnergyFlowPage} />
       <ProtectedPageWithLayout path="/optimization" component={OptimizationDashboard} />
       <ProtectedPageWithLayout path="/vpp" component={OptimizationDashboard} />

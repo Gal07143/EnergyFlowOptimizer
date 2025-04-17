@@ -16,7 +16,8 @@ import {
   ChevronRight,
   ChevronLeft,
   LogOut,
-  Menu
+  Menu,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -50,6 +51,12 @@ const navItems = [
     badge: null
   },
   {
+    title: 'Locations',
+    icon: <MapPin className="h-5 w-5" />,
+    href: '/locations',
+    badge: null
+  },
+  {
     title: 'Optimization',
     icon: <Zap className="h-5 w-5" />,
     href: '/optimization',
@@ -71,12 +78,6 @@ const navItems = [
     title: 'Demand Response',
     icon: <Battery className="h-5 w-5" />,
     href: '/demand-response',
-    badge: null
-  },
-  {
-    title: 'Analytics',
-    icon: <BarChart2 className="h-5 w-5" />,
-    href: '/analytics',
     badge: null
   },
   {
