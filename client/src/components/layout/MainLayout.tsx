@@ -99,12 +99,7 @@ const navItems = [
   }
 ];
 
-// Mock site data (in a real app, this would come from an API)
-const mockSites = [
-  { id: 1, name: 'Home', address: '123 Main St', city: 'San Francisco' },
-  { id: 2, name: 'Office', address: '456 Market St', city: 'San Francisco' },
-  { id: 3, name: 'Warehouse', address: '789 Industrial Blvd', city: 'Oakland' }
-];
+// Site data comes from the SiteContext
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -115,7 +110,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
-  const { currentSiteId, setCurrentSiteId } = useSiteContext();
+  const { currentSiteId, setCurrentSiteId, sites, currentSite } = useSiteContext();
 
   // Handle site change
   const handleSiteChange = (siteId: string) => {
@@ -182,9 +177,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <SelectValue placeholder="Select site" />
               </SelectTrigger>
               <SelectContent>
-                {mockSites.map(site => (
+                {sites && sites.map(site => (
                   <SelectItem key={site.id} value={site.id.toString()}>
-                    {site.name} - {site.city}
+                    {site.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -199,7 +194,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">Current Site: {mockSites.find(s => s.id === currentSiteId)?.name || 'Home'}</TooltipContent>
+                <TooltipContent side="right">Current Site: {currentSite?.name || 'Home'}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

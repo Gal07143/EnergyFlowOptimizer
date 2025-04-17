@@ -29,7 +29,7 @@ const useEnergyData = (siteId?: number | null) => {
     timestamp: new Date().toISOString()
   });
   
-  const { isConnected, lastMessage } = useWebSocket();
+  const { connected: isConnected, lastMessage } = useWebSocket();
   
   // Fetch initial data
   const { data: initialData } = useQuery({
