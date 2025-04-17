@@ -33,7 +33,8 @@ export const optimizationModeEnum = pgEnum('optimization_mode', [
   'self_sufficiency', 
   'peak_shaving', 
   'carbon_reduction', 
-  'grid_relief'
+  'grid_relief',
+  'battery_life'
 ]);
 
 export const userRoles = ['admin', 'manager', 'viewer'] as const;
@@ -139,6 +140,7 @@ export const optimizationSettings = pgTable('optimization_settings', {
   id: serial('id').primaryKey(),
   siteId: integer('site_id').notNull().references(() => sites.id),
   mode: optimizationModeEnum('mode').default('self_sufficiency'),
+  priority: integer('priority').default(5), // Priority scale from 1-10
   peakShavingEnabled: boolean('peak_shaving_enabled').default(false),
   peakShavingTarget: numeric('peak_shaving_target'),
   selfConsumptionEnabled: boolean('self_consumption_enabled').default(true),
@@ -148,7 +150,13 @@ export const optimizationSettings = pgTable('optimization_settings', {
   p2pEnabled: boolean('p2p_enabled').default(false),
   demandResponseEnabled: boolean('demand_response_enabled').default(false),
   aiRecommendationsEnabled: boolean('ai_recommendations_enabled').default(true),
+  aiOptimizationEnabled: boolean('ai_optimization_enabled').default(false),
+  aiModel: text('ai_model').default('gpt-4o'),
+  reinforcementLearningEnabled: boolean('reinforcement_learning_enabled').default(false),
+  constraints: json('constraints'), // Battery min SoC, grid import/export limits, etc.
   schedules: json('schedules'),
+  lastOptimizationTime: timestamp('last_optimization_time'),
+  createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
@@ -246,8 +254,32 @@ export const eventLogTypeEnum = pgEnum('event_log_type', [
   'device', 
   'security', 
   'optimization',
-  'demand_response'
+  'demand_response',
+  'ai_optimization'
 ]);
+
+// AI Optimization Results table
+export const aiOptimizationResults = pgTable('ai_optimization_results', {
+  id: serial('id').primaryKey(),
+  siteId: integer('site_id').references(() => sites.id).notNull(),
+  timestamp: timestamp('timestamp').defaultNow(),
+  mode: optimizationModeEnum('mode').notNull(),
+  batteryChargePower: numeric('battery_charge_power'),
+  batteryDischargePower: numeric('battery_discharge_power'),
+  evChargePower: numeric('ev_charge_power'),
+  heatPumpPower: numeric('heat_pump_power'),
+  projectedSavings: numeric('projected_savings'),
+  confidence: numeric('confidence'),
+  reasoning: text('reasoning'),
+  reinforcementScore: numeric('reinforcement_score'),
+  isApplied: boolean('is_applied').default(false),
+  appliedAt: timestamp('applied_at'),
+  modelUsed: text('model_used'),
+  executionTimeMs: integer('execution_time_ms'),
+  parameters: json('parameters'),
+  feedbackRating: integer('feedback_rating'),
+  feedbackNotes: text('feedback_notes')
+});
 
 // Demand Response Enums
 export const demandResponseProgramTypeEnum = pgEnum('demand_response_program_type', [
