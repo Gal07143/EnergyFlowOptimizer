@@ -381,7 +381,7 @@ export const demandResponseEvents = pgTable('demand_response_events', {
   notificationTime: timestamp('notification_time'),
   targetReduction: numeric('target_reduction'), // kW
   actualReduction: numeric('actual_reduction'), // kW
-  incentiveModifier: numeric('incentive_modifier').default(1), // multiplier for the incentive
+  incentiveModifier: numeric('incentive_modifier').default('1'), // multiplier for the incentive
   notes: text('notes'),
   isEmergency: boolean('is_emergency').default(false),
   weatherConditions: json('weather_conditions'),

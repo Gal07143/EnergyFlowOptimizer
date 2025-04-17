@@ -3,6 +3,9 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { getMqttService, formatDeviceTopic, formatTopic } from './mqttService';
 import { TOPIC_PATTERNS } from '@shared/messageSchema';
 import { getModbusManager, ModbusDevice } from '../adapters/modbusAdapter';
+import { getOCPPManager, OCPPDevice } from '../adapters/ocppAdapter';
+import { getEEBusManager, EEBusDevice } from '../adapters/eebusAdapter';
+import { getSunSpecManager, SunSpecDevice } from '../adapters/sunspecAdapter';
 
 // Device types supported by the system
 export type DeviceType = 'solar_pv' | 'battery_storage' | 'ev_charger' | 'smart_meter' | 'heat_pump';
@@ -233,18 +236,88 @@ class DeviceRegistry {
           break;
       }
       
-      // Generate config based on protocol
-      const protocol: ProtocolType = type === 'ev_charger' ? 'ocpp' : Math.random() > 0.5 ? 'mqtt' : 'modbus';
+      // Generate protocol based on device type
+      let protocol: ProtocolType;
+      let protocolConfig: any = {};
       
-      const protocolConfig = protocol === 'modbus' ? {
-        address: 1 + Math.floor(Math.random() * 10),
-        connection: {
-          type: 'tcp',
-          host: '192.168.1.' + (100 + i),
-          port: 502
-        },
-        registers: this.getDefaultRegistersForDeviceType(type)
-      } : {};
+      // Assign appropriate protocols based on device type
+      switch (type) {
+        case 'ev_charger':
+          protocol = 'ocpp';
+          protocolConfig = {
+            chargePointId: `CP${i+1}`,
+            version: Math.random() > 0.5 ? '1.6' : '2.0',
+            connectionType: 'websocket',
+            endpoint: `ws://localhost:8080/ocpp/${i+1}`,
+            authEnabled: Math.random() > 0.3,
+            maxPower: 22,
+            connectors: 1 + Math.floor(Math.random() * 2)
+          };
+          break;
+        case 'solar_pv':
+          protocol = Math.random() > 0.5 ? 'sunspec' : 'modbus';
+          if (protocol === 'sunspec') {
+            protocolConfig = {
+              deviceId: `INV${i+1}`,
+              deviceType: 'Inverter',
+              connectionType: 'Modbus-TCP',
+              modbusAddress: 1,
+              modbusIp: `192.168.1.${100 + i}`,
+              modbusPort: 502,
+              scanInterval: 10000,
+              models: [101, 103, 120, 123]
+            };
+          } else {
+            protocolConfig = {
+              address: 1 + Math.floor(Math.random() * 10),
+              connection: {
+                type: 'tcp',
+                host: '192.168.1.' + (100 + i),
+                port: 502
+              },
+              registers: this.getDefaultRegistersForDeviceType(type)
+            };
+          }
+          break;
+        case 'heat_pump':
+          protocol = Math.random() > 0.5 ? 'eebus' : 'modbus';
+          if (protocol === 'eebus') {
+            protocolConfig = {
+              deviceId: `HP${i+1}`,
+              deviceType: 'HeatPump',
+              endpoint: `eeb://192.168.1.${150 + i}:5150`,
+              secureConnection: true,
+              brand: manufacturer,
+              model: model
+            };
+          } else {
+            protocolConfig = {
+              address: 1 + Math.floor(Math.random() * 10),
+              connection: {
+                type: 'tcp',
+                host: '192.168.1.' + (100 + i),
+                port: 502
+              },
+              registers: this.getDefaultRegistersForDeviceType(type)
+            };
+          }
+          break;
+        default:
+          // For other device types, randomly assign modbus or mqtt
+          protocol = Math.random() > 0.5 ? 'mqtt' : 'modbus';
+          if (protocol === 'modbus') {
+            protocolConfig = {
+              address: 1 + Math.floor(Math.random() * 10),
+              connection: {
+                type: 'tcp',
+                host: '192.168.1.' + (100 + i),
+                port: 502
+              },
+              registers: this.getDefaultRegistersForDeviceType(type)
+            };
+          }
+          break;
+      }
       
       // Generate apiKey for authentication
       const apiKey = Buffer.from(randomBytes(32)).toString('hex');
@@ -535,7 +608,136 @@ export class DeviceManagementService {
   
   // Add a new device
   addDevice(device: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Device {
-    return this.deviceRegistry.addDevice(device);
+    const newDevice = this.deviceRegistry.addDevice(device);
+    
+    // Initialize the device with the appropriate protocol adapter
+    this.initializeDevice(newDevice);
+    
+    return newDevice;
+  }
+  
+  // Initialize device with the appropriate protocol adapter
+  private async initializeDevice(device: Device): Promise<void> {
+    // Skip if device is offline
+    if (device.status === 'offline') {
+      console.log(`Device ${device.id} is offline, skipping protocol initialization`);
+      return;
+    }
+    
+    try {
+      switch (device.protocol) {
+        case 'modbus':
+          await this.initializeModbusDevice(device);
+          break;
+        case 'ocpp':
+          await this.initializeOcppDevice(device);
+          break;
+        case 'eebus':
+          await this.initializeEebusDevice(device);
+          break;
+        case 'sunspec':
+          await this.initializeSunspecDevice(device);
+          break;
+        case 'mqtt':
+          // MQTT devices are already handled through the MQTT service
+          console.log(`Device ${device.id} uses MQTT protocol, no additional initialization needed`);
+          break;
+        case 'rest':
+          // REST devices poll on an interval or are polled
+          console.log(`Device ${device.id} uses REST protocol, initialization via polling service`);
+          break;
+        default:
+          console.warn(`Unknown protocol '${device.protocol}' for device ${device.id}`);
+      }
+    } catch (error) {
+      console.error(`Error initializing device ${device.id} with ${device.protocol} protocol:`, error);
+    }
+  }
+  
+  // Initialize a Modbus device
+  private async initializeModbusDevice(device: Device): Promise<void> {
+    if (!device.protocolConfig.connection || !device.protocolConfig.registers) {
+      console.error(`Invalid Modbus configuration for device ${device.id}`);
+      return;
+    }
+    
+    const modbusManager = getModbusManager();
+    const modbusDevice: ModbusDevice = {
+      id: device.id,
+      address: device.protocolConfig.address,
+      connection: device.protocolConfig.connection,
+      registers: device.protocolConfig.registers,
+      scanInterval: device.protocolConfig.scanInterval || 5000
+    };
+    
+    await modbusManager.addDevice(modbusDevice);
+    console.log(`Initialized Modbus device ${device.id}`);
+  }
+  
+  // Initialize an OCPP device (EV charger)
+  private async initializeOcppDevice(device: Device): Promise<void> {
+    if (device.type !== 'ev_charger') {
+      console.warn(`Device ${device.id} has OCPP protocol but is not an EV charger`);
+    }
+    
+    const ocppManager = getOCPPManager();
+    const ocppDevice: OCPPDevice = {
+      id: device.id,
+      chargePointId: device.protocolConfig.chargePointId || `CP${device.id}`,
+      version: device.protocolConfig.version || '1.6',
+      connectionType: device.protocolConfig.connectionType || 'websocket',
+      endpoint: device.protocolConfig.endpoint,
+      authEnabled: device.protocolConfig.authEnabled !== undefined ? device.protocolConfig.authEnabled : true,
+      maxPower: device.protocolConfig.maxPower,
+      connectors: device.protocolConfig.connectors || 1
+    };
+    
+    await ocppManager.addDevice(ocppDevice);
+    console.log(`Initialized OCPP device ${device.id}`);
+  }
+  
+  // Initialize an EEBus device (Heat pump or home appliance)
+  private async initializeEebusDevice(device: Device): Promise<void> {
+    if (device.type !== 'heat_pump' && !device.metadata?.applianceType) {
+      console.warn(`Device ${device.id} has EEBus protocol but is not a heat pump or recognized appliance`);
+    }
+    
+    const eebusManager = getEEBusManager();
+    const eebusDevice: EEBusDevice = {
+      id: device.id,
+      deviceId: device.protocolConfig.deviceId || `HP${device.id}`,
+      deviceType: device.protocolConfig.deviceType || 'HeatPump',
+      endpoint: device.protocolConfig.endpoint,
+      secureConnection: device.protocolConfig.secureConnection !== undefined ? device.protocolConfig.secureConnection : true,
+      brand: device.manufacturer,
+      model: device.model
+    };
+    
+    await eebusManager.addDevice(eebusDevice);
+    console.log(`Initialized EEBus device ${device.id}`);
+  }
+  
+  // Initialize a SunSpec device (Solar inverter)
+  private async initializeSunspecDevice(device: Device): Promise<void> {
+    if (device.type !== 'solar_pv') {
+      console.warn(`Device ${device.id} has SunSpec protocol but is not a solar PV device`);
+    }
+    
+    const sunspecManager = getSunSpecManager();
+    const sunspecDevice: SunSpecDevice = {
+      id: device.id,
+      deviceId: device.protocolConfig.deviceId || `INV${device.id}`,
+      deviceType: device.protocolConfig.deviceType || 'Inverter',
+      connectionType: device.protocolConfig.connectionType || 'Modbus-TCP',
+      modbusAddress: device.protocolConfig.modbusAddress,
+      modbusIp: device.protocolConfig.modbusIp,
+      modbusPort: device.protocolConfig.modbusPort,
+      scanInterval: device.protocolConfig.scanInterval || 10000,
+      models: device.protocolConfig.models
+    };
+    
+    await sunspecManager.addDevice(sunspecDevice);
+    console.log(`Initialized SunSpec device ${device.id}`);
   }
   
   // Update an existing device
