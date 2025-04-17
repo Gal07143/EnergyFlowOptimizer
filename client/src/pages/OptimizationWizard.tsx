@@ -95,7 +95,7 @@ export default function OptimizationWizard() {
   const [step, setStep] = useState<'select' | 'review' | 'success'>('select');
   const [customFeatures, setCustomFeatures] = useState<Record<string, boolean>>({});
   const { mutate: applyPreset, isPending } = useApplyOptimizationPreset(currentSiteId);
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   // Find the currently selected preset
   const activePreset = presets.find(p => p.id === selectedPreset);
@@ -135,7 +135,7 @@ export default function OptimizationWizard() {
         }
       );
     } else if (step === 'success') {
-      navigate('/optimization');
+      setLocation('/optimization');
     }
   };
 
@@ -453,14 +453,14 @@ export default function OptimizationWizard() {
               <Button 
                 size="lg" 
                 className="w-full"
-                onClick={() => navigate('/optimization')}
+                onClick={() => setLocation('/optimization')}
               >
                 Go to Optimization Dashboard
               </Button>
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => navigate('/')}
+                onClick={() => setLocation('/')}
               >
                 Return to Home
               </Button>

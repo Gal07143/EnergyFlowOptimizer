@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useOptimizationSettings, useUpdateOptimizationSettings } from '@/hooks/useOptimization';
 import { useSiteSelector } from '@/hooks/useSiteData';
+import { Link } from 'wouter';
 import PageHeader from '@/components/common/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,7 +100,14 @@ export default function OptimizationPage() {
       <PageHeader 
         title="Energy Optimization" 
         subtitle="Configure optimization strategies to maximize your energy efficiency"
-      />
+      >
+        <Link to="/optimization/wizard">
+          <Button className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            <span>Optimization Wizard</span>
+          </Button>
+        </Link>
+      </PageHeader>
       
       <Tabs defaultValue="strategies" value={activeTab} onValueChange={setActiveTab} className="mt-6">
         <TabsList className="mb-6">
