@@ -85,6 +85,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/devices/:id/readings/timerange', deviceController.getDeviceReadingsByTimeRange);
   app.post('/api/devices/readings', deviceController.createDeviceReading);
   
+  // Device control route
+  app.post('/api/devices/:id/control', deviceController.controlDevice);
+  
   // Energy readings routes
   app.get('/api/sites/:siteId/energy-readings', energyController.getEnergyReadings);
   app.get('/api/sites/:siteId/energy-readings/timerange', energyController.getEnergyReadingsByTimeRange);

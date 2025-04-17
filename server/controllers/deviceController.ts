@@ -176,3 +176,179 @@ export const createDeviceReading = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to create device reading' });
   }
 };
+
+export const controlDevice = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.id);
+    const { action, parameters } = req.body;
+    
+    if (isNaN(deviceId)) {
+      return res.status(400).json({ message: 'Invalid device ID' });
+    }
+    
+    if (!action) {
+      return res.status(400).json({ message: 'Action is required' });
+    }
+    
+    const device = await storage.getDevice(deviceId);
+    
+    if (!device) {
+      return res.status(404).json({ message: 'Device not found' });
+    }
+    
+    // Create a response object with status
+    const response: any = {
+      status: 'success',
+      deviceId,
+      action,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Handle device-specific actions
+    switch (device.type) {
+      case 'heat_pump':
+        if (action === 'setTemperature' && parameters?.temperature) {
+          // Create a new device reading with the updated target temperature
+          const newReading = {
+            deviceId,
+            timestamp: new Date(),
+            power: parameters.power ? Number(parameters.power) : 1.2,
+            energy: null,
+            stateOfCharge: null,
+            voltage: null,
+            current: null,
+            frequency: null,
+            temperature: null,
+            additionalData: {
+              targetTemp: Number(parameters.temperature),
+              // Preserve other data if any
+              ...(parameters.additionalData || {})
+            }
+          };
+          
+          const reading = await storage.createDeviceReading(newReading);
+          response.reading = reading;
+        } 
+        else if (action === 'setMode' && parameters?.mode) {
+          // Create a new device reading with the updated mode
+          const newReading = {
+            deviceId,
+            timestamp: new Date(),
+            power: parameters.power ? Number(parameters.power) : 1.2,
+            energy: null,
+            stateOfCharge: null,
+            voltage: null,
+            current: null,
+            frequency: null,
+            temperature: null,
+            additionalData: {
+              mode: parameters.mode,
+              // Preserve other data if any
+              ...(parameters.additionalData || {})
+            }
+          };
+          
+          const reading = await storage.createDeviceReading(newReading);
+          response.reading = reading;
+        }
+        else {
+          return res.status(400).json({ 
+            message: 'Invalid action for heat pump device',
+            supportedActions: ['setTemperature', 'setMode']
+          });
+        }
+        break;
+        
+      case 'battery_storage':
+        if (action === 'setChargingMode' && parameters?.mode) {
+          // Handle battery charging mode
+          const newReading = {
+            deviceId,
+            timestamp: new Date(),
+            power: parameters.power ? Number(parameters.power) : 0,
+            energy: null,
+            stateOfCharge: parameters.stateOfCharge ? Number(parameters.stateOfCharge) : null,
+            voltage: null,
+            current: null,
+            frequency: null,
+            temperature: null,
+            additionalData: {
+              mode: parameters.mode,
+              ...(parameters.additionalData || {})
+            }
+          };
+          
+          const reading = await storage.createDeviceReading(newReading);
+          response.reading = reading;
+        } 
+        else {
+          return res.status(400).json({ 
+            message: 'Invalid action for battery device',
+            supportedActions: ['setChargingMode']
+          });
+        }
+        break;
+        
+      case 'ev_charger':
+        if (action === 'startCharging') {
+          // Handle EV charger start
+          const newReading = {
+            deviceId,
+            timestamp: new Date(),
+            power: parameters?.power ? Number(parameters.power) : 7.4,
+            energy: null,
+            stateOfCharge: null,
+            voltage: null,
+            current: null,
+            frequency: null,
+            temperature: null,
+            additionalData: {
+              isCharging: true,
+              ...(parameters?.additionalData || {})
+            }
+          };
+          
+          const reading = await storage.createDeviceReading(newReading);
+          response.reading = reading;
+        } 
+        else if (action === 'stopCharging') {
+          // Handle EV charger stop
+          const newReading = {
+            deviceId,
+            timestamp: new Date(),
+            power: 0,
+            energy: null,
+            stateOfCharge: null,
+            voltage: null,
+            current: null,
+            frequency: null,
+            temperature: null,
+            additionalData: {
+              isCharging: false,
+              ...(parameters?.additionalData || {})
+            }
+          };
+          
+          const reading = await storage.createDeviceReading(newReading);
+          response.reading = reading;
+        }
+        else {
+          return res.status(400).json({ 
+            message: 'Invalid action for EV charger device',
+            supportedActions: ['startCharging', 'stopCharging']
+          });
+        }
+        break;
+        
+      default:
+        return res.status(400).json({ 
+          message: `Control actions not supported for device type: ${device.type}` 
+        });
+    }
+    
+    res.json(response);
+  } catch (error) {
+    console.error('Error controlling device:', error);
+    res.status(500).json({ message: 'Failed to control device' });
+  }
+};
