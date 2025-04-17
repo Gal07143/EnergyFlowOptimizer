@@ -117,13 +117,72 @@ export default function DevicesPage() {
     });
   };
 
+  // New device form state
+  const [newDevice, setNewDevice] = useState({
+    name: '',
+    type: '',
+    model: '',
+    manufacturer: '',
+    location: '',
+    ipAddress: '',
+    capacity: '',
+    protocol: 'modbus',
+  });
+  
+  // Handle new device form input change
+  const handleNewDeviceChange = (field: string, value: string) => {
+    setNewDevice({
+      ...newDevice,
+      [field]: value,
+    });
+  };
+  
   // Handle add new device
   const handleAddDevice = () => {
+    // Validation
+    if (!newDevice.name || !newDevice.type) {
+      toast({
+        title: 'Required Fields Missing',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Convert capacity to number
+    const capacity = newDevice.capacity ? parseFloat(newDevice.capacity) : 0;
+    
+    // In a real app, this would call an API to create the device
+    const deviceData = {
+      ...newDevice,
+      siteId: currentSiteId,
+      capacity,
+      status: 'offline',
+    };
+    
+    console.log('Creating new device:', deviceData);
+    
     toast({
       title: 'Device Added',
-      description: 'New device has been added to the system.',
+      description: `${newDevice.name} has been added to the system.`,
+      variant: 'default',
+    });
+    
+    // Clear form and close dialog
+    setNewDevice({
+      name: '',
+      type: '',
+      model: '',
+      manufacturer: '',
+      location: '',
+      ipAddress: '',
+      capacity: '',
+      protocol: 'modbus',
     });
     setShowAddDeviceDialog(false);
+    
+    // Refetch devices to update the list
+    setTimeout(() => refetch(), 500);
   };
 
   // Handle device click to show details
@@ -376,12 +435,20 @@ export default function DevicesPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="device-name">Device Name</Label>
-                <Input id="device-name" placeholder="Enter device name" />
+                <Label htmlFor="device-name">Device Name <span className="text-destructive">*</span></Label>
+                <Input 
+                  id="device-name" 
+                  placeholder="Enter device name" 
+                  value={newDevice.name}
+                  onChange={(e) => handleNewDeviceChange('name', e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="device-type">Device Type</Label>
-                <Select>
+                <Label htmlFor="device-type">Device Type <span className="text-destructive">*</span></Label>
+                <Select 
+                  value={newDevice.type}
+                  onValueChange={(value) => handleNewDeviceChange('type', value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select device type" />
                   </SelectTrigger>
@@ -397,24 +464,49 @@ export default function DevicesPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="device-model">Model/Manufacturer</Label>
-                <Input id="device-model" placeholder="Enter model or manufacturer" />
+                <Input 
+                  id="device-model" 
+                  placeholder="Enter model or manufacturer" 
+                  value={newDevice.manufacturer}
+                  onChange={(e) => handleNewDeviceChange('manufacturer', e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="device-location">Location</Label>
-                <Input id="device-location" placeholder="Enter location (e.g., Garage, Roof)" />
+                <Input 
+                  id="device-location" 
+                  placeholder="Enter location (e.g., Garage, Roof)" 
+                  value={newDevice.location}
+                  onChange={(e) => handleNewDeviceChange('location', e.target.value)}
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="device-ip">IP Address</Label>
-                <Input id="device-ip" placeholder="Enter IP address" />
+                <Input 
+                  id="device-ip" 
+                  placeholder="Enter IP address" 
+                  value={newDevice.ipAddress}
+                  onChange={(e) => handleNewDeviceChange('ipAddress', e.target.value)}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="device-capacity">Capacity (kW)</Label>
-                  <Input id="device-capacity" type="number" min="0" step="0.1" defaultValue="0" />
+                  <Input 
+                    id="device-capacity" 
+                    type="number" 
+                    min="0" 
+                    step="0.1" 
+                    value={newDevice.capacity} 
+                    onChange={(e) => handleNewDeviceChange('capacity', e.target.value)}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="device-protocol">Protocol</Label>
-                  <Select defaultValue="mqtt">
+                  <Select 
+                    value={newDevice.protocol}
+                    onValueChange={(value) => handleNewDeviceChange('protocol', value)}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
