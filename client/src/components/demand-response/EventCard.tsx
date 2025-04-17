@@ -208,7 +208,7 @@ export default function EventCard({
                 {participation.incentiveEarned !== null && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Incentive earned:</span>
-                    <span className="font-medium">${participation.incentiveEarned.toFixed(2)}</span>
+                    <span className="font-medium">${participation.incentiveEarned?.toFixed(2) || '0.00'}</span>
                   </div>
                 )}
               </div>

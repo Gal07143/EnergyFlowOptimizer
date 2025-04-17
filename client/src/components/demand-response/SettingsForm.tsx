@@ -335,7 +335,7 @@ export default function SettingsForm({
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                     <div className="space-y-0.5">
                       <FormLabel className="text-base flex items-center">
-                        <DeviceMobile className="h-4 w-4 mr-2" />
+                        <Smartphone className="h-4 w-4 mr-2" />
                         Push Notifications
                       </FormLabel>
                       <FormDescription>

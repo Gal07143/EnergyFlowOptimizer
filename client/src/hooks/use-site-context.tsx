@@ -19,6 +19,7 @@ export interface Site {
 interface SiteContextType {
   sites: Site[];
   currentSite: Site | null;
+  currentSiteId: number | null;
   isLoading: boolean;
   error: Error | null;
   setSiteById: (siteId: number) => void;
@@ -28,6 +29,7 @@ interface SiteContextType {
 const SiteContext = createContext<SiteContextType>({
   sites: [],
   currentSite: null,
+  currentSiteId: null,
   isLoading: true,
   error: null,
   setSiteById: () => {},
@@ -99,6 +101,7 @@ export function SiteProvider({ children }: SiteProviderProps) {
   const contextValue: SiteContextType = {
     sites,
     currentSite,
+    currentSiteId: currentSite?.id || null,
     isLoading,
     error,
     setSiteById,
