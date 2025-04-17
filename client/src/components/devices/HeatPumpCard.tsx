@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import DeviceCard from './DeviceCard';
-import { Device } from '@/types/devices';
+import { Device, DeviceReading } from '@/types/devices';
 import { useDeviceReadings, useDeviceControl } from '@/hooks/useDevices';
 import { formatNumber } from '@/lib/utils/data-utils';
 import { Thermometer, ArrowUp, ArrowDown } from 'lucide-react';
@@ -12,20 +12,29 @@ interface HeatPumpCardProps {
   device: Device;
 }
 
+interface HeatPumpData {
+  currentTemp: number;
+  targetTemp: number;
+  mode: string;
+  cop: number;
+}
+
 export default function HeatPumpCard({ device }: HeatPumpCardProps) {
-  const { data: readings = [] } = useDeviceReadings(device.id, 1);
+  const { data: readings } = useDeviceReadings(device.id, 1);
   const { mutate: sendCommand } = useDeviceControl();
   
-  const latestReading = readings && readings.length > 0 ? readings[0] : null;
+  const readingsArray = readings as DeviceReading[] || [];
+  const latestReading: DeviceReading | undefined = readingsArray.length > 0 ? readingsArray[0] : undefined;
   
   // Extract temperature and power consumption
-  const currentTemp = latestReading?.additionalData?.currentTemp ?? 21.5; // Default value for display
-  const targetTemp = latestReading?.additionalData?.targetTemp ?? 22.0; // Default value for display
+  const additionalData = latestReading?.additionalData as HeatPumpData | undefined;
+  const currentTemp = additionalData?.currentTemp ?? 21.5; // Default value for display
+  const targetTemp = additionalData?.targetTemp ?? 22.0; // Default value for display
   const powerConsumption = latestReading?.power ?? 1.2; // Default value for display
-  const mode = latestReading?.additionalData?.mode ?? 'heating'; // Default mode
+  const mode = additionalData?.mode ?? 'heating'; // Default mode
   
   // Calculate COP (Coefficient of Performance) if available
-  const cop = latestReading?.additionalData?.cop ?? 3.8; // Default value for display
+  const cop = additionalData?.cop ?? 3.8; // Default value for display
   
   // Local state for temperature control
   const [localTargetTemp, setLocalTargetTemp] = useState(targetTemp);

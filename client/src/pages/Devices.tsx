@@ -71,6 +71,14 @@ export default function DevicesPage() {
       capacity: '',
       siteId: currentSiteId,
     },
+    values: {
+      name: '',
+      type: 'solar_pv',
+      model: '',
+      manufacturer: '',
+      capacity: '',
+      siteId: currentSiteId,
+    }
   });
 
   // Group devices by type
@@ -247,7 +255,7 @@ export default function DevicesPage() {
                   render={({ field }) => (
                     <FormItem className="hidden">
                       <FormControl>
-                        <Input type="hidden" {...field} value={currentSiteId} />
+                        <Input type="hidden" {...field} value={String(currentSiteId)} />
                       </FormControl>
                     </FormItem>
                   )}

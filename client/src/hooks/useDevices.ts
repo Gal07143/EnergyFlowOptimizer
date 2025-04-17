@@ -11,7 +11,7 @@ import { useWebSocket } from './useWebSocket';
 
 // Get all devices for a site
 export function useDevices(siteId: number) {
-  return useQuery({
+  return useQuery<Device[]>({
     queryKey: ['/api/sites', siteId, 'devices'],
     enabled: !!siteId,
   });
@@ -19,7 +19,7 @@ export function useDevices(siteId: number) {
 
 // Get devices by type
 export function useDevicesByType(siteId: number, type: string) {
-  return useQuery({
+  return useQuery<Device[]>({
     queryKey: ['/api/sites', siteId, 'devices/type', type],
     enabled: !!siteId && !!type,
   });
@@ -27,7 +27,7 @@ export function useDevicesByType(siteId: number, type: string) {
 
 // Get a single device
 export function useDevice(deviceId: number | undefined) {
-  return useQuery({
+  return useQuery<Device>({
     queryKey: ['/api/devices', deviceId],
     enabled: !!deviceId,
   });
@@ -35,7 +35,7 @@ export function useDevice(deviceId: number | undefined) {
 
 // Get device readings
 export function useDeviceReadings(deviceId: number | undefined, limit: number = 100) {
-  return useQuery({
+  return useQuery<DeviceReading[]>({
     queryKey: ['/api/devices', deviceId, 'readings', { limit }],
     enabled: !!deviceId,
   });
@@ -253,9 +253,9 @@ export function useDeviceControl() {
 
 // Helper to transform device data into summaries
 export function useDeviceSummaries(siteId: number): DeviceSummary[] {
-  const { data: devices } = useDevices(siteId);
+  const { data: devices = [] } = useDevices(siteId);
   
-  if (!devices) {
+  if (!devices || !devices.length) {
     return [];
   }
   
@@ -277,6 +277,12 @@ export function useDeviceSummaries(siteId: number): DeviceSummary[] {
     } else if (device.type === 'ev_charger') {
       summary.currentOutput = 0;
       summary.stateOfCharge = 0;
+    } else if (device.type === 'heat_pump') {
+      summary.currentOutput = 0;
+      summary.currentTemp = 21.5;
+      summary.targetTemp = 22.0;
+      summary.operatingMode = 'heating';
+      summary.cop = 3.8;
     }
     
     return summary;

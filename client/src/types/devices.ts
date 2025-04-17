@@ -40,6 +40,10 @@ export interface DeviceSummary {
   dailyEnergy?: number;
   stateOfCharge?: number;
   temperature?: number;
+  currentTemp?: number;
+  targetTemp?: number;
+  operatingMode?: string;
+  cop?: number; // Coefficient of Performance for heat pumps
 }
 
 export interface BatteryDevice extends Device {
@@ -104,6 +108,28 @@ export interface SmartMeterReading extends DeviceReading {
   voltage: number;
   current: number;
   frequency: number;
+}
+
+export interface HeatPumpDevice extends Device {
+  type: 'heat_pump';
+  settings: {
+    maxThermalOutput?: number;
+    minTemperature?: number;
+    maxTemperature?: number;
+    operationModes?: string[];
+  };
+}
+
+export interface HeatPumpReading extends DeviceReading {
+  power: number;
+  energy: number;
+  temperature: number;
+  additionalData: {
+    currentTemp: number;
+    targetTemp: number;
+    mode: 'heating' | 'cooling' | 'auto' | 'off';
+    cop: number; // Coefficient of Performance
+  };
 }
 
 // For device filtering and organization
