@@ -1031,8 +1031,11 @@ export class ConsumptionPatternService {
   }[]> {
     const patterns = this.getPatternsBySite(siteId);
     if (patterns.length === 0 || readings.length === 0) {
+      console.log("No patterns or readings available for anomaly detection");
       return [];
     }
+    
+    console.log(`Detecting anomalies for ${readings.length} readings against ${patterns.length} patterns`);
     
     // Group readings by pattern and sort by time for trend analysis
     const groupedReadings = readings.sort((a, b) => {
@@ -1197,6 +1200,15 @@ export class ConsumptionPatternService {
         
         // Combine approaches: either outside confidence interval or high z-score
         const isAnomaly = isOutsideInterval || zScore > 3;
+        
+        // Debug log for decision making - only for high home power values to avoid log noise
+        if (actualConsumption > 10) {
+          console.log(`Reading at ${timestamp.toISOString()} with consumption ${actualConsumption}:`);
+          console.log(`  Pattern ${pattern.id} (${pattern.name}) expected: ${expectedValue}`);
+          console.log(`  Confidence interval: ${confidenceInterval.lower} - ${confidenceInterval.upper}`);
+          console.log(`  Deviation: ${deviation} (${deviationPercent.toFixed(2)}%), Z-score: ${zScore.toFixed(2)}`);
+          console.log(`  Outside interval: ${isOutsideInterval}, Is anomaly: ${isAnomaly}`);
+        }
         
         if (isAnomaly) {
           // Determine severity based on multiple factors
@@ -1371,12 +1383,27 @@ export class ConsumptionPatternService {
   
   /**
    * Check if a timestamp falls within the range of a pattern
+   * For anomaly detection, we allow a grace period of 14 days beyond the pattern end date
    */
   private isTimestampInPattern(timestamp: Date, pattern: ConsumptionPattern): boolean {
     const startDate = new Date(pattern.startTimestamp);
     const endDate = new Date(pattern.endTimestamp);
     
-    return timestamp >= startDate && timestamp <= endDate;
+    // For anomaly detection, allow readings up to 14 days after the pattern's end date
+    const extendedEndDate = new Date(endDate);
+    extendedEndDate.setDate(extendedEndDate.getDate() + 14);
+    
+    const isInRange = timestamp >= startDate && timestamp <= extendedEndDate;
+    
+    // Only log during an anomaly detection request (with future data)
+    if (timestamp > endDate) {
+      console.log(`Timestamp check for ${timestamp.toISOString()} against pattern ${pattern.id}:`);
+      console.log(`  Pattern range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log(`  Extended range: ${startDate.toISOString()} to ${extendedEndDate.toISOString()}`);
+      console.log(`  In range: ${isInRange}`);
+    }
+    
+    return isInRange;
   }
   
   /**
