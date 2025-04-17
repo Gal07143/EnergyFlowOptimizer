@@ -431,102 +431,28 @@ export default function DevicesPage() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
-                                className="text-destructive focus:text-destructive"
-                                onClick={(e) => { e.stopPropagation(); }}
+                                className="text-destructive"
+                                onClick={(e) => { e.stopPropagation(); handleDeviceCommand(device.id, 'delete'); }}
                               >
                                 <Trash className="mr-2 h-4 w-4" />
-                                <span>Remove</span>
+                                <span>Delete</span>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
                       </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Location: </span>
-                            <span>{device.location || 'Unknown'}</span>
+                      <CardContent>
+                        <div className="grid grid-cols-2 text-sm">
+                          <div className="flex flex-col space-y-2">
+                            <div className="text-muted-foreground">Location</div>
+                            <div>{device.location || 'Not specified'}</div>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Capacity: </span>
-                            <span>{device.capacity} {device.type?.includes('battery') ? 'kWh' : 'kW'}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Model: </span>
-                            <span>{device.model || 'N/A'}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">IP: </span>
-                            <span>{device.ipAddress || 'N/A'}</span>
+                          <div className="flex flex-col space-y-2">
+                            <div className="text-muted-foreground">Capacity</div>
+                            <div>{device.capacity ? `${device.capacity} ${device.type?.includes('battery') ? 'kWh' : 'kW'}` : 'N/A'}</div>
                           </div>
                         </div>
                       </CardContent>
-                      <CardFooter className="pt-0">
-                        <div className="w-full">
-                          {device.type?.includes('battery') && (
-                            <div className="mt-2">
-                              <div className="flex justify-between text-xs mb-1">
-                                <span>State of Charge</span>
-                                <span className="font-medium">{device.readings?.soc || 0}%</span>
-                              </div>
-                              <div className="w-full bg-muted rounded-full h-2">
-                                <div 
-                                  className="bg-green-500 h-2 rounded-full" 
-                                  style={{ width: `${device.readings?.soc || 0}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          )}
-                          {device.type?.includes('solar') && (
-                            <div className="mt-2">
-                              <div className="flex justify-between text-xs mb-1">
-                                <span>Current Power</span>
-                                <span className="font-medium">{device.readings?.power || 0} W</span>
-                              </div>
-                              <div className="w-full bg-muted rounded-full h-2">
-                                <div 
-                                  className="bg-yellow-500 h-2 rounded-full" 
-                                  style={{ 
-                                    width: `${Math.min(100, ((device.readings?.power || 0) / (device.capacity || 1)) * 100)}%` 
-                                  }}
-                                ></div>
-                              </div>
-                            </div>
-                          )}
-                          {device.type?.includes('ev') && (
-                            <div className="mt-2">
-                              <div className="flex justify-between text-xs mb-1">
-                                <span>Charging Power</span>
-                                <span className="font-medium">{device.readings?.power || 0} kW</span>
-                              </div>
-                              <div className="w-full bg-muted rounded-full h-2">
-                                <div 
-                                  className={`${device.status === 'charging' ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'} h-2 rounded-full`}
-                                  style={{ 
-                                    width: `${Math.min(100, ((device.readings?.power || 0) / (device.capacity || 1)) * 100)}%` 
-                                  }}
-                                ></div>
-                              </div>
-                            </div>
-                          )}
-                          {device.type?.includes('heat') && (
-                            <div className="mt-2">
-                              <div className="flex justify-between text-xs mb-1">
-                                <span>Temperature</span>
-                                <span className="font-medium">{device.readings?.temperature || 20}°C</span>
-                              </div>
-                              <div className="w-full bg-muted rounded-full h-2">
-                                <div 
-                                  className="bg-red-500 h-2 rounded-full" 
-                                  style={{ 
-                                    width: `${Math.min(100, ((device.readings?.temperature || 20) / 50) * 100)}%` 
-                                  }}
-                                ></div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </CardFooter>
                     </Card>
                   ))}
                 </div>
@@ -537,395 +463,513 @@ export default function DevicesPage() {
         
         {/* Add device dialog */}
         <Dialog open={showAddDeviceDialog} onOpenChange={setShowAddDeviceDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>Add New Device</DialogTitle>
               <DialogDescription>
                 Enter the details of the device you would like to add to your system.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="device-name">Device Name <span className="text-destructive">*</span></Label>
-                <Input 
-                  id="device-name" 
-                  placeholder="Enter device name" 
-                  value={newDevice.name}
-                  onChange={(e) => handleNewDeviceChange('name', e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="device-id">Device ID <span className="text-destructive">*</span></Label>
-                <Input 
-                  id="device-id" 
-                  placeholder="Enter unique device ID for connection" 
-                  value={newDevice.deviceId}
-                  onChange={(e) => handleNewDeviceChange('deviceId', e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  This ID is used by the device to identify itself when connecting to the system
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="device-type">Device Type <span className="text-destructive">*</span></Label>
-                <Select 
-                  value={newDevice.type}
-                  onValueChange={(value) => handleNewDeviceChange('type', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select device type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="solar_pv">Solar PV</SelectItem>
-                    <SelectItem value="battery_storage">Battery Storage</SelectItem>
-                    <SelectItem value="ev_charger">EV Charger</SelectItem>
-                    <SelectItem value="heat_pump">Heat Pump</SelectItem>
-                    <SelectItem value="smart_meter">Smart Meter</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="device-manufacturer">Manufacturer <span className="text-destructive">*</span></Label>
-                <Select 
-                  value={newDevice.manufacturer}
-                  onValueChange={(value) => handleNewDeviceChange('manufacturer', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select manufacturer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {manufacturers.map(manufacturer => (
-                      <SelectItem key={manufacturer.id} value={manufacturer.id.toString()}>
-                        {manufacturer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="device-model">Model <span className="text-destructive">*</span></Label>
-                {availableModels.length > 0 ? (
-                  <Select
-                    value={newDevice.deviceCatalogId?.toString() || ""}
-                    onValueChange={handleModelSelect}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select device model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableModels.map(model => (
-                        <SelectItem key={model.id} value={model.id.toString()}>
-                          {model.name} - {model.modelNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input 
-                    id="device-model" 
-                    placeholder="Enter model number" 
-                    value={newDevice.model}
-                    onChange={(e) => handleNewDeviceChange('model', e.target.value)}
-                  />
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="device-location">Location</Label>
-                <Input 
-                  id="device-location" 
-                  placeholder="Enter location (e.g., Garage, Roof)" 
-                  value={newDevice.location}
-                  onChange={(e) => handleNewDeviceChange('location', e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="device-ip">IP Address</Label>
-                <Input 
-                  id="device-ip" 
-                  placeholder="Enter IP address" 
-                  value={newDevice.ipAddress}
-                  onChange={(e) => handleNewDeviceChange('ipAddress', e.target.value)}
-                />
-              </div>
-              {/* Site selection */}
-              <div className="grid gap-2">
-                <Label htmlFor="site-selection">Site</Label>
-                <Select
-                  value={newDevice.siteId?.toString() || ""}
-                  onValueChange={(value) => handleNewDeviceChange('siteId', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select site" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sites.map((site: any) => (
-                      <SelectItem key={site.id} value={site.id.toString()}>
-                        {site.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="device-capacity">
-                    Capacity ({newDevice.type?.includes('battery') ? 'kWh' : 'kW'})
-                  </Label>
-                  <Input 
-                    id="device-capacity" 
-                    type="number" 
-                    min="0" 
-                    step="0.1" 
-                    value={newDevice.capacity} 
-                    onChange={(e) => handleNewDeviceChange('capacity', e.target.value)}
-                    disabled={newDevice.deviceCatalogId !== null}
-                  />
-                  {newDevice.deviceCatalogId !== null && (
-                    <div className="text-xs text-muted-foreground">
-                      Capacity set automatically from model
-                    </div>
-                  )}
+            
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="basic">Basic Information</TabsTrigger>
+                <TabsTrigger value="connection">Connection</TabsTrigger>
+                <TabsTrigger value="technical">Technical Specs</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="basic" className="space-y-4 py-4">
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="h-4 w-4 rounded-full bg-primary"></div>
+                  <p className="font-medium">Step 1: Basic Device Information</p>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="device-protocol">Protocol</Label>
-                  <Select 
-                    value={newDevice.protocol}
-                    onValueChange={(value) => handleNewDeviceChange('protocol', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {newDevice.deviceCatalogId !== null && availableModels.length > 0 ? (
-                        // Show protocols from the selected device catalog model
-                        (() => {
-                          const selectedModel = availableModels.find(model => model.id === newDevice.deviceCatalogId);
-                          const supportedProtocols = selectedModel?.supportedProtocols || [];
-                          
-                          return supportedProtocols.map((protocol: string) => (
-                            <SelectItem key={protocol} value={protocol}>
-                              {protocol.charAt(0).toUpperCase() + protocol.slice(1).replace('_', ' ')}
+                
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="device-name">Device Name <span className="text-destructive">*</span></Label>
+                    <Input 
+                      id="device-name" 
+                      placeholder="Enter device name" 
+                      value={newDevice.name}
+                      onChange={(e) => handleNewDeviceChange('name', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="device-id">Device ID <span className="text-destructive">*</span></Label>
+                    <Input 
+                      id="device-id" 
+                      placeholder="Enter unique device ID for connection" 
+                      value={newDevice.deviceId}
+                      onChange={(e) => handleNewDeviceChange('deviceId', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This ID is used by the device to identify itself when connecting to the system
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="device-type">Device Type <span className="text-destructive">*</span></Label>
+                      <Select 
+                        value={newDevice.type}
+                        onValueChange={(value) => handleNewDeviceChange('type', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select device type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="solar_pv">Solar PV</SelectItem>
+                          <SelectItem value="battery_storage">Battery Storage</SelectItem>
+                          <SelectItem value="ev_charger">EV Charger</SelectItem>
+                          <SelectItem value="heat_pump">Heat Pump</SelectItem>
+                          <SelectItem value="smart_meter">Smart Meter</SelectItem>
+                          <SelectItem value="inverter">Inverter</SelectItem>
+                          <SelectItem value="load_controller">Load Controller</SelectItem>
+                          <SelectItem value="energy_gateway">Energy Gateway</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="device-location">Location</Label>
+                      <Input 
+                        id="device-location" 
+                        placeholder="e.g. Garage, Roof" 
+                        value={newDevice.location}
+                        onChange={(e) => handleNewDeviceChange('location', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="device-manufacturer">Manufacturer</Label>
+                      <Select 
+                        value={newDevice.manufacturer}
+                        onValueChange={(value) => handleNewDeviceChange('manufacturer', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select manufacturer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {manufacturers.map(manufacturer => (
+                            <SelectItem key={manufacturer.id} value={manufacturer.id.toString()}>
+                              {manufacturer.name}
                             </SelectItem>
-                          ));
-                        })()
-                      ) : (
-                        // Default protocol options
-                        <>
-                          <SelectItem value="mqtt">MQTT</SelectItem>
-                          <SelectItem value="modbus">Modbus</SelectItem>
-                          <SelectItem value="modbus_tcp">Modbus TCP</SelectItem>
-                          <SelectItem value="rest">HTTP/REST</SelectItem>
-                          <SelectItem value="ocpp">OCPP</SelectItem>
-                          <SelectItem value="sunspec">SunSpec</SelectItem>
-                          <SelectItem value="eebus">EEBus</SelectItem>
-                        </>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="device-model">Model</Label>
+                      <Select 
+                        value={newDevice.deviceCatalogId?.toString() || ''}
+                        onValueChange={(value) => handleModelSelect(value)}
+                        disabled={availableModels.length === 0 || !newDevice.manufacturer}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={!newDevice.manufacturer ? "Select manufacturer first" : availableModels.length === 0 ? "No models available" : "Select model"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableModels.map(model => (
+                            <SelectItem key={model.id} value={model.id.toString()}>
+                              {model.name} ({model.modelNumber})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {availableModels.length === 0 && newDevice.manufacturer && newDevice.type && (
+                        <p className="text-xs text-amber-500">
+                          No models found for this manufacturer and device type.
+                        </p>
                       )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {/* Device type-specific fields */}
-              {newDevice.type === 'ev_charger' && (
-                <div className="grid gap-4 p-4 border rounded-md bg-muted/20">
-                  <h4 className="font-medium">EV Charger Specific Parameters</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="charging-power">Charging Power (kW)</Label>
-                      <Input 
-                        id="charging-power" 
-                        type="number" 
-                        min="0" 
-                        step="0.1" 
-                        value={newDevice.chargingPower}
-                        onChange={(e) => handleNewDeviceChange('chargingPower', e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="connector-type">Connector Type</Label>
-                      <Select 
-                        value={newDevice.connectorType}
-                        onValueChange={(value) => handleNewDeviceChange('connectorType', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select connector type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="type1">Type 1 (J1772)</SelectItem>
-                          <SelectItem value="type2">Type 2 (Mennekes)</SelectItem>
-                          <SelectItem value="ccs1">CCS1</SelectItem>
-                          <SelectItem value="ccs2">CCS2</SelectItem>
-                          <SelectItem value="chademo">CHAdeMO</SelectItem>
-                          <SelectItem value="tesla">Tesla</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
-                </div>
-              )}
-              
-              {newDevice.type === 'battery_storage' && (
-                <div className="grid gap-4 p-4 border rounded-md bg-muted/20">
-                  <h4 className="font-medium">Battery Specific Parameters</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="battery-cycles">Cycle Life</Label>
-                      <Input 
-                        id="battery-cycles" 
-                        type="number" 
-                        min="0"
-                        value={newDevice.batteryCycles}
-                        onChange={(e) => handleNewDeviceChange('batteryCycles', e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="depth-discharge">Depth of Discharge (%)</Label>
-                      <Input 
-                        id="depth-discharge" 
-                        type="number" 
-                        min="0" 
-                        max="100"
-                        value={newDevice.depthOfDischarge}
-                        onChange={(e) => handleNewDeviceChange('depthOfDischarge', e.target.value)}
-                      />
-                    </div>
+                  
+                  <div className="grid gap-2">
+                    <Label htmlFor="device-capacity">Capacity (kW/kWh)</Label>
+                    <Input 
+                      id="device-capacity" 
+                      placeholder="Enter capacity" 
+                      value={newDevice.capacity}
+                      onChange={(e) => handleNewDeviceChange('capacity', e.target.value)}
+                    />
                   </div>
                 </div>
-              )}
+              </TabsContent>
               
-              {newDevice.type === 'solar_pv' && (
-                <div className="grid gap-4 p-4 border rounded-md bg-muted/20">
-                  <h4 className="font-medium">Solar PV Specific Parameters</h4>
-                  <div className="grid grid-cols-3 gap-4">
+              <TabsContent value="connection" className="space-y-4 py-4">
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="h-4 w-4 rounded-full bg-primary"></div>
+                  <p className="font-medium">Step 2: Connection Settings</p>
+                </div>
+                
+                <div className="grid gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="panel-count">Panel Count</Label>
-                      <Input 
-                        id="panel-count" 
-                        type="number" 
-                        min="0"
-                        value={newDevice.panelCount}
-                        onChange={(e) => handleNewDeviceChange('panelCount', e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="orientation">Orientation</Label>
+                      <Label htmlFor="device-protocol">Communication Protocol</Label>
                       <Select 
-                        value={newDevice.orientation}
-                        onValueChange={(value) => handleNewDeviceChange('orientation', value)}
+                        value={newDevice.protocol}
+                        onValueChange={(value) => handleNewDeviceChange('protocol', value)}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select orientation" />
+                          <SelectValue placeholder="Select protocol" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="north">North</SelectItem>
-                          <SelectItem value="south">South</SelectItem>
-                          <SelectItem value="east">East</SelectItem>
-                          <SelectItem value="west">West</SelectItem>
-                          <SelectItem value="southeast">Southeast</SelectItem>
-                          <SelectItem value="southwest">Southwest</SelectItem>
-                          <SelectItem value="northeast">Northeast</SelectItem>
-                          <SelectItem value="northwest">Northwest</SelectItem>
+                          <SelectItem value="modbus">Modbus RTU</SelectItem>
+                          <SelectItem value="modbus_tcp">Modbus TCP</SelectItem>
+                          <SelectItem value="sunspec">SunSpec</SelectItem>
+                          <SelectItem value="ocpp">OCPP</SelectItem>
+                          <SelectItem value="mqtt">MQTT</SelectItem>
+                          <SelectItem value="http">HTTP/REST</SelectItem>
+                          <SelectItem value="eebus">EEBus</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="tilt">Tilt Angle (°)</Label>
+                      <Label htmlFor="device-ip">IP Address/Serial Port</Label>
                       <Input 
-                        id="tilt" 
-                        type="number" 
-                        min="0" 
-                        max="90"
-                        value={newDevice.tilt}
-                        onChange={(e) => handleNewDeviceChange('tilt', e.target.value)}
+                        id="device-ip" 
+                        placeholder="e.g. 192.168.1.100 or COM3" 
+                        value={newDevice.ipAddress}
+                        onChange={(e) => handleNewDeviceChange('ipAddress', e.target.value)}
                       />
                     </div>
                   </div>
                 </div>
-              )}
+                
+                {/* Conditional fields based on device type */}
+                {newDevice.type === 'ev_charger' && (
+                  <div className="mt-4 border rounded-lg p-4">
+                    <h3 className="font-medium mb-2">EV Charger Specific Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="charging-power">Charging Power (kW)</Label>
+                        <Input 
+                          id="charging-power" 
+                          placeholder="e.g. 7.4, 11, 22" 
+                          value={newDevice.chargingPower}
+                          onChange={(e) => handleNewDeviceChange('chargingPower', e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="connector-type">Connector Type</Label>
+                        <Select 
+                          value={newDevice.connectorType}
+                          onValueChange={(value) => handleNewDeviceChange('connectorType', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select connector" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="type1">Type 1 (J1772)</SelectItem>
+                            <SelectItem value="type2">Type 2 (Mennekes)</SelectItem>
+                            <SelectItem value="ccs1">CCS1</SelectItem>
+                            <SelectItem value="ccs2">CCS2</SelectItem>
+                            <SelectItem value="chademo">CHAdeMO</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {newDevice.type === 'battery_storage' && (
+                  <div className="mt-4 border rounded-lg p-4">
+                    <h3 className="font-medium mb-2">Battery Storage Specific Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="battery-cycles">Warranted Cycles</Label>
+                        <Input 
+                          id="battery-cycles" 
+                          placeholder="e.g. 6000" 
+                          value={newDevice.batteryCycles}
+                          onChange={(e) => handleNewDeviceChange('batteryCycles', e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="depth-of-discharge">Depth of Discharge (%)</Label>
+                        <Input 
+                          id="depth-of-discharge" 
+                          placeholder="e.g. 90" 
+                          value={newDevice.depthOfDischarge}
+                          onChange={(e) => handleNewDeviceChange('depthOfDischarge', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {newDevice.type === 'solar_pv' && (
+                  <div className="mt-4 border rounded-lg p-4">
+                    <h3 className="font-medium mb-2">Solar PV Specific Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="panel-count">Number of Panels</Label>
+                        <Input 
+                          id="panel-count" 
+                          placeholder="e.g. 12" 
+                          value={newDevice.panelCount}
+                          onChange={(e) => handleNewDeviceChange('panelCount', e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="orientation">Orientation</Label>
+                        <Select 
+                          value={newDevice.orientation}
+                          onValueChange={(value) => handleNewDeviceChange('orientation', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select orientation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="south">South</SelectItem>
+                            <SelectItem value="southeast">Southeast</SelectItem>
+                            <SelectItem value="southwest">Southwest</SelectItem>
+                            <SelectItem value="east">East</SelectItem>
+                            <SelectItem value="west">West</SelectItem>
+                            <SelectItem value="north">North</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="tilt">Tilt Angle (°)</Label>
+                        <Input 
+                          id="tilt" 
+                          placeholder="e.g. 30" 
+                          value={newDevice.tilt}
+                          onChange={(e) => handleNewDeviceChange('tilt', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {newDevice.type === 'heat_pump' && (
+                  <div className="mt-4 border rounded-lg p-4">
+                    <h3 className="font-medium mb-2">Heat Pump Specific Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="heating-capacity">Heating Capacity (kW)</Label>
+                        <Input 
+                          id="heating-capacity" 
+                          placeholder="e.g. 8" 
+                          value={newDevice.heatingCapacity}
+                          onChange={(e) => handleNewDeviceChange('heatingCapacity', e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="cooling-capacity">Cooling Capacity (kW)</Label>
+                        <Input 
+                          id="cooling-capacity" 
+                          placeholder="e.g. 6" 
+                          value={newDevice.coolingCapacity}
+                          onChange={(e) => handleNewDeviceChange('coolingCapacity', e.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="cop">COP</Label>
+                        <Input 
+                          id="cop" 
+                          placeholder="e.g. 4.5" 
+                          value={newDevice.cop}
+                          onChange={(e) => handleNewDeviceChange('cop', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {newDevice.type === 'smart_meter' && (
+                  <div className="mt-4 border rounded-lg p-4">
+                    <h3 className="font-medium mb-2">Smart Meter Specific Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="meter-type">Meter Type</Label>
+                        <Select 
+                          value={newDevice.meterType}
+                          onValueChange={(value) => handleNewDeviceChange('meterType', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select meter type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="grid">Grid Connection</SelectItem>
+                            <SelectItem value="consumption">Consumption</SelectItem>
+                            <SelectItem value="generation">Generation</SelectItem>
+                            <SelectItem value="submetering">Submetering</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="measurement-points">Measurement Points</Label>
+                        <Input 
+                          id="measurement-points" 
+                          placeholder="e.g. 1 or 3" 
+                          value={newDevice.measurementPoints}
+                          onChange={(e) => handleNewDeviceChange('measurementPoints', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
               
-              {newDevice.type === 'heat_pump' && (
-                <div className="grid gap-4 p-4 border rounded-md bg-muted/20">
-                  <h4 className="font-medium">Heat Pump Specific Parameters</h4>
-                  <div className="grid grid-cols-3 gap-4">
+              <TabsContent value="technical" className="space-y-4 py-4">
+                <div className="flex items-center space-x-2 text-sm">
+                  <div className="h-4 w-4 rounded-full bg-primary"></div>
+                  <p className="font-medium">Step 3: Technical Specifications</p>
+                </div>
+                
+                <div className="text-sm text-muted-foreground mb-4">
+                  Technical specifications help the system accurately predict energy flows and optimize performance.
+                  These values are automatically populated when selecting a manufacturer and model.
+                </div>
+                
+                {/* General specifications for all device types */}
+                <div className="border rounded-lg p-4 mb-4">
+                  <h3 className="font-medium mb-2">General Specifications</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="heating-capacity">Heating Capacity (kW)</Label>
+                      <Label htmlFor="error-margin">Error Margin (%)</Label>
                       <Input 
-                        id="heating-capacity" 
-                        type="number" 
-                        min="0" 
-                        step="0.1"
-                        value={newDevice.heatingCapacity}
-                        onChange={(e) => handleNewDeviceChange('heatingCapacity', e.target.value)}
+                        id="error-margin" 
+                        placeholder="e.g. 2.5" 
+                      />
+                      <p className="text-xs text-muted-foreground">Measurement error margin in percentage</p>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="self-consumption">Self Consumption (W)</Label>
+                      <Input 
+                        id="self-consumption" 
+                        placeholder="e.g. 5" 
+                      />
+                      <p className="text-xs text-muted-foreground">Power consumed by the device itself</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Conditional technical specs based on device type */}
+                {newDevice.type === 'battery_storage' && (
+                  <div className="border rounded-lg p-4 mb-4">
+                    <h3 className="font-medium mb-2">Battery Specifications</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="round-trip-efficiency">Round Trip Efficiency (%)</Label>
+                        <Input 
+                          id="round-trip-efficiency" 
+                          placeholder="e.g. 95" 
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="self-discharge-rate">Self-Discharge Rate (%/month)</Label>
+                        <Input 
+                          id="self-discharge-rate" 
+                          placeholder="e.g. 2" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {newDevice.type === 'solar_pv' && (
+                  <div className="border rounded-lg p-4 mb-4">
+                    <h3 className="font-medium mb-2">Solar Panel Specifications</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="temp-coefficient">Temperature Coefficient (%/°C)</Label>
+                        <Input 
+                          id="temp-coefficient" 
+                          placeholder="e.g. -0.35" 
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="degradation-rate">Annual Degradation Rate (%)</Label>
+                        <Input 
+                          id="degradation-rate" 
+                          placeholder="e.g. 0.5" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {newDevice.type === 'ev_charger' && (
+                  <div className="border rounded-lg p-4 mb-4">
+                    <h3 className="font-medium mb-2">EV Charger Specifications</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="charger-efficiency">Charging Efficiency (%)</Label>
+                        <Input 
+                          id="charger-efficiency" 
+                          placeholder="e.g. 94" 
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="standby-power">Standby Power (W)</Label>
+                        <Input 
+                          id="standby-power" 
+                          placeholder="e.g. 2.5" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {newDevice.type === 'heat_pump' && (
+                  <div className="border rounded-lg p-4 mb-4">
+                    <h3 className="font-medium mb-2">Heat Pump Specifications</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="cop-at-7c">COP at 7°C</Label>
+                        <Input 
+                          id="cop-at-7c" 
+                          placeholder="e.g. 4.8" 
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="cop-at-minus-7c">COP at -7°C</Label>
+                        <Input 
+                          id="cop-at-minus-7c" 
+                          placeholder="e.g. 3.2" 
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="refrigerant-type">Refrigerant Type</Label>
+                        <Input 
+                          id="refrigerant-type" 
+                          placeholder="e.g. R32" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Compliance and certification section */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Certifications & Compliance</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="certifications">Certifications</Label>
+                      <Input 
+                        id="certifications" 
+                        placeholder="e.g. CE, TÜV, UL" 
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="cooling-capacity">Cooling Capacity (kW)</Label>
+                      <Label htmlFor="compliance">Compliance Standards</Label>
                       <Input 
-                        id="cooling-capacity" 
-                        type="number" 
-                        min="0"
-                        step="0.1"
-                        value={newDevice.coolingCapacity}
-                        onChange={(e) => handleNewDeviceChange('coolingCapacity', e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="cop">COP</Label>
-                      <Input 
-                        id="cop" 
-                        type="number" 
-                        min="0" 
-                        step="0.1"
-                        value={newDevice.cop}
-                        onChange={(e) => handleNewDeviceChange('cop', e.target.value)}
+                        id="compliance" 
+                        placeholder="e.g. IEC 62109-1/2, VDE-AR-N 4105" 
                       />
                     </div>
                   </div>
                 </div>
-              )}
-              
-              {newDevice.type === 'smart_meter' && (
-                <div className="grid gap-4 p-4 border rounded-md bg-muted/20">
-                  <h4 className="font-medium">Smart Meter Specific Parameters</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="meter-type">Meter Type</Label>
-                      <Select 
-                        value={newDevice.meterType}
-                        onValueChange={(value) => handleNewDeviceChange('meterType', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select meter type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="grid">Grid Connection</SelectItem>
-                          <SelectItem value="generation">Generation</SelectItem>
-                          <SelectItem value="consumption">Consumption</SelectItem>
-                          <SelectItem value="subload">Sub-load</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="measurement-points">Measurement Points</Label>
-                      <Select 
-                        value={newDevice.measurementPoints}
-                        onValueChange={(value) => handleNewDeviceChange('measurementPoints', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select measurement points" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Single Phase</SelectItem>
-                          <SelectItem value="3">Three Phase</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+              </TabsContent>
+            </Tabs>
+            
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowAddDeviceDialog(false)}>Cancel</Button>
               <Button onClick={handleAddDevice}>Add Device</Button>
