@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { useProfile, ProfileFormData, PasswordFormData } from '@/hooks/use-profile';
+import { useProfile, ProfileFormData, PasswordFormData, profileFormSchema, passwordFormSchema } from '@/hooks/use-profile';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { LoaderCircle } from 'lucide-react';
 import { AlertTriangle, Mail, User, Lock } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { profileFormSchema, passwordFormSchema } from '@/hooks/use-profile';
 
 const ProfilePage = () => {
   const { user } = useAuth();
