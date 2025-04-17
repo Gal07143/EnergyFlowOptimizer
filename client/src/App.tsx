@@ -14,6 +14,7 @@ import DemandResponse from "@/pages/DemandResponse";
 import ProfilePage from "@/pages/ProfilePage";
 import AuthPage from "@/pages/auth-page";
 import EmailVerificationPage from "@/pages/email-verification-page";
+import DeviceRegistryPage from "@/pages/DeviceRegistryPage";
 import { WebSocketStatus } from "@/components/ui/websocket-status";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/use-auth";

@@ -497,6 +497,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/consumption-patterns/:id', requireManager, ConsumptionPatternController.updatePattern);
   app.delete('/api/consumption-patterns/:id', requireAdmin, ConsumptionPatternController.deletePattern);
   
+  // Device Registry & Provisioning routes
+  app.use('/api/device-registry', deviceRegistryRoutes);
+  
   // Development endpoint without auth for testing ML models
   app.post('/api/test/consumption-patterns/:id/train', ConsumptionPatternController.trainPatternModel);
   
