@@ -148,13 +148,13 @@ export async function updateOptimizationSettings(req: Request, res: Response) {
       // Create new settings
       await db.insert(optimizationSettings)
         .values({
-          siteId: settings.siteId,
+          site_id: settings.siteId, // Use snake_case for column names
           mode: settings.mode,
           priority: settings.priority,
           constraints: settings.constraints || {},
-          active: settings.active,
-          createdAt: new Date(),
-          updatedAt: new Date()
+          ai_optimization_enabled: settings.active, // Use snake_case for column names
+          created_at: new Date(),
+          updated_at: new Date()
         });
     }
     
