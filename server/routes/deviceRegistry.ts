@@ -104,36 +104,13 @@ router.patch('/registry/:id', requireAuth, async (req: Request, res: Response) =
     // Validate request body fields
     // Note: We only validate the fields that are present
     const validationSchema = z.object({
-      deviceType: z.enum([
-        'solar_pv',
-        'battery_storage',
-        'ev_charger',
-        'smart_meter',
-        'heat_pump',
-        'inverter',
-        'load_controller',
-        'energy_gateway'
-      ] as [DeviceType, ...DeviceType[]]).optional(),
-      registrationStatus: z.enum([
-        'pending',
-        'registered',
-        'provisioning',
-        'active',
-        'decommissioned',
-        'rejected'
-      ]).optional(),
+      deviceType: z.enum(deviceTypeEnum.enumValues).optional(),
+      registrationStatus: z.enum(deviceRegistrationStatusEnum.enumValues).optional(),
       firmwareVersion: z.string().optional(),
       location: z.string().optional(),
       metadata: z.record(z.string(), z.any()).optional(),
       isOnline: z.boolean().optional(),
-      authMethod: z.enum([
-        'none',
-        'api_key',
-        'certificate',
-        'username_password',
-        'oauth',
-        'token'
-      ] as [DeviceAuthMethod, ...DeviceAuthMethod[]]).optional()
+      authMethod: z.enum(deviceAuthMethodEnum.enumValues).optional()
     });
 
     const validationResult = validationSchema.safeParse(req.body);

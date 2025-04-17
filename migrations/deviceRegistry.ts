@@ -1,32 +1,29 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Pool } from 'pg';
-import * as fs from 'fs';
-import * as path from 'path';
+// Device Registry migration
+import { Client } from 'pg';
 
 /**
- * This migration script creates the device registry and provisioning tables.
+ * Runs the device registry migration on the database
+ * @param client PostgreSQL client to use for the migration
  */
+export async function runMigration(client: Client): Promise<void> {
+  console.log('Running device registry migration...');
 
-// Load database connection string from environment
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  console.error('DATABASE_URL environment variable is required');
-  process.exit(1);
-}
-
-async function runMigration() {
-  try {
-    console.log('Connecting to database...');
-    const pool = new Pool({ connectionString: DATABASE_URL });
-    const db = drizzle(pool);
-
-    // Create the SQL for the migration
-    console.log('Creating migration SQL...');
-    const migrationSQL = `
-    -- Create device registration status enum if not exists
+  // Create enums
+  await client.query(`
     DO $$ BEGIN
+      -- Device type enum
+      CREATE TYPE device_type AS ENUM (
+        'solar_pv',
+        'battery_storage',
+        'ev_charger',
+        'smart_meter',
+        'heat_pump',
+        'inverter',
+        'load_controller',
+        'energy_gateway'
+      );
+      
+      -- Device registration status enum
       CREATE TYPE device_registration_status AS ENUM (
         'pending',
         'registered',
@@ -35,12 +32,8 @@ async function runMigration() {
         'decommissioned',
         'rejected'
       );
-    EXCEPTION
-      WHEN duplicate_object THEN null;
-    END $$;
-
-    -- Create device authentication method enum if not exists
-    DO $$ BEGIN
+      
+      -- Device auth method enum
       CREATE TYPE device_auth_method AS ENUM (
         'none',
         'api_key',
@@ -50,10 +43,13 @@ async function runMigration() {
         'token'
       );
     EXCEPTION
-      WHEN duplicate_object THEN null;
+      WHEN duplicate_object THEN
+        NULL;
     END $$;
+  `);
 
-    -- Create device registry table
+  // Create device registry table
+  await client.query(`
     CREATE TABLE IF NOT EXISTS device_registry (
       id SERIAL PRIMARY KEY,
       device_id INTEGER REFERENCES devices(id) ON DELETE CASCADE,
@@ -73,11 +69,13 @@ async function runMigration() {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
+  `);
 
-    -- Create device credentials table
+  // Create device credentials table
+  await client.query(`
     CREATE TABLE IF NOT EXISTS device_credentials (
       id SERIAL PRIMARY KEY,
-      device_registry_id INTEGER NOT NULL REFERENCES device_registry(id) ON DELETE CASCADE,
+      device_registry_id INTEGER REFERENCES device_registry(id) ON DELETE CASCADE NOT NULL,
       auth_method device_auth_method NOT NULL,
       username TEXT,
       password_hash TEXT,
@@ -92,8 +90,10 @@ async function runMigration() {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
+  `);
 
-    -- Create provisioning templates table
+  // Create provisioning templates table
+  await client.query(`
     CREATE TABLE IF NOT EXISTS provisioning_templates (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
@@ -108,8 +108,10 @@ async function runMigration() {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
+  `);
 
-    -- Create registration codes table
+  // Create registration codes table
+  await client.query(`
     CREATE TABLE IF NOT EXISTS registration_codes (
       id SERIAL PRIMARY KEY,
       code TEXT NOT NULL UNIQUE,
@@ -125,8 +127,10 @@ async function runMigration() {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
+  `);
 
-    -- Create provisioning history table
+  // Create provisioning history table
+  await client.query(`
     CREATE TABLE IF NOT EXISTS provisioning_history (
       id SERIAL PRIMARY KEY,
       device_registry_id INTEGER REFERENCES device_registry(id),
@@ -142,39 +146,200 @@ async function runMigration() {
       ip_address TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
+  `);
 
-    -- Create indexes
-    CREATE INDEX IF NOT EXISTS idx_device_registry_device_id ON device_registry(device_id);
-    CREATE INDEX IF NOT EXISTS idx_device_registry_device_uid ON device_registry(device_uid);
-    CREATE INDEX IF NOT EXISTS idx_device_registry_registration_id ON device_registry(registration_id);
-    CREATE INDEX IF NOT EXISTS idx_device_registry_device_type ON device_registry(device_type);
-    CREATE INDEX IF NOT EXISTS idx_device_registry_registration_status ON device_registry(registration_status);
-
-    CREATE INDEX IF NOT EXISTS idx_device_credentials_device_registry_id ON device_credentials(device_registry_id);
-    CREATE INDEX IF NOT EXISTS idx_device_credentials_auth_method ON device_credentials(auth_method);
-
-    CREATE INDEX IF NOT EXISTS idx_provisioning_templates_device_type ON provisioning_templates(device_type);
-    CREATE INDEX IF NOT EXISTS idx_provisioning_templates_is_active ON provisioning_templates(is_active);
-
-    CREATE INDEX IF NOT EXISTS idx_registration_codes_code ON registration_codes(code);
-    CREATE INDEX IF NOT EXISTS idx_registration_codes_device_type ON registration_codes(device_type);
-    CREATE INDEX IF NOT EXISTS idx_registration_codes_is_active ON registration_codes(is_active);
-
-    CREATE INDEX IF NOT EXISTS idx_provisioning_history_device_registry_id ON provisioning_history(device_registry_id);
-    CREATE INDEX IF NOT EXISTS idx_provisioning_history_template_id ON provisioning_history(provisioning_template_id);
-    `;
-
-    // Execute the migration SQL
-    console.log('Executing migration SQL...');
-    await db.execute(migrationSQL);
-
-    console.log('Migration completed successfully');
-    await pool.end();
-    process.exit(0);
-  } catch (error) {
-    console.error('Migration failed:', error);
-    process.exit(1);
+  // Add sample data for development (only if tables are empty)
+  const { rows: devicesCount } = await client.query('SELECT COUNT(*) FROM device_registry');
+  
+  if (parseInt(devicesCount[0].count) === 0) {
+    console.log('Adding sample device registry data...');
+    
+    // Sample provisioning templates
+    await client.query(`
+      INSERT INTO provisioning_templates 
+        (name, description, device_type, config_template, firmware_version, auth_method, default_settings, required_capabilities)
+      VALUES
+        (
+          'Standard Solar PV Template', 
+          'Default template for solar PV installations', 
+          'solar_pv', 
+          '{"mqtt_topic_prefix": "devices/solar", "reporting_interval": 60, "power_limit": 5000}', 
+          '1.2.0', 
+          'api_key', 
+          '{"max_power": 5000, "overcurrent_protection": true}',
+          '["voltage_reading", "current_reading", "power_reading"]'
+        ),
+        (
+          'EV Charger Standard Setup', 
+          'Template for EV chargers with load management', 
+          'ev_charger', 
+          '{"mqtt_topic_prefix": "devices/evcharger", "reporting_interval": 30, "max_current": 32}', 
+          '2.1.5', 
+          'certificate', 
+          '{"max_charge_current": 32, "phase_rotation": "auto"}',
+          '["current_reading", "session_management", "load_management"]'
+        ),
+        (
+          'Home Battery System', 
+          'Template for residential battery storage systems', 
+          'battery_storage', 
+          '{"mqtt_topic_prefix": "devices/battery", "reporting_interval": 60, "min_soc": 20, "max_soc": 90}', 
+          '3.0.1', 
+          'username_password', 
+          '{"charge_limit": 90, "discharge_limit": 20, "priority": "self_consumption"}',
+          '["soc_reading", "power_reading", "temperature_reading"]'
+        );
+    `);
+    
+    // Sample registration codes
+    await client.query(`
+      INSERT INTO registration_codes 
+        (code, device_type, provisioning_template_id, is_one_time, max_uses, is_active, expires_at)
+      VALUES
+        (
+          'SOLAR-REG-123456', 
+          'solar_pv', 
+          1, 
+          TRUE, 
+          1, 
+          TRUE, 
+          NOW() + INTERVAL '30 days'
+        ),
+        (
+          'EV-CHARGER-789012', 
+          'ev_charger', 
+          2, 
+          TRUE, 
+          1, 
+          TRUE, 
+          NOW() + INTERVAL '30 days'
+        ),
+        (
+          'MULTI-USE-BATTERY', 
+          'battery_storage', 
+          3, 
+          FALSE, 
+          10, 
+          TRUE, 
+          NOW() + INTERVAL '90 days'
+        );
+    `);
+    
+    // Generate QR codes (in a real implementation, this would be handled by the service)
+    await client.query(`
+      UPDATE registration_codes
+      SET 
+        qr_code_data = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
+        registration_url = CONCAT('https://ems.example.com/device-register?code=', code);
+    `);
+    
+    // Sample device registrations
+    await client.query(`
+      INSERT INTO device_registry 
+        (device_uid, registration_status, device_type, firmware_version, location, is_online, auth_method)
+      VALUES
+        (
+          'SOLAR-INV-001', 
+          'active', 
+          'solar_pv', 
+          '1.2.0', 
+          'Roof - South Facing', 
+          TRUE, 
+          'api_key'
+        ),
+        (
+          'EV-CHARGER-002', 
+          'provisioning', 
+          'ev_charger', 
+          '2.1.5', 
+          'Garage - East Wall', 
+          FALSE, 
+          'certificate'
+        ),
+        (
+          'BATTERY-SYS-003', 
+          'registered', 
+          'battery_storage', 
+          '3.0.1', 
+          'Utility Room', 
+          TRUE, 
+          'username_password'
+        ),
+        (
+          'SMART-METER-004', 
+          'pending', 
+          'smart_meter', 
+          '1.0.5', 
+          'Main Electrical Panel', 
+          FALSE, 
+          'none'
+        );
+    `);
+    
+    // Sample device credentials
+    await client.query(`
+      INSERT INTO device_credentials 
+        (device_registry_id, auth_method, api_key, api_secret, username, password_hash, certificate_pem, is_active)
+      VALUES
+        (
+          1, 
+          'api_key', 
+          'sk_test_solar_123456789abcdef', 
+          'ss_test_solar_secret_123456789', 
+          NULL, 
+          NULL, 
+          NULL, 
+          TRUE
+        ),
+        (
+          3, 
+          'username_password', 
+          NULL, 
+          NULL, 
+          'battery_system', 
+          '$2b$10$abcdefghijklmnopqrstuvwxyz123456789ABCDEFG', 
+          NULL, 
+          TRUE
+        );
+    `);
+    
+    // Sample provisioning history
+    await client.query(`
+      INSERT INTO provisioning_history 
+        (device_registry_id, provisioning_template_id, registration_code_id, status, started_at, completed_at, provisioning_data, applied_configuration)
+      VALUES
+        (
+          1, 
+          1, 
+          1, 
+          'success', 
+          NOW() - INTERVAL '2 days', 
+          NOW() - INTERVAL '2 days' + INTERVAL '5 minutes', 
+          '{"device_id": 1, "template_id": 1, "user_id": 1}', 
+          '{"mqtt_topic_prefix": "devices/solar", "reporting_interval": 60, "power_limit": 5000, "max_power": 5000, "overcurrent_protection": true}'
+        ),
+        (
+          2, 
+          2, 
+          2, 
+          'in_progress', 
+          NOW() - INTERVAL '30 minutes', 
+          NULL, 
+          '{"device_id": 2, "template_id": 2, "user_id": 1}', 
+          NULL
+        ),
+        (
+          4, 
+          NULL, 
+          NULL, 
+          'failed', 
+          NOW() - INTERVAL '1 day', 
+          NOW() - INTERVAL '1 day' + INTERVAL '2 minutes', 
+          '{"device_id": 4, "user_id": 1}', 
+          NULL
+        );
+    `);
   }
-}
 
-runMigration();
+  console.log('Device registry migration completed successfully');
+}
