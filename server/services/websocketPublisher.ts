@@ -75,7 +75,7 @@ export function initWebSocketPublisher() {
   });
   
   // Subscribe to device telemetry
-  mqttService.subscribe('devices/+/telemetry', async (topic, message) => {
+  mqttService.subscribe('devices/+/telemetry', (topic: string, message: any) => {
     try {
       // Extract device ID from topic
       const deviceIdMatch = topic.match(/devices\/(\d+)\/telemetry/);
@@ -119,7 +119,7 @@ export function initWebSocketPublisher() {
   });
   
   // Subscribe to command responses
-  mqttService.subscribe('devices/+/commands/response', async (topic, message) => {
+  mqttService.subscribe('devices/+/commands/response', (topic: string, message: any) => {
     try {
       // Extract device ID from topic
       const deviceIdMatch = topic.match(/devices\/(\d+)\/commands\/response/);
