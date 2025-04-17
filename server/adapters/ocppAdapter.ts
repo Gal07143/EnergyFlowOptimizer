@@ -1,498 +1,855 @@
+import { EventEmitter } from 'events';
 import { getMqttService } from '../services/mqttService';
-import { db } from '../db';
-import { deviceReadings, devices } from '@shared/schema';
-import { eq } from 'drizzle-orm';
 
-// OCPP versions supported by the adapter
-export type OCPPVersion = '1.6' | '2.0';
+/**
+ * OCPP (Open Charge Point Protocol) is an open standard for communication between
+ * EV charging stations and a central management system. This adapter implements
+ * a simplified version of the OCPP protocol (based on versions 1.6 and 2.0).
+ */
 
-// OCPP connection types
-export type OCPPConnectionType = 'websocket' | 'soap';
-
-// OCPP charger status
-export type ChargerStatus = 
-  | 'Available' 
-  | 'Preparing' 
-  | 'Charging' 
-  | 'SuspendedEVSE' 
-  | 'SuspendedEV' 
-  | 'Finishing' 
-  | 'Reserved' 
-  | 'Unavailable' 
-  | 'Faulted';
-
-// OCPP transaction information
-export interface TransactionInfo {
-  id: string;
-  startTime: string;
-  stopTime?: string;
-  meterStart: number;
-  meterStop?: number;
-  tagId?: string;
-  status: 'Pending' | 'InProgress' | 'Completed' | 'Failed';
+// OCPP connection configuration
+export interface OCPPConnectionConfig {
+  chargePointUrl: string;
+  centralSystemUrl: string;
+  version: '1.6' | '2.0';
+  securityProfile?: number;
+  authorizationKey?: string;
+  mockMode?: boolean;
 }
 
-// OCPP device configuration
+// OCPP charge point (device) interface
 export interface OCPPDevice {
   id: number;
   chargePointId: string;
-  version: OCPPVersion;
-  connectionType: OCPPConnectionType;
-  endpoint: string;
-  authEnabled: boolean;
-  maxPower?: number;
+  connection: OCPPConnectionConfig;
   connectors: number;
-  transactionSupport?: boolean;
-  securityProfile?: number;
+  maxPower: number;
 }
 
-// Mock transaction data for development
-interface MockTransaction {
-  id: string;
-  deviceId: number;
+// Connector status enum
+export enum ConnectorStatus {
+  AVAILABLE = 'Available',
+  PREPARING = 'Preparing',
+  CHARGING = 'Charging',
+  SUSPENDED_EV = 'SuspendedEV',
+  SUSPENDED_EVSE = 'SuspendedEVSE',
+  FINISHING = 'Finishing',
+  RESERVED = 'Reserved',
+  UNAVAILABLE = 'Unavailable',
+  FAULTED = 'Faulted'
+}
+
+// Transaction data interface
+export interface TransactionData {
+  id: number;
   connectorId: number;
-  status: 'InProgress' | 'Completed';
-  startTime: string;
-  meterStart: number;
-  currentMeter: number;
   tagId?: string;
-  stopTime?: string;
+  startTime: string;
+  endTime?: string;
+  meterStart: number;
   meterStop?: number;
+  status: 'Started' | 'Updated' | 'Ended';
+  energy: number;
   power: number;
+  duration: number;
+}
+
+// Connector data interface
+export interface ConnectorData {
+  id: number;
+  status: ConnectorStatus;
+  errorCode?: string;
+  power: number;
+  energy: number;
+  plugType?: string;
+  maxCurrent?: number;
+  currentTransaction?: number;
+}
+
+// Charge point data interface
+export interface ChargePointData {
+  id: number;
+  chargePointId: string;
+  timestamp: string;
+  connectors: ConnectorData[];
+  heartbeatInterval: number;
+  firmwareVersion: string;
+  model: string;
+  vendor: string;
+  maxPower: number;
+  lastHeartbeat: string;
+  status: 'online' | 'offline' | 'error';
 }
 
 /**
- * OCPP Adapter manages communication with EV chargers using OCPP protocol
+ * OCPP Adapter - Handles communication with a single OCPP charge point
  */
-export class OCPPAdapter {
-  private deviceConfig: OCPPDevice;
-  private status: ChargerStatus = 'Available';
+export class OCPPAdapter extends EventEmitter {
+  private device: OCPPDevice;
+  private connected: boolean = false;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+  private lastData: ChargePointData;
+  private transactions: Map<number, TransactionData> = new Map();
+  private nextTransactionId: number = 1;
   private mqttService = getMqttService();
-  private transactions: Map<number, MockTransaction> = new Map(); // Connector ID -> Transaction
   private inDevelopment: boolean = process.env.NODE_ENV === 'development';
-  private simulationInterval?: NodeJS.Timeout;
   
-  constructor(deviceConfig: OCPPDevice) {
-    this.deviceConfig = deviceConfig;
+  constructor(device: OCPPDevice) {
+    super();
+    this.device = device;
+    
+    // Initialize lastData with default values
+    this.lastData = {
+      id: device.id,
+      chargePointId: device.chargePointId,
+      timestamp: new Date().toISOString(),
+      connectors: Array.from({ length: device.connectors + 1 }, (_, i) => ({
+        id: i,
+        status: i === 0 ? ConnectorStatus.AVAILABLE : ConnectorStatus.AVAILABLE,
+        power: 0,
+        energy: 0
+      })),
+      heartbeatInterval: 60, // Default 60 seconds
+      firmwareVersion: '1.0.0',
+      model: 'Generic OCPP Charger',
+      vendor: 'EMS System',
+      maxPower: device.maxPower,
+      lastHeartbeat: new Date().toISOString(),
+      status: 'offline'
+    };
   }
   
-  /**
-   * Connect to the OCPP charger
-   */
-  async connect(): Promise<void> {
-    if (this.inDevelopment) {
-      console.log(`Development mode: Using simulated data for OCPP device ${this.deviceConfig.id}`);
-      this.simulateConnection();
+  // Connect to the OCPP charge point
+  async connect(): Promise<boolean> {
+    if (this.connected) {
+      return true;
+    }
+    
+    try {
+      console.log(`Connecting to OCPP charge point ${this.device.id}`);
+      
+      if (this.inDevelopment && this.device.connection.mockMode) {
+        console.log(`Development mode: Using simulated data for OCPP device ${this.device.id}`);
+        this.connected = true;
+        this.lastData.status = 'online';
+        this.emit('connected', this.device.id);
+        await this.publishDeviceStatus('online');
+        this.startHeartbeat();
+        return true;
+      }
+      
+      // In a real implementation, we would:
+      // 1. Establish WebSocket connection to the charge point
+      // 2. Perform handshake according to OCPP spec
+      // 3. Set up message handlers
+      
+      this.connected = true;
+      this.lastData.status = 'online';
+      this.emit('connected', this.device.id);
+      await this.publishDeviceStatus('online');
+      this.startHeartbeat();
+      
+      return true;
+    } catch (error) {
+      console.error(`Error connecting to OCPP charge point ${this.device.id}:`, error);
+      this.connected = false;
+      this.lastData.status = 'error';
+      await this.publishDeviceStatus('error', error.message);
+      this.emit('error', error);
+      
+      // Schedule reconnect
+      this.scheduleReconnect();
+      
+      return false;
+    }
+  }
+  
+  // Disconnect from the OCPP charge point
+  async disconnect(): Promise<void> {
+    if (!this.connected) {
       return;
     }
     
     try {
-      // In production, implement actual OCPP connection via WebSocket or SOAP
-      console.log(`Connecting to OCPP device ${this.deviceConfig.id} at ${this.deviceConfig.endpoint}`);
+      console.log(`Disconnecting from OCPP charge point ${this.device.id}`);
       
-      // Real implementation would connect to the OCPP server here
-      // For now, just set the status to Available
-      this.status = 'Available';
+      // Stop heartbeat
+      this.stopHeartbeat();
       
-      // Publish initial status
-      await this.publishStatusUpdate();
+      // Cancel reconnect timer if active
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      
+      // In a real implementation, we would close the WebSocket connection
+      
+      this.connected = false;
+      this.lastData.status = 'offline';
+      this.emit('disconnected', this.device.id);
+      await this.publishDeviceStatus('offline');
     } catch (error) {
-      console.error(`Error connecting to OCPP device ${this.deviceConfig.id}:`, error);
+      console.error(`Error disconnecting from OCPP charge point ${this.device.id}:`, error);
+      this.emit('error', error);
+    }
+  }
+  
+  // Start heartbeat timer
+  private startHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      return;
+    }
+    
+    const interval = this.lastData.heartbeatInterval * 1000; // Convert to ms
+    console.log(`Starting heartbeat for OCPP charge point ${this.device.id} every ${interval}ms`);
+    
+    // Send initial heartbeat
+    this.sendHeartbeat();
+    
+    this.heartbeatTimer = setInterval(() => {
+      this.sendHeartbeat();
+    }, interval);
+  }
+  
+  // Stop heartbeat timer
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+  
+  // Send heartbeat and update status
+  private async sendHeartbeat(): Promise<void> {
+    if (!this.connected) {
+      return;
+    }
+    
+    try {
+      // Update last heartbeat timestamp
+      this.lastData.lastHeartbeat = new Date().toISOString();
+      this.lastData.timestamp = new Date().toISOString();
+      
+      if (this.inDevelopment && this.device.connection.mockMode) {
+        // In development, simulate changes in connector status and values
+        this.updateMockData();
+      } else {
+        // In a real implementation, we would:
+        // 1. Send Heartbeat.req to the charge point
+        // 2. Process Heartbeat.conf response
+        // 3. Update status based on response
+      }
+      
+      // Publish updated data
+      await this.publishTelemetry();
+      
+      this.emit('heartbeat', {
+        deviceId: this.device.id,
+        timestamp: this.lastData.lastHeartbeat
+      });
+    } catch (error) {
+      console.error(`Error sending heartbeat to OCPP charge point ${this.device.id}:`, error);
+      this.emit('error', error);
+      
+      // If too many heartbeat failures, mark as disconnected
+      if (this.connected) {
+        this.connected = false;
+        this.lastData.status = 'error';
+        await this.publishDeviceStatus('error', 'Heartbeat failed');
+        this.scheduleReconnect();
+      }
+    }
+  }
+  
+  // Schedule a reconnection attempt
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer) {
+      return;
+    }
+    
+    const delay = 5000; // 5 seconds
+    console.log(`Scheduling reconnect for OCPP charge point ${this.device.id} in ${delay}ms`);
+    
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      
+      try {
+        await this.connect();
+      } catch (error) {
+        console.error(`Error reconnecting to OCPP charge point ${this.device.id}:`, error);
+        this.scheduleReconnect();
+      }
+    }, delay);
+  }
+  
+  // Update mock data in development mode
+  private updateMockData(): void {
+    // Update timestamp
+    this.lastData.timestamp = new Date().toISOString();
+    
+    // Process active transactions
+    for (const [transactionId, transaction] of this.transactions.entries()) {
+      if (transaction.status !== 'Ended') {
+        // Update transaction data
+        const duration = (new Date().getTime() - new Date(transaction.startTime).getTime()) / 1000;
+        const connector = this.lastData.connectors[transaction.connectorId];
+        
+        // Simulate energy consumption (kWh)
+        const newEnergy = transaction.meterStart / 1000 + (duration / 3600) * (connector.power / 1000);
+        const energyDelta = newEnergy - (transaction.energy || 0);
+        
+        // Update transaction
+        transaction.energy = newEnergy;
+        transaction.duration = Math.round(duration);
+        transaction.power = connector.power;
+        transaction.status = 'Updated';
+        
+        // Emit transaction update event
+        this.emit('transactionUpdate', {
+          deviceId: this.device.id,
+          transactionId,
+          connectorId: transaction.connectorId,
+          energy: transaction.energy,
+          power: transaction.power,
+          duration: transaction.duration
+        });
+      }
+    }
+    
+    // Randomly update connector status
+    for (const connector of this.lastData.connectors) {
+      // Skip connector 0 (charge point main connector)
+      if (connector.id === 0) continue;
+      
+      // Get current transaction for this connector
+      const transactionId = connector.currentTransaction;
+      const hasTransaction = transactionId !== undefined && this.transactions.has(transactionId);
+      
+      // If charging, update power with some random fluctuation
+      if (connector.status === ConnectorStatus.CHARGING && hasTransaction) {
+        // Fluctuate power by ±5%
+        const powerFluctuation = 1 + (Math.random() * 0.1 - 0.05);
+        connector.power = Math.min(
+          this.device.maxPower, 
+          Math.max(0, connector.power * powerFluctuation)
+        );
+        
+        // Accumulate energy
+        const transaction = this.transactions.get(transactionId)!;
+        connector.energy = transaction.energy * 1000; // Convert kWh to Wh
+      }
+      
+      // Randomly change status if no transaction
+      if (!hasTransaction && Math.random() < 0.05) { // 5% chance to change
+        if (connector.status === ConnectorStatus.AVAILABLE) {
+          // Randomly become unavailable
+          if (Math.random() < 0.3) {
+            connector.status = ConnectorStatus.UNAVAILABLE;
+          }
+        } else if (connector.status === ConnectorStatus.UNAVAILABLE) {
+          // Return to available
+          connector.status = ConnectorStatus.AVAILABLE;
+        }
+      }
+    }
+  }
+  
+  // Publish telemetry data via MQTT
+  private async publishTelemetry(): Promise<void> {
+    const topic = `devices/${this.device.id}/telemetry`;
+    
+    // Prepare data for publishing
+    const data = {
+      deviceId: this.device.id,
+      timestamp: this.lastData.timestamp,
+      protocol: 'ocpp',
+      readings: {
+        chargePoint: {
+          id: this.lastData.chargePointId,
+          vendor: this.lastData.vendor,
+          model: this.lastData.model,
+          firmwareVersion: this.lastData.firmwareVersion,
+          lastHeartbeat: this.lastData.lastHeartbeat
+        },
+        connectors: this.lastData.connectors.map(c => ({
+          id: c.id,
+          status: c.status,
+          power: c.power,
+          energy: c.energy,
+          currentTransaction: c.currentTransaction
+        })),
+        transactions: Array.from(this.transactions.values())
+          .filter(t => t.status !== 'Ended')
+          .map(t => ({
+            id: t.id,
+            connectorId: t.connectorId,
+            tagId: t.tagId,
+            startTime: t.startTime,
+            energy: t.energy,
+            power: t.power,
+            duration: t.duration
+          }))
+      }
+    };
+    
+    try {
+      await this.mqttService.publish(topic, data);
+    } catch (error) {
+      console.error(`Error publishing telemetry for OCPP device ${this.device.id}:`, error);
+    }
+  }
+  
+  // Publish device status update via MQTT
+  private async publishDeviceStatus(status: string, details?: string): Promise<void> {
+    const topic = `devices/${this.device.id}/status`;
+    
+    try {
+      await this.mqttService.publish(topic, {
+        deviceId: this.device.id,
+        status,
+        timestamp: new Date().toISOString(),
+        details
+      });
+    } catch (error) {
+      console.error(`Error publishing status for OCPP device ${this.device.id}:`, error);
+    }
+  }
+  
+  // Start a charging transaction
+  async startTransaction(connectorId: number, tagId?: string): Promise<TransactionData | null> {
+    if (!this.connected) {
+      throw new Error(`Cannot start transaction - charge point ${this.device.id} not connected`);
+    }
+    
+    try {
+      // Validate connector ID
+      if (connectorId < 1 || connectorId >= this.lastData.connectors.length) {
+        throw new Error(`Invalid connector ID: ${connectorId}`);
+      }
+      
+      const connector = this.lastData.connectors[connectorId];
+      
+      // Check if connector is available
+      if (connector.status !== ConnectorStatus.AVAILABLE) {
+        throw new Error(`Connector ${connectorId} is not available (status: ${connector.status})`);
+      }
+      
+      console.log(`Starting transaction on charge point ${this.device.id}, connector ${connectorId}`);
+      
+      if (this.inDevelopment && this.device.connection.mockMode) {
+        // Create a new transaction in development mode
+        const transactionId = this.nextTransactionId++;
+        const now = new Date().toISOString();
+        const meterStart = Math.floor(connector.energy);
+        
+        const transaction: TransactionData = {
+          id: transactionId,
+          connectorId,
+          tagId,
+          startTime: now,
+          meterStart,
+          status: 'Started',
+          energy: 0,
+          power: 0,
+          duration: 0
+        };
+        
+        // Store transaction
+        this.transactions.set(transactionId, transaction);
+        
+        // Update connector status
+        connector.status = ConnectorStatus.CHARGING;
+        connector.currentTransaction = transactionId;
+        connector.power = Math.min(7400, this.device.maxPower); // Default to 7.4kW or max power
+        
+        // Publish updated data
+        await this.publishTelemetry();
+        
+        // Emit transaction start event
+        this.emit('transactionStart', {
+          deviceId: this.device.id,
+          transactionId,
+          connectorId,
+          tagId
+        });
+        
+        // Publish command response
+        await this.publishCommandResponse(
+          'startTransaction',
+          true,
+          { transactionId, connectorId }
+        );
+        
+        return transaction;
+      } else {
+        // In a real implementation, we would:
+        // 1. Send RemoteStartTransaction.req to the charge point
+        // 2. Process RemoteStartTransaction.conf response
+        // 3. Wait for StartTransaction.req from charge point
+        // 4. Send StartTransaction.conf response
+        // 5. Return created transaction data
+        
+        // For now, simulate the same as development mode
+        const transactionId = this.nextTransactionId++;
+        const now = new Date().toISOString();
+        const meterStart = Math.floor(connector.energy);
+        
+        const transaction: TransactionData = {
+          id: transactionId,
+          connectorId,
+          tagId,
+          startTime: now,
+          meterStart,
+          status: 'Started',
+          energy: 0,
+          power: 0,
+          duration: 0
+        };
+        
+        // Store transaction
+        this.transactions.set(transactionId, transaction);
+        
+        // Update connector status
+        connector.status = ConnectorStatus.CHARGING;
+        connector.currentTransaction = transactionId;
+        connector.power = Math.min(7400, this.device.maxPower); // Default to 7.4kW or max power
+        
+        // Publish updated data
+        await this.publishTelemetry();
+        
+        // Emit transaction start event
+        this.emit('transactionStart', {
+          deviceId: this.device.id,
+          transactionId,
+          connectorId,
+          tagId
+        });
+        
+        // Publish command response
+        await this.publishCommandResponse(
+          'startTransaction',
+          true,
+          { transactionId, connectorId }
+        );
+        
+        return transaction;
+      }
+    } catch (error) {
+      console.error(`Error starting transaction on charge point ${this.device.id}:`, error);
+      
+      // Publish command failure
+      await this.publishCommandResponse(
+        'startTransaction',
+        false,
+        null,
+        error.message
+      );
+      
       throw error;
     }
   }
   
-  /**
-   * Disconnect from the OCPP charger
-   */
-  async disconnect(): Promise<void> {
-    if (this.inDevelopment && this.simulationInterval) {
-      clearInterval(this.simulationInterval);
-      this.simulationInterval = undefined;
+  // Stop a charging transaction
+  async stopTransaction(connectorId: number): Promise<TransactionData | null> {
+    if (!this.connected) {
+      throw new Error(`Cannot stop transaction - charge point ${this.device.id} not connected`);
     }
     
-    // In production, implement actual OCPP disconnection
-    
-    console.log(`Disconnected from OCPP device ${this.deviceConfig.id}`);
-  }
-  
-  /**
-   * Simulate OCPP connection for development mode
-   */
-  private simulateConnection(): void {
-    console.log(`Simulated connection to OCPP device ${this.deviceConfig.id}`);
-    this.status = 'Available';
-    
-    // Simulate periodic status updates and meter values
-    this.simulationInterval = setInterval(() => {
-      this.simulateActivityAndReadings();
-    }, 10000); // Every 10 seconds
-    
-    // Publish initial status
-    this.publishStatusUpdate();
-  }
-  
-  /**
-   * Simulate random EV charger activity for development
-   */
-  private simulateActivityAndReadings(): void {
-    // Randomly decide if we should start or stop charging
-    const random = Math.random();
-    
-    // For each connector, decide what to do
-    for (let connectorId = 1; connectorId <= this.deviceConfig.connectors; connectorId++) {
-      const transaction = this.transactions.get(connectorId);
-      
-      if (!transaction && random < 0.2) {
-        // 20% chance to start a new transaction if none is in progress
-        this.simulateStartTransaction(connectorId);
-      } else if (transaction && random > 0.8) {
-        // 20% chance to stop an in-progress transaction
-        this.simulateStopTransaction(connectorId);
-      } else if (transaction) {
-        // Update meter values for in-progress transactions
-        this.simulateUpdateMeterValues(connectorId, transaction);
-      }
-    }
-    
-    // Update overall charger status based on transactions
-    this.updateStatusFromTransactions();
-    
-    // Publish status update
-    this.publishStatusUpdate();
-  }
-  
-  /**
-   * Simulate starting a charging transaction
-   */
-  private simulateStartTransaction(connectorId: number): void {
-    const now = new Date();
-    const transactionId = `${this.deviceConfig.id}-${connectorId}-${now.getTime()}`;
-    const meterStart = Math.floor(Math.random() * 1000); // Random start meter value
-    
-    const transaction: MockTransaction = {
-      id: transactionId,
-      deviceId: this.deviceConfig.id,
-      connectorId,
-      status: 'InProgress',
-      startTime: now.toISOString(),
-      meterStart,
-      currentMeter: meterStart,
-      tagId: `TAG${Math.floor(Math.random() * 10000)}`,
-      power: Math.floor(Math.random() * 11) + 3 // 3-13 kW
-    };
-    
-    this.transactions.set(connectorId, transaction);
-    console.log(`[OCPP] Device ${this.deviceConfig.id} Connector ${connectorId} - Started transaction ${transactionId}`);
-    
-    // Store reading in database if needed
-    this.storeDeviceReading(transaction);
-  }
-  
-  /**
-   * Simulate stopping a charging transaction
-   */
-  private simulateStopTransaction(connectorId: number): void {
-    const transaction = this.transactions.get(connectorId);
-    if (!transaction) return;
-    
-    const now = new Date();
-    const energyConsumed = Math.random() * 30; // 0-30 kWh
-    const meterStop = transaction.meterStart + (energyConsumed * 1000); // Convert kWh to Wh
-    
-    transaction.status = 'Completed';
-    transaction.stopTime = now.toISOString();
-    transaction.meterStop = meterStop;
-    transaction.power = 0;
-    
-    console.log(`[OCPP] Device ${this.deviceConfig.id} Connector ${connectorId} - Stopped transaction ${transaction.id}, energy: ${energyConsumed.toFixed(2)} kWh`);
-    
-    // Store final reading
-    this.storeDeviceReading(transaction);
-    
-    // Remove transaction
-    this.transactions.delete(connectorId);
-  }
-  
-  /**
-   * Simulate updating meter values during a transaction
-   */
-  private simulateUpdateMeterValues(connectorId: number, transaction: MockTransaction): void {
-    // Increase meter by a random amount (representing energy consumption)
-    const energyIncrease = (transaction.power / 60) * (Math.random() * 0.2 + 0.9); // kWh for ~1 minute +/- 10%
-    transaction.currentMeter += energyIncrease * 1000; // Convert kWh to Wh
-    
-    // Randomly adjust power within a reasonable range
-    const powerDelta = (Math.random() - 0.5) * 2; // -1 to +1 kW
-    transaction.power = Math.max(3, Math.min(22, transaction.power + powerDelta)); // Clamp between 3 and 22 kW
-    
-    // Store the updated reading
-    this.storeDeviceReading(transaction);
-  }
-  
-  /**
-   * Store device reading in the database
-   */
-  private async storeDeviceReading(transaction: MockTransaction): Promise<void> {
     try {
-      const timestamp = new Date().toISOString();
-      const power = transaction.power;
-      const energy = transaction.currentMeter / 1000; // Convert Wh to kWh
+      // Validate connector ID
+      if (connectorId < 1 || connectorId >= this.lastData.connectors.length) {
+        throw new Error(`Invalid connector ID: ${connectorId}`);
+      }
       
-      // Update device readings in database
-      await db.insert(deviceReadings).values({
-        deviceId: this.deviceConfig.id,
-        timestamp,
-        power: power.toString(),
-        energy: energy.toString(),
-        additionalData: {
-          connectorId: transaction.connectorId,
-          transactionId: transaction.id,
-          meterValue: transaction.currentMeter,
-          tagId: transaction.tagId
-        }
-      });
+      const connector = this.lastData.connectors[connectorId];
       
+      // Check if connector has an active transaction
+      if (!connector.currentTransaction) {
+        throw new Error(`No active transaction on connector ${connectorId}`);
+      }
+      
+      const transactionId = connector.currentTransaction;
+      const transaction = this.transactions.get(transactionId);
+      
+      if (!transaction) {
+        throw new Error(`Transaction ${transactionId} not found`);
+      }
+      
+      console.log(`Stopping transaction ${transactionId} on charge point ${this.device.id}, connector ${connectorId}`);
+      
+      if (this.inDevelopment && this.device.connection.mockMode) {
+        // Stop the transaction in development mode
+        const now = new Date().toISOString();
+        const meterStop = Math.floor(connector.energy);
+        
+        // Update transaction
+        transaction.endTime = now;
+        transaction.meterStop = meterStop;
+        transaction.status = 'Ended';
+        
+        // Update connector status
+        connector.status = ConnectorStatus.AVAILABLE;
+        connector.currentTransaction = undefined;
+        connector.power = 0;
+        
+        // Publish updated data
+        await this.publishTelemetry();
+        
+        // Emit transaction stop event
+        this.emit('transactionStop', {
+          deviceId: this.device.id,
+          transactionId,
+          connectorId,
+          energy: transaction.energy,
+          duration: transaction.duration
+        });
+        
+        // Publish command response
+        await this.publishCommandResponse(
+          'stopTransaction',
+          true,
+          { transactionId, connectorId }
+        );
+        
+        return transaction;
+      } else {
+        // In a real implementation, we would:
+        // 1. Send RemoteStopTransaction.req to the charge point
+        // 2. Process RemoteStopTransaction.conf response
+        // 3. Wait for StopTransaction.req from charge point
+        // 4. Send StopTransaction.conf response
+        // 5. Return updated transaction data
+        
+        // For now, simulate the same as development mode
+        const now = new Date().toISOString();
+        const meterStop = Math.floor(connector.energy);
+        
+        // Update transaction
+        transaction.endTime = now;
+        transaction.meterStop = meterStop;
+        transaction.status = 'Ended';
+        
+        // Update connector status
+        connector.status = ConnectorStatus.AVAILABLE;
+        connector.currentTransaction = undefined;
+        connector.power = 0;
+        
+        // Publish updated data
+        await this.publishTelemetry();
+        
+        // Emit transaction stop event
+        this.emit('transactionStop', {
+          deviceId: this.device.id,
+          transactionId,
+          connectorId,
+          energy: transaction.energy,
+          duration: transaction.duration
+        });
+        
+        // Publish command response
+        await this.publishCommandResponse(
+          'stopTransaction',
+          true,
+          { transactionId, connectorId }
+        );
+        
+        return transaction;
+      }
     } catch (error) {
-      console.error(`Error storing OCPP device reading for device ${this.deviceConfig.id}:`, error);
+      console.error(`Error stopping transaction on charge point ${this.device.id}:`, error);
+      
+      // Publish command failure
+      await this.publishCommandResponse(
+        'stopTransaction',
+        false,
+        null,
+        error.message
+      );
+      
+      throw error;
     }
   }
   
-  /**
-   * Update charger status based on active transactions
-   */
-  private updateStatusFromTransactions(): void {
-    const activeTransactions = Array.from(this.transactions.values()).filter(t => t.status === 'InProgress');
+  // Publish command response via MQTT
+  private async publishCommandResponse(command: string, success: boolean, result?: any, error?: string): Promise<void> {
+    const topic = `devices/${this.device.id}/commands/response`;
     
-    if (activeTransactions.length > 0) {
-      this.status = 'Charging';
-    } else {
-      this.status = 'Available';
-    }
-  }
-  
-  /**
-   * Publish status update to MQTT
-   */
-  private async publishStatusUpdate(): Promise<void> {
     try {
-      const activePower = Array.from(this.transactions.values())
-        .filter(t => t.status === 'InProgress')
-        .reduce((sum, transaction) => sum + transaction.power, 0);
-      
-      const timestamp = new Date().toISOString();
-      
-      // Publish to MQTT
-      await this.mqttService.publish(`devices/${this.deviceConfig.id}/status`, {
-        messageType: 'status',
-        timestamp,
-        deviceId: this.deviceConfig.id,
-        status: this.status,
-        connectors: Array.from(this.transactions.entries()).map(([connectorId, transaction]) => ({
-          id: connectorId,
-          status: transaction.status === 'InProgress' ? 'Charging' : 'Available',
-          power: transaction.power,
-          transactionId: transaction.id
-        })),
-        totalPower: activePower
+      await this.mqttService.publish(topic, {
+        deviceId: this.device.id,
+        command,
+        success,
+        result,
+        error,
+        timestamp: new Date().toISOString()
       });
-      
-      // Update device status in database
-      await db.update(devices)
-        .set({
-          status: this.status === 'Available' ? 'online' : this.status === 'Faulted' ? 'error' : 'online',
-          lastSeenAt: timestamp
-        })
-        .where(eq(devices.id, this.deviceConfig.id));
-      
-    } catch (error) {
-      console.error(`Error publishing OCPP status update for device ${this.deviceConfig.id}:`, error);
+    } catch (err) {
+      console.error(`Error publishing command response for device ${this.device.id}:`, err);
     }
   }
   
-  /**
-   * Start a charging transaction
-   */
-  async startTransaction(connectorId: number, tagId?: string): Promise<TransactionInfo | null> {
-    // In development mode, use simulation
-    if (this.inDevelopment) {
-      // Only start if connector isn't already in use
-      if (this.transactions.has(connectorId)) {
-        return null;
-      }
-      
-      this.simulateStartTransaction(connectorId);
-      const transaction = this.transactions.get(connectorId);
-      
-      if (transaction) {
-        return {
-          id: transaction.id,
-          startTime: transaction.startTime,
-          meterStart: transaction.meterStart,
-          tagId: transaction.tagId,
-          status: 'InProgress'
-        };
-      }
-      
-      return null;
-    }
-    
-    // In production, implement actual OCPP RemoteStartTransaction
-    // This would call the appropriate OCPP method based on version
-    
-    return null;
+  // Get charge point data
+  getChargePointData(): ChargePointData {
+    return this.lastData;
   }
   
-  /**
-   * Stop a charging transaction
-   */
-  async stopTransaction(connectorId: number): Promise<TransactionInfo | null> {
-    // In development mode, use simulation
-    if (this.inDevelopment) {
-      const transaction = this.transactions.get(connectorId);
-      if (!transaction || transaction.status !== 'InProgress') {
-        return null;
-      }
-      
-      this.simulateStopTransaction(connectorId);
-      
-      if (transaction.stopTime && transaction.meterStop) {
-        return {
-          id: transaction.id,
-          startTime: transaction.startTime,
-          stopTime: transaction.stopTime,
-          meterStart: transaction.meterStart,
-          meterStop: transaction.meterStop,
-          tagId: transaction.tagId,
-          status: 'Completed'
-        };
-      }
-      
-      return null;
-    }
-    
-    // In production, implement actual OCPP RemoteStopTransaction
-    // This would call the appropriate OCPP method based on version
-    
-    return null;
+  // Get transaction by ID
+  getTransaction(transactionId: number): TransactionData | undefined {
+    return this.transactions.get(transactionId);
   }
   
-  /**
-   * Set charge point maximum power
-   */
-  async setChargingProfile(connectorId: number, maxPower: number): Promise<boolean> {
-    console.log(`Setting charging profile for device ${this.deviceConfig.id}, connector ${connectorId}, maxPower: ${maxPower}kW`);
-    
-    // In development mode, just update the simulated transaction power
-    if (this.inDevelopment) {
-      const transaction = this.transactions.get(connectorId);
-      if (transaction && transaction.status === 'InProgress') {
-        transaction.power = Math.min(transaction.power, maxPower);
-        return true;
-      }
-      
-      return false;
-    }
-    
-    // In production, implement actual OCPP SetChargingProfile
-    // This would call the appropriate OCPP method based on version
-    
-    return false;
+  // Get all transactions
+  getAllTransactions(): TransactionData[] {
+    return Array.from(this.transactions.values());
   }
   
-  /**
-   * Get the current status of the charge point
-   */
-  getStatus(): ChargerStatus {
-    return this.status;
-  }
-  
-  /**
-   * Get active transactions
-   */
-  getActiveTransactions(): TransactionInfo[] {
+  // Get active transactions
+  getActiveTransactions(): TransactionData[] {
     return Array.from(this.transactions.values())
-      .filter(t => t.status === 'InProgress')
-      .map(t => ({
-        id: t.id,
-        startTime: t.startTime,
-        meterStart: t.meterStart,
-        tagId: t.tagId,
-        status: 'InProgress'
-      }));
+      .filter(t => t.status !== 'Ended');
+  }
+  
+  // Get connector data
+  getConnectorData(connectorId: number): ConnectorData | undefined {
+    if (connectorId < 0 || connectorId >= this.lastData.connectors.length) {
+      return undefined;
+    }
+    return this.lastData.connectors[connectorId];
+  }
+  
+  // Check if connected
+  isConnected(): boolean {
+    return this.connected;
   }
 }
 
-// Singleton manager for all OCPP devices
+/**
+ * OCPP Manager - Manages all OCPP charge points in the system
+ */
 export class OCPPManager {
   private adapters: Map<number, OCPPAdapter> = new Map();
   private inDevelopment: boolean = process.env.NODE_ENV === 'development';
   
-  /**
-   * Add and initialize an OCPP device
-   */
+  constructor() {
+    console.log('Initializing OCPP Manager');
+  }
+  
+  // Add a new OCPP charge point
   async addDevice(deviceConfig: OCPPDevice): Promise<void> {
+    // Check if device already exists
     if (this.adapters.has(deviceConfig.id)) {
-      console.log(`OCPP device ${deviceConfig.id} already exists, updating configuration`);
-      await this.removeDevice(deviceConfig.id);
+      console.log(`OCPP charge point ${deviceConfig.id} already registered`);
+      return;
     }
+    
+    console.log(`Adding OCPP charge point ${deviceConfig.id}`);
     
     // Create adapter
     const adapter = new OCPPAdapter(deviceConfig);
+    
+    // Store adapter
     this.adapters.set(deviceConfig.id, adapter);
     
-    // Connect
-    try {
-      await adapter.connect();
-    } catch (error) {
-      console.error(`Error initializing OCPP device ${deviceConfig.id}:`, error);
+    // Set up event listeners
+    adapter.on('connected', (deviceId: number) => {
+      console.log(`OCPP charge point ${deviceId} connected`);
+    });
+    
+    adapter.on('disconnected', (deviceId: number) => {
+      console.log(`OCPP charge point ${deviceId} disconnected`);
+    });
+    
+    adapter.on('error', (error: Error) => {
+      console.error('OCPP charge point error:', error);
+    });
+    
+    adapter.on('transactionStart', (data: any) => {
+      console.log(`Transaction ${data.transactionId} started on charge point ${data.deviceId}, connector ${data.connectorId}`);
+    });
+    
+    adapter.on('transactionStop', (data: any) => {
+      console.log(`Transaction ${data.transactionId} stopped on charge point ${data.deviceId}, connector ${data.connectorId}`);
+    });
+    
+    // Connect in development mode
+    if (this.inDevelopment) {
+      try {
+        await adapter.connect();
+      } catch (error) {
+        console.error(`Error connecting to OCPP charge point ${deviceConfig.id}:`, error);
+      }
     }
   }
   
-  /**
-   * Remove and stop an OCPP device
-   */
+  // Remove an OCPP charge point
   async removeDevice(deviceId: number): Promise<void> {
     const adapter = this.adapters.get(deviceId);
-    if (!adapter) return;
+    if (!adapter) {
+      console.log(`OCPP charge point ${deviceId} not found`);
+      return;
+    }
     
+    // Disconnect
     await adapter.disconnect();
+    
+    // Remove adapter
     this.adapters.delete(deviceId);
-    console.log(`Removed OCPP device ${deviceId}`);
+    
+    console.log(`Removed OCPP charge point ${deviceId}`);
   }
   
-  /**
-   * Get an OCPP adapter by device ID
-   */
+  // Get an adapter by device ID
   getAdapter(deviceId: number): OCPPAdapter | undefined {
     return this.adapters.get(deviceId);
   }
   
-  /**
-   * Stop and disconnect all devices
-   */
-  async shutdown(): Promise<void> {
-    const shutdownPromises: Promise<void>[] = [];
+  // Get all charge points
+  getAllChargePoints(): ChargePointData[] {
+    return Array.from(this.adapters.values()).map(adapter => adapter.getChargePointData());
+  }
+  
+  // Get all active transactions
+  getAllActiveTransactions(): {
+    deviceId: number;
+    transaction: TransactionData;
+  }[] {
+    const transactions: {
+      deviceId: number;
+      transaction: TransactionData;
+    }[] = [];
+    
     for (const [deviceId, adapter] of this.adapters.entries()) {
-      shutdownPromises.push(adapter.disconnect());
-      console.log(`Shutting down OCPP device ${deviceId}`);
+      const deviceTransactions = adapter.getActiveTransactions();
+      for (const transaction of deviceTransactions) {
+        transactions.push({
+          deviceId,
+          transaction
+        });
+      }
     }
     
-    await Promise.all(shutdownPromises);
+    return transactions;
+  }
+  
+  // Shutdown all charge points
+  async shutdown(): Promise<void> {
+    console.log('Shutting down OCPP Manager');
+    
+    const disconnectPromises = Array.from(this.adapters.values()).map(adapter => adapter.disconnect());
+    await Promise.all(disconnectPromises);
+    
     this.adapters.clear();
-    console.log('All OCPP devices shut down');
   }
 }
 
 // Singleton instance
-let ocppManagerInstance: OCPPManager | null = null;
+let ocppManager: OCPPManager;
 
-/**
- * Get or create the OCPP manager instance
- */
+// Get OCPP manager instance
 export function getOCPPManager(): OCPPManager {
-  if (!ocppManagerInstance) {
-    ocppManagerInstance = new OCPPManager();
+  if (!ocppManager) {
+    ocppManager = new OCPPManager();
   }
-  return ocppManagerInstance;
+  return ocppManager;
 }
