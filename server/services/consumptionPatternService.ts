@@ -749,7 +749,16 @@ export class ConsumptionPatternService {
     const anomalies = [];
     
     for (const reading of readings) {
-      const timestamp = new Date(reading.timestamp);
+      // We need to calculate consumption from the energy reading
+      // In a real implementation, this would be part of the data or extracted from gridPower + homePower
+      const actualConsumption = this.calculateConsumptionFromReading(reading);
+      
+      // Safely handle the timestamp
+      const timestamp = typeof reading.timestamp === 'string' 
+        ? new Date(reading.timestamp)
+        : (reading.timestamp instanceof Date 
+            ? reading.timestamp 
+            : new Date());
       const hour = timestamp.getHours();
       const dayOfWeek = timestamp.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -794,10 +803,10 @@ export class ConsumptionPatternService {
           }
         }
         
-        // Calculate deviation
-        const actualValue = reading.consumption;
+        // Calculate deviation 
+        const actualValue = this.calculateConsumptionFromReading(reading); // Make sure to use the helper method
         const deviation = actualValue - expectedValue;
-        const deviationPercent = (deviation / expectedValue) * 100;
+        const deviationPercent = (expectedValue === 0) ? 0 : (deviation / expectedValue) * 100;
         
         // Determine if this is an anomaly
         // Typically, a deviation of more than 3 standard deviations is considered an anomaly
@@ -826,6 +835,51 @@ export class ConsumptionPatternService {
     }
     
     return anomalies;
+  }
+  
+  /**
+   * Calculate consumption from energy reading
+   * This is a helper method to extract/calculate consumption value from energy readings
+   */
+  private calculateConsumptionFromReading(reading: EnergyReading): number {
+    // In a real implementation, this would use actual consumption data
+    // For now, we'll use the gridPower or homePower if available
+    
+    // First try to use homePower which represents consumption
+    if (reading.homePower !== null && reading.homePower !== undefined) {
+      const homePower = typeof reading.homePower === 'string' 
+        ? parseFloat(reading.homePower) 
+        : Number(reading.homePower);
+      
+      if (!isNaN(homePower)) {
+        return Math.max(0, homePower);
+      }
+    }
+    
+    // Fall back to gridPower if homePower is not available
+    if (reading.gridPower !== null && reading.gridPower !== undefined) {
+      const gridPower = typeof reading.gridPower === 'string' 
+        ? parseFloat(reading.gridPower) 
+        : Number(reading.gridPower);
+      
+      if (!isNaN(gridPower)) {
+        return Math.max(0, gridPower); // Only positive values for consumption
+      }
+    }
+    
+    // If no power readings are available, estimate from energy if possible
+    if (reading.homeEnergy !== null && reading.homeEnergy !== undefined) {
+      const homeEnergy = typeof reading.homeEnergy === 'string' 
+        ? parseFloat(reading.homeEnergy) 
+        : Number(reading.homeEnergy);
+      
+      if (!isNaN(homeEnergy)) {
+        return Math.max(0, homeEnergy);
+      }
+    }
+    
+    // Default fallback
+    return 1.0; // Fallback value for development/testing
   }
   
   /**
