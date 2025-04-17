@@ -188,7 +188,7 @@ export function validateMessage(message: any): { valid: boolean; errors?: any; d
 
 // Topic patterns for MQTT messaging
 export const TOPIC_PATTERNS = {
-  // Core device messaging topics
+  // Core device messaging topics with enhanced structure
   TELEMETRY: 'devices/:deviceId/telemetry',
   STATUS: 'devices/:deviceId/status',
   COMMAND_REQUEST: 'devices/:deviceId/commands/request',
@@ -197,21 +197,60 @@ export const TOPIC_PATTERNS = {
   CONFIG_ACK: 'devices/:deviceId/config/ack',
   EVENT: 'devices/:deviceId/events',
   
+  // Device type specific topics for more granular control
+  EV_CHARGER: 'devices/:deviceId/ev_charger/:connectorId',
+  EV_CHARGER_STATUS: 'devices/:deviceId/ev_charger/:connectorId/status',
+  EV_CHARGER_SESSION: 'devices/:deviceId/ev_charger/:connectorId/session',
+  EV_CHARGER_COMMAND: 'devices/:deviceId/ev_charger/:connectorId/command',
+  
+  BATTERY: 'devices/:deviceId/battery',
+  BATTERY_STATUS: 'devices/:deviceId/battery/status',
+  BATTERY_SOC: 'devices/:deviceId/battery/soc',
+  BATTERY_POWER: 'devices/:deviceId/battery/power',
+  BATTERY_COMMAND: 'devices/:deviceId/battery/command',
+  
+  SOLAR: 'devices/:deviceId/solar',
+  SOLAR_STATUS: 'devices/:deviceId/solar/status',
+  SOLAR_PRODUCTION: 'devices/:deviceId/solar/production',
+  SOLAR_COMMAND: 'devices/:deviceId/solar/command',
+  
+  HEAT_PUMP: 'devices/:deviceId/heat_pump',
+  HEAT_PUMP_STATUS: 'devices/:deviceId/heat_pump/status',
+  HEAT_PUMP_TEMPERATURE: 'devices/:deviceId/heat_pump/temperature',
+  HEAT_PUMP_COMMAND: 'devices/:deviceId/heat_pump/command',
+  
+  METER: 'devices/:deviceId/meter',
+  METER_READING: 'devices/:deviceId/meter/reading',
+  METER_POWER: 'devices/:deviceId/meter/power',
+  
   // Discovery and provisioning topics
   DISCOVERY_REQUEST: 'system/discovery/request',
   DISCOVERY_RESPONSE: 'system/discovery/response/devices/:deviceInfo.serialNumber',
   
-  // Group topics
+  // Site level topics
   SITE_TELEMETRY: 'sites/:siteId/telemetry',
   SITE_STATUS: 'sites/:siteId/status',
   SITE_COMMANDS: 'sites/:siteId/commands',
+  SITE_ENERGY: 'sites/:siteId/energy',
+  SITE_FORECAST: 'sites/:siteId/forecast/:forecastType',
+  SITE_OPTIMIZATION: 'sites/:siteId/optimization/:optimizationType',
   
-  // Device type topics
+  // Virtual Power Plant (VPP) topics
+  VPP_EVENT: 'vpp/events/:eventId',
+  VPP_RESPONSE: 'vpp/events/:eventId/responses/:siteId',
+  VPP_ENROLLMENT: 'vpp/programs/:programId/enrollments/:siteId',
+  
+  // Device groups by type
   DEVICE_TYPE: 'devices/type/:deviceType/#',
   
   // System topics
   SYSTEM_STATUS: 'system/status',
-  SYSTEM_COMMANDS: 'system/commands/#'
+  SYSTEM_COMMANDS: 'system/commands/#',
+  SYSTEM_ALERTS: 'system/alerts/:alertLevel',
+  
+  // Heartbeat and monitoring
+  HEARTBEAT: 'system/heartbeat/:componentId',
+  DIAGNOSTICS: 'system/diagnostics/:componentId'
 };
 
 // Function to format a topic pattern with parameters

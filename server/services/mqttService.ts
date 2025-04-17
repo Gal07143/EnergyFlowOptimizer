@@ -1,7 +1,8 @@
 import mqtt from 'mqtt';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
-import { TOPIC_PATTERNS } from '@shared/messageSchema';
+import { TOPIC_PATTERNS, QoSLevel } from '@shared/messageSchema';
+import { getMqttConfig, getMqttOptions } from '../config/mqttBrokerConfig';
 
 export interface MqttConnectionOptions {
   brokerUrl?: string;
@@ -20,16 +21,35 @@ export interface MqttConnectionOptions {
     qos: 0 | 1 | 2;
     retain: boolean;
   };
+  // Enhanced options
+  protocol?: 'mqtt' | 'mqtts' | 'ws' | 'wss';
+  cert?: string;
+  key?: string;
+  ca?: string;
+  highAvailability?: boolean;
+  maxInflightMessages?: number;
+  persistentSession?: boolean;
 }
 
 export interface PublishOptions {
-  qos?: 0 | 1 | 2;
+  qos?: QoSLevel;
   retain?: boolean;
   dup?: boolean;
+  properties?: {
+    payloadFormatIndicator?: boolean;
+    messageExpiryInterval?: number;
+    contentType?: string;
+    responseTopic?: string;
+    correlationData?: Buffer;
+    userProperties?: Record<string, string>;
+  };
 }
 
 export interface SubscribeOptions {
-  qos?: 0 | 1 | 2;
+  qos?: QoSLevel;
+  nl?: boolean; // No Local flag
+  rap?: boolean; // Retain as Published
+  rh?: number; // Retain Handling
 }
 
 interface MessageHandler {
@@ -148,15 +168,26 @@ export class MqttService {
   private topicCache: Map<string, Record<string, any>> = new Map();
   
   constructor(options?: MqttConnectionOptions) {
+    // Get configuration from broker config
+    const mqttConfig = getMqttConfig();
+    const mqttOptions = getMqttOptions();
+    
+    // Merge with provided options
     this.options = {
-      brokerUrl: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
-      clientId: `ems-${uuidv4()}`,
-      keepalive: 60,
-      clean: true,
-      reconnectPeriod: 5000,
-      connectTimeout: 30000,
-      queueQoSZero: true,
-      rejectUnauthorized: false,
+      brokerUrl: mqttConfig.mainBrokerUrl,
+      clientId: mqttOptions.clientId as string,
+      keepalive: mqttConfig.keepalive,
+      clean: mqttConfig.cleanSession,
+      reconnectPeriod: mqttConfig.reconnectPeriod,
+      connectTimeout: mqttConfig.connectTimeout,
+      queueQoSZero: mqttConfig.queueQosZeroMessages,
+      rejectUnauthorized: mqttConfig.rejectUnauthorized,
+      protocol: mqttConfig.tlsEnabled ? 'mqtts' : 'mqtt',
+      highAvailability: mqttConfig.highAvailability,
+      maxInflightMessages: mqttConfig.maxInflightMessages,
+      persistentSession: mqttConfig.persistentSession,
+      username: mqttConfig.authEnabled ? mqttConfig.username : undefined,
+      password: mqttConfig.authEnabled ? mqttConfig.password : undefined,
       ...options
     };
     
@@ -169,19 +200,42 @@ export class MqttService {
       console.log('Development mode: Using mock MQTT broker');
       this.client = new MockMqttBroker();
     } else {
-      // Client will be initialized in connect()
-      this.client = mqtt.connect(this.options.brokerUrl!, {
+      // Enhanced MQTT client connection options
+      const connectOptions: any = {
         clientId: this.clientId,
         keepalive: this.options.keepalive,
         clean: this.options.clean,
         reconnectPeriod: this.options.reconnectPeriod,
         connectTimeout: this.options.connectTimeout,
         queueQoSZero: this.options.queueQoSZero,
-        rejectUnauthorized: this.options.rejectUnauthorized,
-        username: this.options.username,
-        password: this.options.password,
-        will: this.options.will
-      });
+        rejectUnauthorized: this.options.rejectUnauthorized
+      };
+      
+      // Add authentication if enabled
+      if (this.options.username) {
+        connectOptions.username = this.options.username;
+        connectOptions.password = this.options.password;
+      }
+      
+      // Add TLS configuration if enabled
+      if (this.options.protocol === 'mqtts') {
+        connectOptions.protocol = 'mqtts';
+        if (this.options.cert && this.options.key) {
+          connectOptions.cert = this.options.cert;
+          connectOptions.key = this.options.key;
+          if (this.options.ca) {
+            connectOptions.ca = this.options.ca;
+          }
+        }
+      }
+      
+      // Add will message if provided
+      if (this.options.will) {
+        connectOptions.will = this.options.will;
+      }
+      
+      // Client will be initialized in connect()
+      this.client = mqtt.connect(this.options.brokerUrl!, connectOptions);
     }
   }
   
@@ -480,19 +534,46 @@ export class MqttService {
       this.reconnectTimer = null;
       
       if (!this.useMockBroker) {
-        // For real MQTT client, create a new instance
-        this.client = mqtt.connect(this.options.brokerUrl!, {
+        // For real MQTT client, create a new instance with enhanced options
+        const connectOptions: any = {
           clientId: this.clientId,
           keepalive: this.options.keepalive,
           clean: this.options.clean,
           reconnectPeriod: this.options.reconnectPeriod,
           connectTimeout: this.options.connectTimeout,
           queueQoSZero: this.options.queueQoSZero,
-          rejectUnauthorized: this.options.rejectUnauthorized,
-          username: this.options.username,
-          password: this.options.password,
-          will: this.options.will
-        });
+          rejectUnauthorized: this.options.rejectUnauthorized
+        };
+        
+        // Add authentication if enabled
+        if (this.options.username) {
+          connectOptions.username = this.options.username;
+          connectOptions.password = this.options.password;
+        }
+        
+        // Add TLS configuration if enabled
+        if (this.options.protocol === 'mqtts') {
+          connectOptions.protocol = 'mqtts';
+          if (this.options.cert && this.options.key) {
+            connectOptions.cert = this.options.cert;
+            connectOptions.key = this.options.key;
+            if (this.options.ca) {
+              connectOptions.ca = this.options.ca;
+            }
+          }
+        }
+        
+        // Add will message if provided
+        if (this.options.will) {
+          connectOptions.will = this.options.will;
+        }
+        
+        // Add enhanced options for MQTT 5.0 if available
+        if (this.options.maxInflightMessages) {
+          connectOptions.maxInflightMessages = this.options.maxInflightMessages;
+        }
+        
+        this.client = mqtt.connect(this.options.brokerUrl!, connectOptions);
       }
       
       this.connect().catch(err => {
