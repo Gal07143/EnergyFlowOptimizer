@@ -260,6 +260,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/tariffs/:id', requireAdmin, tariffController.deleteTariff);
   app.post('/api/sites/:siteId/tariff/israeli', requireManager, tariffController.createIsraeliTariff);
   
+  // Additional specialized Israeli tariff types
+  app.post('/api/sites/:siteId/tariff/israeli/lv', requireManager, (req, res) => {
+    req.query.type = 'lv';
+    return tariffController.createIsraeliTariff(req, res);
+  });
+  app.post('/api/sites/:siteId/tariff/israeli/hv', requireManager, (req, res) => {
+    req.query.type = 'hv';
+    return tariffController.createIsraeliTariff(req, res);
+  });
+  app.post('/api/sites/:siteId/tariff/israeli/tou', requireManager, (req, res) => {
+    req.query.type = 'tou';
+    return tariffController.createIsraeliTariff(req, res);
+  });
+  
   // Setup routes
   app.post('/api/create-demo-user', setupController.createDemoUser);
   app.post('/api/demo-setup', setupController.createDemoData);

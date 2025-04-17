@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useSiteTariff, useCurrentTariffRate, useCreateIsraeliTariff, useDeleteTariff } from '@/hooks/useTariff';
+import { useSiteTariff, useCurrentTariffRate, useCreateIsraeliTariff, useDeleteTariff, IsraeliTariffType } from '@/hooks/useTariff';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, DollarSign, Clock, Trash2, AlertTriangle } from 'lucide-react';
+import { CalendarDays, DollarSign, Clock, Trash2, AlertTriangle, ZapIcon, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -17,6 +17,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TariffWidgetProps {
   siteId: number;
@@ -45,7 +52,7 @@ export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
   
   const handleCreateIsraeliTariff = async () => {
     try {
-      await createIsraeliTariffMutation.mutateAsync();
+      await createIsraeliTariffMutation.mutateAsync('tou');
       toast({
         title: "Success",
         description: "Israeli tariff created successfully",
@@ -78,22 +85,112 @@ export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
     }
   };
 
-  // If no tariff data exists yet, show creation button
+  // State for selected tariff type
+  const [selectedTariffType, setSelectedTariffType] = useState<IsraeliTariffType>('tou');
+  
+  // Handle creating Israeli tariff with selected type
+  const handleCreateIsraeliTariffWithType = async () => {
+    try {
+      await createIsraeliTariffMutation.mutateAsync(selectedTariffType);
+      toast({
+        title: "Success",
+        description: `Israeli ${selectedTariffType.toUpperCase()} tariff created successfully`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : `Failed to create Israeli ${selectedTariffType.toUpperCase()} tariff`,
+        variant: "destructive"
+      });
+    }
+  };
+
+  // If no tariff data exists yet, show creation options
   if (!tariff && !isTariffLoading && !tariffError) {
     return (
       <Card className={className}>
         <CardHeader>
-          <CardTitle>No Tariff Data</CardTitle>
+          <CardTitle>Israeli Electricity Tariff</CardTitle>
+          <p className="text-sm text-muted-foreground">Select the tariff type to create</p>
         </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center py-6">
-          <p className="text-muted-foreground mb-4 text-center">
-            No tariff configuration found for this site. Would you like to create an Israeli tariff model?
-          </p>
+        <CardContent className="flex flex-col items-center justify-center py-4">
+          <div className="grid w-full gap-4">
+            <div className="flex flex-col space-y-1.5">
+              <label htmlFor="tariff-type" className="text-sm font-medium">Tariff Type</label>
+              <Select 
+                value={selectedTariffType}
+                onValueChange={(value) => setSelectedTariffType(value as IsraeliTariffType)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select tariff type" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="tou">
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-2" />
+                      <span>Time of Use (TOU)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="lv">
+                    <div className="flex items-center">
+                      <Zap className="h-4 w-4 mr-2" />
+                      <span>Low Voltage (LV)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="hv">
+                    <div className="flex items-center">
+                      <Zap className="h-4 w-4 mr-2" />
+                      <span>High Voltage (HV)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="border rounded-md p-3 bg-muted/50">
+              {selectedTariffType === 'tou' && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Time of Use Tariff</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Varies by time of day and season. Higher rates during peak hours (17:00-22:00), 
+                    medium rates during shoulder hours, and lower rates at night.
+                  </p>
+                  <p className="text-sm">Currency: ILS (₪)</p>
+                </div>
+              )}
+              
+              {selectedTariffType === 'lv' && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Low Voltage Tariff</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Static rate for standard residential and small commercial consumers connected to 
+                    the low voltage network (230V/400V).
+                  </p>
+                  <p className="text-sm">Rate: 0.48 ILS/kWh</p>
+                </div>
+              )}
+              
+              {selectedTariffType === 'hv' && (
+                <div className="space-y-2">
+                  <h3 className="font-semibold">High Voltage Tariff</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Lower static rate for industrial consumers and large facilities connected 
+                    directly to the high voltage network.
+                  </p>
+                  <p className="text-sm">Rate: 0.43 ILS/kWh</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
           <Button 
-            onClick={handleCreateIsraeliTariff}
+            className="mt-6 w-full"
+            onClick={handleCreateIsraeliTariffWithType}
             disabled={createIsraeliTariffMutation.isPending}
           >
-            {createIsraeliTariffMutation.isPending ? 'Creating...' : 'Create Israeli Tariff'}
+            {createIsraeliTariffMutation.isPending 
+              ? 'Creating...' 
+              : `Create ${selectedTariffType.toUpperCase()} Tariff`}
           </Button>
         </CardContent>
       </Card>

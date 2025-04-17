@@ -49,16 +49,35 @@ export function useCurrentTariffRate(siteId: number | undefined) {
   });
 }
 
+export type IsraeliTariffType = 'tou' | 'lv' | 'hv';
+
 export function useCreateIsraeliTariff(siteId: number | undefined) {
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (tariffType: IsraeliTariffType = 'tou') => {
       if (!siteId) throw new Error('Site ID is required');
-      const response = await fetch(`/api/sites/${siteId}/tariff/israeli`, {
+      
+      let endpoint = '';
+      switch(tariffType) {
+        case 'lv':
+          endpoint = `/api/sites/${siteId}/tariff/israeli/lv`;
+          break;
+        case 'hv':
+          endpoint = `/api/sites/${siteId}/tariff/israeli/hv`;
+          break;
+        case 'tou':
+        default:
+          endpoint = `/api/sites/${siteId}/tariff/israeli/tou`;
+          break;
+      }
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
       });
+      
       if (!response.ok) {
-        throw new Error('Failed to create Israeli tariff');
+        throw new Error(`Failed to create Israeli ${tariffType.toUpperCase()} tariff`);
       }
+      
       return response.json();
     },
     onSuccess: () => {

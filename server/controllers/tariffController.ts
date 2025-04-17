@@ -249,16 +249,105 @@ export const createIsraeliTariffData = async (siteId: number) => {
   }
 };
 
+// Create Israeli LV (Low Voltage) static tariff data
+export const createIsraeliLVTariffData = async (siteId: number) => {
+  try {
+    // Check if site already has a tariff
+    const existingTariffs = await storage.getTariffs(siteId);
+    
+    // If Israeli LV tariff already exists, return it
+    const existingLVTariff = existingTariffs.find(
+      (t) => t.name === 'Israeli LV Tariff' && t.provider === 'Israel Electric Corporation'
+    );
+    
+    if (existingLVTariff) {
+      return existingLVTariff;
+    }
+    
+    // Israeli Low Voltage static tariff data
+    const israeliLVTariffData = {
+      siteId,
+      name: 'Israeli LV Tariff',
+      provider: 'Israel Electric Corporation',
+      importRate: 0.48, // Base static rate in ILS for Low Voltage
+      exportRate: 0.23, // Feed-in tariff for solar in ILS
+      isTimeOfUse: false,
+      currency: 'ILS',
+      dataIntervalSeconds: 60
+    };
+    
+    // Create the Israeli LV tariff in the database
+    const createdTariff = await storage.createTariff(israeliLVTariffData);
+    
+    return createdTariff;
+  } catch (error) {
+    console.error('Error creating Israeli LV tariff data:', error);
+    throw error;
+  }
+};
+
+// Create Israeli HV (High Voltage) static tariff data
+export const createIsraeliHVTariffData = async (siteId: number) => {
+  try {
+    // Check if site already has a tariff
+    const existingTariffs = await storage.getTariffs(siteId);
+    
+    // If Israeli HV tariff already exists, return it
+    const existingHVTariff = existingTariffs.find(
+      (t) => t.name === 'Israeli HV Tariff' && t.provider === 'Israel Electric Corporation'
+    );
+    
+    if (existingHVTariff) {
+      return existingHVTariff;
+    }
+    
+    // Israeli High Voltage static tariff data
+    const israeliHVTariffData = {
+      siteId,
+      name: 'Israeli HV Tariff',
+      provider: 'Israel Electric Corporation',
+      importRate: 0.43, // Base static rate in ILS for High Voltage
+      exportRate: 0.23, // Feed-in tariff for solar in ILS
+      isTimeOfUse: false,
+      currency: 'ILS',
+      dataIntervalSeconds: 60
+    };
+    
+    // Create the Israeli HV tariff in the database
+    const createdTariff = await storage.createTariff(israeliHVTariffData);
+    
+    return createdTariff;
+  } catch (error) {
+    console.error('Error creating Israeli HV tariff data:', error);
+    throw error;
+  }
+};
+
 // API endpoint to create Israeli tariff
 export const createIsraeliTariff = async (req: Request, res: Response) => {
   try {
     const siteId = parseInt(req.params.siteId);
+    const tariffType = req.query.type as string || 'tou'; // Default to TOU if not specified
     
     if (isNaN(siteId)) {
       return res.status(400).json({ message: 'Invalid site ID' });
     }
     
-    const israeliTariff = await createIsraeliTariffData(siteId);
+    let israeliTariff;
+    
+    // Create tariff based on requested type
+    switch (tariffType.toLowerCase()) {
+      case 'lv':
+        israeliTariff = await createIsraeliLVTariffData(siteId);
+        break;
+      case 'hv':
+        israeliTariff = await createIsraeliHVTariffData(siteId);
+        break;
+      case 'tou':
+      default:
+        israeliTariff = await createIsraeliTariffData(siteId);
+        break;
+    }
     
     res.status(201).json(israeliTariff);
   } catch (error: any) {
