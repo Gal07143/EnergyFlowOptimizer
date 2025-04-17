@@ -109,6 +109,12 @@ const deviceItems = [
     badge: { text: 'New', variant: 'success' as const }
   },
   {
+    title: 'Electrical Diagrams',
+    icon: <Activity className="h-5 w-5" />,
+    href: '/electrical-diagrams',
+    badge: { text: 'New', variant: 'success' as const }
+  },
+  {
     title: 'Battery Storage',
     icon: <Battery className="h-5 w-5" />,
     href: '/devices?type=battery',
@@ -282,6 +288,62 @@ export function MainLayout({ children }: MainLayoutProps) {
               );
             })}
           </ul>
+
+          {/* Device Management Section */}
+          {!collapsed && (
+            <div className="mt-6 px-3">
+              <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground">
+                DEVICE MANAGEMENT
+              </h3>
+            </div>
+          )}
+          <ul className="space-y-1 px-2">
+            {deviceItems.map((item) => {
+              const isActive = location === item.href || 
+                (item.href.includes('?type=') && location.startsWith('/devices') && 
+                location.includes(item.href.split('?type=')[1]));
+              
+              return (
+                <li key={item.href}>
+                  <Link href={item.href}>
+                    <a 
+                      className={cn(
+                        "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                        isActive 
+                          ? "bg-primary/10 text-primary" 
+                          : "text-muted-foreground",
+                        collapsed && "justify-center px-2"
+                      )}
+                    >
+                      {collapsed ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>{item.icon}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">{item.title}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <>
+                          {item.icon}
+                          <span className="ml-3">{item.title}</span>
+                          {item.badge && (
+                            <Badge
+                              variant={item.badge.variant}
+                              className="ml-auto"
+                            >
+                              {item.badge.text}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </a>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
         {/* User menu */}
@@ -359,7 +421,9 @@ export function MainLayout({ children }: MainLayoutProps) {
           
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-semibold md:block">
-              {navItems.find(item => item.href === location)?.title || 'Dashboard'}
+              {navItems.find(item => item.href === location)?.title || 
+               deviceItems.find(item => item.href === location)?.title || 
+               (location.startsWith('/electrical-diagrams/') ? 'Electrical Diagram' : 'Dashboard')}
             </h1>
           </div>
           
