@@ -1,12 +1,12 @@
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/Dashboard";
-import Devices from "@/pages/Devices";
+// Import new pages
+import DashboardPage from "@/pages/DashboardPage";
+import DevicesPage from "@/pages/DevicesPage";
 import DeviceDetail from "@/pages/DeviceDetail";
-import Analytics from "@/pages/Analytics";
-import Optimization from "@/pages/Optimization";
-import OptimizationWizard from "@/pages/OptimizationWizard";
+import EnergyFlowPage from "@/pages/EnergyFlowPage";
+import OptimizationDashboard from "@/pages/OptimizationDashboard";
 import Settings from "@/pages/Settings";
 import Weather from "@/pages/Weather";
 import DemandResponse from "@/pages/DemandResponse";
@@ -19,6 +19,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { SiteProvider } from "@/hooks/use-site-context";
 import { WebSocketProvider } from "@/hooks/WebSocketProvider";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { MainLayout } from "@/components/layout/MainLayout";
 
 // Component to show connection status in corner
 const ConnectionStatus = () => (
@@ -27,19 +28,33 @@ const ConnectionStatus = () => (
   </div>
 );
 
+// Wrapper component for layout
+const ProtectedPageWithLayout = ({ component: Component, ...rest }: { component: React.ComponentType }) => {
+  return (
+    <ProtectedRoute
+      {...rest}
+      component={() => (
+        <MainLayout>
+          <Component />
+        </MainLayout>
+      )}
+    />
+  );
+};
+
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={Dashboard} />
-      <ProtectedRoute path="/devices" component={Devices} />
-      <ProtectedRoute path="/devices/:id" component={DeviceDetail} />
-      <ProtectedRoute path="/analytics" component={Analytics} />
-      <ProtectedRoute path="/optimization" component={Optimization} />
-      <ProtectedRoute path="/optimization/wizard" component={OptimizationWizard} />
-      <ProtectedRoute path="/weather" component={Weather} />
-      <ProtectedRoute path="/demand-response" component={DemandResponse} />
-      <ProtectedRoute path="/settings" component={Settings} />
-      <ProtectedRoute path="/profile" component={ProfilePage} />
+      <ProtectedPageWithLayout path="/" component={DashboardPage} />
+      <ProtectedPageWithLayout path="/devices" component={DevicesPage} />
+      <ProtectedPageWithLayout path="/devices/:id" component={DeviceDetail} />
+      <ProtectedPageWithLayout path="/energy-flow" component={EnergyFlowPage} />
+      <ProtectedPageWithLayout path="/optimization" component={OptimizationDashboard} />
+      <ProtectedPageWithLayout path="/vpp" component={OptimizationDashboard} />
+      <ProtectedPageWithLayout path="/weather" component={Weather} />
+      <ProtectedPageWithLayout path="/demand-response" component={DemandResponse} />
+      <ProtectedPageWithLayout path="/settings" component={Settings} />
+      <ProtectedPageWithLayout path="/profile" component={ProfilePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/verify-email" component={EmailVerificationPage} />
       <Route component={NotFound} />
