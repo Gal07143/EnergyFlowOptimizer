@@ -689,6 +689,13 @@ export const deviceCatalogPresetsRelations = relations(deviceCatalogPresets, ({ 
   }),
 }));
 
+export const deviceTechnicalSpecsRelations = relations(deviceTechnicalSpecs, ({ one }) => ({
+  device: one(deviceCatalog, {
+    fields: [deviceTechnicalSpecs.deviceCatalogId],
+    references: [deviceCatalog.id],
+  }),
+}));
+
 // Relations
 export const sitesRelations = relations(sites, ({ many }) => ({
   devices: many(devices),
@@ -1067,6 +1074,40 @@ export const insertDeviceCatalogRegisterSchema = createInsertSchema(deviceCatalo
 
 export const insertDeviceCatalogPresetSchema = createInsertSchema(deviceCatalogPresets)
   .omit({ id: true, createdAt: true, updatedAt: true });
+  
+export const insertDeviceTechnicalSpecsSchema = createInsertSchema(deviceTechnicalSpecs, {
+  // General specifications
+  errorMargin: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  selfConsumption: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  
+  // Battery specific
+  depthOfDischargeMax: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  cycleLifeAt80Percent: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  roundTripEfficiency: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  selfDischargeRate: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  
+  // Solar specific
+  temperatureCoefficientPmax: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  degradationRate: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  shadingTolerance: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  
+  // EV Charger specific
+  standbyPower: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  chargingEfficiency: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  
+  // Heat Pump specific
+  cop: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  copAt7C: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  copAtMinus7C: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  
+  // Inverter specific
+  mpptEfficiency: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  euroEfficiency: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  standbyConsumption: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  
+  // Smart Meter specific
+  measurementPrecision: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Device Catalog types
 export type DeviceManufacturer = typeof deviceManufacturers.$inferSelect;
@@ -1083,6 +1124,9 @@ export type InsertDeviceCatalogRegister = z.infer<typeof insertDeviceCatalogRegi
 
 export type DeviceCatalogPreset = typeof deviceCatalogPresets.$inferSelect;
 export type InsertDeviceCatalogPreset = z.infer<typeof insertDeviceCatalogPresetSchema>;
+
+export type DeviceTechnicalSpec = typeof deviceTechnicalSpecs.$inferSelect;
+export type InsertDeviceTechnicalSpec = z.infer<typeof insertDeviceTechnicalSpecsSchema>;
 
 export type GridConnection = typeof gridConnections.$inferSelect;
 export type InsertGridConnection = z.infer<typeof insertGridConnectionSchema>;
