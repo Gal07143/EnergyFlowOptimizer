@@ -23,6 +23,7 @@ interface SiteContextType {
   isLoading: boolean;
   error: Error | null;
   setSiteById: (siteId: number) => void;
+  setCurrentSiteId: (siteId: number) => void;
 }
 
 // Create the context with default values
@@ -33,6 +34,7 @@ const SiteContext = createContext<SiteContextType>({
   isLoading: true,
   error: null,
   setSiteById: () => {},
+  setCurrentSiteId: () => {},
 });
 
 interface SiteProviderProps {
@@ -98,6 +100,9 @@ export function SiteProvider({ children }: SiteProviderProps) {
     }
   }, [sites, currentSite]);
 
+  // setCurrentSiteId is an alias for setSiteById for backward compatibility
+  const setCurrentSiteId = setSiteById;
+
   const contextValue: SiteContextType = {
     sites,
     currentSite,
@@ -105,6 +110,7 @@ export function SiteProvider({ children }: SiteProviderProps) {
     isLoading,
     error,
     setSiteById,
+    setCurrentSiteId
   };
 
   return (

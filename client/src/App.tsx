@@ -29,10 +29,10 @@ const ConnectionStatus = () => (
 );
 
 // Wrapper component for layout
-const ProtectedPageWithLayout = ({ component: Component, ...rest }: { component: React.ComponentType }) => {
+const ProtectedPageWithLayout = ({ component: Component, path }: { component: React.ComponentType, path: string }) => {
   return (
     <ProtectedRoute
-      {...rest}
+      path={path}
       component={() => (
         <MainLayout>
           <Component />

@@ -205,7 +205,7 @@ export default function DashboardPage() {
       case 'scheduled':
         return <Clock className="h-5 w-5 text-green-500" />;
       default:
-        return <Info className="h-5 w-5 text-gray-500" />;
+        return <Activity className="h-5 w-5 text-gray-500" />;
     }
   };
   
@@ -400,7 +400,7 @@ export default function DashboardPage() {
                           label={{ value: 'Cost ($)', angle: -90, position: 'insideLeft', dx: -10 }}
                         />
                         <Tooltip 
-                          formatter={(value) => [`$${value.toFixed(2)}`, '']}
+                          formatter={(value) => [`$${typeof value === 'number' ? value.toFixed(2) : value}`, '']}
                         />
                         <Area 
                           type="monotone" 
@@ -452,7 +452,7 @@ export default function DashboardPage() {
                           label={{ value: 'CO2 (kg)', angle: -90, position: 'insideLeft', dx: -10 }}
                         />
                         <Tooltip 
-                          formatter={(value) => [`${value.toFixed(2)} kg`, '']}
+                          formatter={(value) => [`${typeof value === 'number' ? value.toFixed(2) : value} kg`, '']}
                         />
                         <Area 
                           type="monotone" 
