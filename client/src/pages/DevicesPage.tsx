@@ -37,13 +37,15 @@ import {
   Settings, 
   AlertCircle,
   CheckCircle,
-  Activity
+  Activity,
+  Lock as LockIcon
 } from 'lucide-react';
 import { useDevicesBySite } from '@/hooks/useDevice';
 import { useSiteContext } from '@/hooks/use-site-context';
 import { useToast } from '@/hooks/use-toast';
 import { useTechnicalSpecs, useSaveTechnicalSpecs } from '@/hooks/useTechnicalSpecs';
 import DeviceDetailPanel from '@/components/devices/DeviceDetailPanel';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function DevicesPage() {
   const [activeTab, setActiveTab] = useState('all');
@@ -1131,18 +1133,25 @@ export default function DevicesPage() {
                       </div>
                     </div>
                     
-                    {/* Save button */}
+                    {/* Save button - only for authenticated users */}
                     <div className="flex justify-end">
-                      <Button 
-                        type="button"
-                        onClick={handleSaveTechSpecs}
-                        disabled={saveTechSpecsMutation.isPending}
-                      >
-                        {saveTechSpecsMutation.isPending && (
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        Save Technical Specifications
-                      </Button>
+                      {useAuth().user ? (
+                        <Button 
+                          type="button"
+                          onClick={handleSaveTechSpecs}
+                          disabled={saveTechSpecsMutation.isPending}
+                        >
+                          {saveTechSpecsMutation.isPending && (
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Save Technical Specifications
+                        </Button>
+                      ) : (
+                        <div className="text-sm text-muted-foreground italic bg-muted px-4 py-2 rounded">
+                          <LockIcon className="h-4 w-4 inline-block mr-2" />
+                          Log in to save changes to technical specifications
+                        </div>
+                      )}
                     </div>
                   </>
                 ) : (

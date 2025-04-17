@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Device technical specifications routes
+  // Device technical specifications routes - Allow unauthenticated access for GET
   app.get('/api/device-catalog/:id/technical-specs', async (req, res) => {
     try {
       const deviceCatalogId = parseInt(req.params.id);
@@ -169,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Save technical specifications for a device model
+  // Save technical specifications for a device model - Requires manager role
   app.post('/api/device-catalog/:id/technical-specs', requireManager, async (req, res) => {
     try {
       const deviceCatalogId = parseInt(req.params.id);
