@@ -1,53 +1,38 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { deviceRegistryService } from '../services/deviceRegistryService';
 import QRCode from 'qrcode';
-import { DeviceType, DeviceAuthMethod, deviceTypeEnum, deviceAuthMethodEnum, deviceRegistrationStatusEnum } from '@shared/deviceRegistry';
+import { isAuthenticated } from '../middleware/auth';
+import deviceRegistryService from '../services/deviceRegistryService';
+import {
+  deviceTypeEnum,
+  deviceRegistrationStatusEnum,
+  deviceAuthMethodEnum,
+  DeviceType,
+  DeviceAuthMethod,
+  InsertDeviceRegistry,
+  insertDeviceRegistrySchema,
+  insertProvisioningTemplateSchema,
+} from '@shared/deviceRegistry';
 
-// Create a router
 const router = Router();
 
-// Authorization & validation middleware
-const requireAuth = (req: Request, res: Response, next: Function) => {
-  // In a real app, check if user is authenticated
-  // For demo, we'll skip actual authentication
-  next();
-};
-
-// Zod schemas for validation
-const registerDeviceSchema = z.object({
-  deviceUid: z.string().min(1, 'Device UID is required'),
-  deviceType: z.enum(deviceTypeEnum.enumValues),
-  firmwareVersion: z.string().optional(),
-  location: z.string().optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
-  authMethod: z.enum(deviceAuthMethodEnum.enumValues).optional()
-});
-
-const createTemplateSchema = z.object({
-  name: z.string().min(1, 'Template name is required'),
-  description: z.string().optional(),
-  deviceType: z.enum(deviceTypeEnum.enumValues),
-  configTemplate: z.record(z.string(), z.any()),
-  firmwareVersion: z.string().optional(),
-  authMethod: z.enum(deviceAuthMethodEnum.enumValues),
-  defaultSettings: z.record(z.string(), z.any()).optional(),
-  requiredCapabilities: z.array(z.string()).optional(),
-  isActive: z.boolean().optional()
+// Create validation schemas for route handlers
+const createTemplateSchema = insertProvisioningTemplateSchema.extend({
+  // Additional validation can be added here
 });
 
 const generateCodeSchema = z.object({
   deviceType: z.enum(deviceTypeEnum.enumValues).optional(),
   templateId: z.number().optional(),
-  expiryHours: z.number().int().positive().max(8760).default(24), // Max 1 year
-  isOneTime: z.boolean().default(true),
-  maxUses: z.number().int().positive().default(1)
+  expiryHours: z.number().optional(),
+  isOneTime: z.boolean().optional(),
+  maxUses: z.number().optional()
 });
 
 // ----- Device Registry Endpoints -----
 
 // Get all devices
-router.get('/registry', requireAuth, async (req: Request, res: Response) => {
+router.get('/registry', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const devices = await deviceRegistryService.getDevices();
     res.json(devices);
@@ -58,7 +43,7 @@ router.get('/registry', requireAuth, async (req: Request, res: Response) => {
 });
 
 // Get device by ID
-router.get('/registry/:id', requireAuth, async (req: Request, res: Response) => {
+router.get('/registry/:id', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const deviceId = parseInt(req.params.id, 10);
     if (isNaN(deviceId)) {
@@ -78,9 +63,9 @@ router.get('/registry/:id', requireAuth, async (req: Request, res: Response) => 
 });
 
 // Register a new device
-router.post('/registry', requireAuth, async (req: Request, res: Response) => {
+router.post('/registry', isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const validationResult = registerDeviceSchema.safeParse(req.body);
+    const validationResult = insertDeviceRegistrySchema.safeParse(req.body);
     if (!validationResult.success) {
       return res.status(400).json({ errors: validationResult.error.format() });
     }
@@ -93,8 +78,8 @@ router.post('/registry', requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// Update device
-router.patch('/registry/:id', requireAuth, async (req: Request, res: Response) => {
+// Update a device
+router.patch('/registry/:id', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const deviceId = parseInt(req.params.id, 10);
     if (isNaN(deviceId)) {
@@ -127,7 +112,7 @@ router.patch('/registry/:id', requireAuth, async (req: Request, res: Response) =
 });
 
 // Filter devices
-router.get('/registry/filter', requireAuth, async (req: Request, res: Response) => {
+router.get('/registry/filter', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const { deviceType, registrationStatus, isOnline } = req.query;
     
@@ -154,7 +139,7 @@ router.get('/registry/filter', requireAuth, async (req: Request, res: Response) 
 });
 
 // Apply template to device
-router.post('/registry/:id/apply-template', requireAuth, async (req: Request, res: Response) => {
+router.post('/registry/:id/apply-template', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const deviceId = parseInt(req.params.id, 10);
     if (isNaN(deviceId)) {
@@ -175,7 +160,7 @@ router.post('/registry/:id/apply-template', requireAuth, async (req: Request, re
 });
 
 // Create credentials for device
-router.post('/registry/:id/credentials', requireAuth, async (req: Request, res: Response) => {
+router.post('/registry/:id/credentials', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const deviceId = parseInt(req.params.id, 10);
     if (isNaN(deviceId)) {
@@ -198,7 +183,7 @@ router.post('/registry/:id/credentials', requireAuth, async (req: Request, res: 
 // ----- Template Endpoints -----
 
 // Get all templates
-router.get('/templates', requireAuth, async (req: Request, res: Response) => {
+router.get('/templates', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const deviceType = req.query.deviceType as DeviceType | undefined;
     const templates = await deviceRegistryService.getTemplates(deviceType);
@@ -210,7 +195,7 @@ router.get('/templates', requireAuth, async (req: Request, res: Response) => {
 });
 
 // Get template by ID
-router.get('/templates/:id', requireAuth, async (req: Request, res: Response) => {
+router.get('/templates/:id', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const templateId = parseInt(req.params.id, 10);
     if (isNaN(templateId)) {
@@ -230,7 +215,7 @@ router.get('/templates/:id', requireAuth, async (req: Request, res: Response) =>
 });
 
 // Create a new template
-router.post('/templates', requireAuth, async (req: Request, res: Response) => {
+router.post('/templates', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const validationResult = createTemplateSchema.safeParse(req.body);
     if (!validationResult.success) {
@@ -248,7 +233,7 @@ router.post('/templates', requireAuth, async (req: Request, res: Response) => {
 // ----- Registration Code Endpoints -----
 
 // Get all registration codes
-router.get('/registration-codes', requireAuth, async (req: Request, res: Response) => {
+router.get('/registration-codes', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const codes = await deviceRegistryService.getRegistrationCodes();
     res.json(codes);
@@ -259,7 +244,7 @@ router.get('/registration-codes', requireAuth, async (req: Request, res: Respons
 });
 
 // Generate registration code
-router.post('/registration-codes', requireAuth, async (req: Request, res: Response) => {
+router.post('/registration-codes', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const validationResult = generateCodeSchema.safeParse(req.body);
     if (!validationResult.success) {
@@ -282,7 +267,7 @@ router.post('/registration-codes', requireAuth, async (req: Request, res: Respon
 });
 
 // Get QR code for registration code
-router.get('/registration-codes/:id/qr', requireAuth, async (req: Request, res: Response) => {
+router.get('/registration-codes/:id/qr', isAuthenticated, async (req: Request, res: Response) => {
   try {
     const codeId = parseInt(req.params.id, 10);
     if (isNaN(codeId)) {
