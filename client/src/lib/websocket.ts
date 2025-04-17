@@ -32,8 +32,8 @@ class WebSocketManager {
   private eventHandlers: Map<string, Array<(...args: any[]) => void>> = new Map();
   private messageQueue: WebSocketMessage[] = [];
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1s delay
+  private maxReconnectAttempts = 30; // Increased to allow more reconnection attempts
+  private reconnectDelay = 1500; // Start with 1.5s delay
   private connectionId: string | null = null;
   private subscriptions: { siteId?: number; deviceId?: number }[] = [];
 
@@ -81,6 +81,11 @@ class WebSocketManager {
     if (this.reconnectTimeout !== null) {
       window.clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
+    }
+    
+    if (this.heartbeatInterval !== null) {
+      window.clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
     }
 
     this.reconnectAttempts = 0;
@@ -181,6 +186,9 @@ class WebSocketManager {
     return this;
   }
 
+  private heartbeatInterval: number | null = null;
+  private heartbeatTimeout = 30000; // 30 seconds between heartbeats
+  
   // Private: Handle WebSocket open event
   private handleOpen() {
     console.log('WebSocket connected');
@@ -203,8 +211,30 @@ class WebSocketManager {
       }
     }
     
+    // Start heartbeat to keep connection alive
+    this.startHeartbeat();
+    
     // Emit connected event
     this.emit('connected', { connectionId: this.connectionId || '' });
+    console.log('WebSocket connected successfully');
+  }
+  
+  // Start heartbeat mechanism to keep connection alive
+  private startHeartbeat() {
+    // Clear any existing heartbeat
+    if (this.heartbeatInterval !== null) {
+      window.clearInterval(this.heartbeatInterval);
+    }
+    
+    // Set up periodic ping
+    this.heartbeatInterval = window.setInterval(() => {
+      if (this.isConnected()) {
+        this.ping();
+      } else {
+        // If not connected, try to reconnect
+        this.connect();
+      }
+    }, this.heartbeatTimeout);
   }
 
   // Private: Handle WebSocket message event

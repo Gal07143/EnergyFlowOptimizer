@@ -1,4 +1,57 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+const { memo } = React;
+
+// Memoized anomaly chart component
+const AnomalyChart = memo(({ data }: { 
+  data: Array<any> 
+}) => {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <ScatterChart margin={{ top: 20, right: 30, left: 20, bottom: 10 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis 
+          dataKey="timestamp" 
+          name="Time" 
+          allowDuplicatedCategory={false} 
+          type="category" 
+        />
+        <YAxis 
+          dataKey="actual" 
+          name="Energy" 
+          unit=" kWh" 
+          domain={['auto', 'auto']}
+        />
+        <ZAxis 
+          dataKey="severity" 
+          range={[50, 200]} 
+          name="Severity" 
+        />
+        <Tooltip 
+          cursor={{ strokeDasharray: '3 3' }}
+          formatter={(value, name) => {
+            if (name === 'Actual') return [`${value} kWh`, name];
+            if (name === 'Expected') return [`${value} kWh`, name];
+            return [value, name];
+          }}
+        />
+        <Legend />
+        <Scatter 
+          name="Actual" 
+          data={data} 
+          fill="#FF5252"
+          shape="triangle"
+        />
+        <Scatter 
+          name="Expected" 
+          data={data}
+          dataKey="expected"
+          fill="#4CAF50"
+          shape="circle"
+        />
+      </ScatterChart>
+    </ResponsiveContainer>
+  );
+});
 import { 
   Card, 
   CardContent, 
@@ -113,6 +166,85 @@ interface Anomaly {
 }
 
 // Main component
+// Memoized pattern chart component to avoid unnecessary re-renders
+const PatternChart = memo(({ data, averageValue }: { 
+  data: Array<{timestamp: string, value: number}>, 
+  averageValue: number 
+}) => {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart
+        data={data}
+        margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="timestamp" />
+        <YAxis unit=" kWh" />
+        <Tooltip />
+        <ReferenceLine
+          y={averageValue}
+          stroke="#888"
+          strokeDasharray="3 3"
+          label="Average"
+        />
+        <Line
+          type="monotone"
+          dataKey="value"
+          name="Energy Usage"
+          stroke="#8884d8"
+          strokeWidth={2}
+          dot={{ r: 3 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+});
+
+// Memoized prediction chart component to avoid unnecessary re-renders
+const PredictionChart = memo(({ data }: { 
+  data: Array<{timestamp: string, predicted: number, upper: number, lower: number}> 
+}) => {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart
+        data={data}
+        margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="timestamp" />
+        <YAxis unit=" kWh" />
+        <Tooltip />
+        <Legend />
+        <Line
+          type="monotone"
+          dataKey="predicted"
+          name="Prediction"
+          stroke="#8884d8"
+          strokeWidth={2}
+          dot={{ r: 3 }}
+        />
+        <Line
+          type="monotone"
+          dataKey="upper"
+          name="Upper Bound"
+          stroke="#82ca9d"
+          strokeDasharray="5 5"
+          dot={false}
+        />
+        <Line
+          type="monotone"
+          dataKey="lower"
+          name="Lower Bound"
+          stroke="#ff8042"
+          strokeDasharray="5 5"
+          dot={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+});
+
+// Main component with optimized performance
 export default function ConsumptionPatterns() {
   const { currentSiteId } = useSiteSelector();
   const [loading, setLoading] = useState(true);
@@ -122,9 +254,13 @@ export default function ConsumptionPatterns() {
   const [view, setView] = useState<'patterns' | 'anomalies'>('patterns');
   const [timeframe, setTimeframe] = useState<'hourly' | 'daily' | 'weekly' | 'monthly'>('daily');
 
+  // Use a ref to track first render and avoid unnecessary data fetches
+  const initialFetchRef = useRef(false);
+  
   useEffect(() => {
     // Load patterns when component mounts or site changes
-    if (currentSiteId) {
+    if (currentSiteId && !initialFetchRef.current) {
+      initialFetchRef.current = true;
       fetchPatterns();
     }
   }, [currentSiteId]);
@@ -432,70 +568,14 @@ export default function ConsumptionPatterns() {
                           </TabsTrigger>
                         </TabsList>
                         <TabsContent value="historical">
-                          <ResponsiveContainer width="100%" height={300}>
-                            <LineChart
-                              data={getPatternChartData()}
-                              margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="timestamp" />
-                              <YAxis unit=" kWh" />
-                              <Tooltip />
-                              <ReferenceLine
-                                y={currentPattern.patternData.averageValue}
-                                stroke="#888"
-                                strokeDasharray="3 3"
-                                label="Average"
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="value"
-                                name="Energy Usage"
-                                stroke="#8884d8"
-                                strokeWidth={2}
-                                dot={{ r: 3 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
+                          <PatternChart 
+                            data={getPatternChartData()} 
+                            averageValue={currentPattern.patternData.averageValue} 
+                          />
                         </TabsContent>
                         <TabsContent value="predictions">
                           {currentPattern.ml.predictions ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                              <LineChart
-                                data={getPredictionChartData()}
-                                margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-                              >
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="timestamp" />
-                                <YAxis unit=" kWh" />
-                                <Tooltip />
-                                <Legend />
-                                <Line
-                                  type="monotone"
-                                  dataKey="predicted"
-                                  name="Prediction"
-                                  stroke="#8884d8"
-                                  strokeWidth={2}
-                                  dot={{ r: 3 }}
-                                />
-                                <Line
-                                  type="monotone"
-                                  dataKey="upper"
-                                  name="Upper Bound"
-                                  stroke="#82ca9d"
-                                  strokeDasharray="5 5"
-                                  dot={false}
-                                />
-                                <Line
-                                  type="monotone"
-                                  dataKey="lower"
-                                  name="Lower Bound"
-                                  stroke="#ff8042"
-                                  strokeDasharray="5 5"
-                                  dot={false}
-                                />
-                              </LineChart>
-                            </ResponsiveContainer>
+                            <PredictionChart data={getPredictionChartData()} />
                           ) : (
                             <div className="flex items-center justify-center h-64 text-gray-500">
                               No prediction data available. Train the model first.
