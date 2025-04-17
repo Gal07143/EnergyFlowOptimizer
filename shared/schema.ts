@@ -9,7 +9,10 @@ export const deviceTypeEnum = pgEnum('device_type', [
   'battery_storage', 
   'ev_charger', 
   'smart_meter', 
-  'heat_pump'
+  'heat_pump',
+  'inverter',
+  'load_controller',
+  'energy_gateway'
 ]);
 
 export const deviceStatusEnum = pgEnum('device_status', [
@@ -318,6 +321,28 @@ export const eventLogs = pgTable('event_logs', {
   sourceIp: text('source_ip'),
 });
 
+// Device Catalog Enums
+export const communicationProtocolEnum = pgEnum('communication_protocol', [
+  'modbus_tcp',
+  'modbus_rtu',
+  'mqtt',
+  'http',
+  'ocpp',
+  'sunspec',
+  'eebus',
+  'rest',
+  'proprietary'
+]);
+
+export const documentTypeEnum = pgEnum('document_type', [
+  'manual',
+  'datasheet',
+  'installation_guide',
+  'quick_start_guide',
+  'certificate',
+  'warranty'
+]);
+
 // Grid Connection Details
 export const gridConnectionType = pgEnum('grid_connection_type', [
   'single_phase', 
@@ -463,6 +488,89 @@ export const remoteCommands = pgTable('remote_commands', {
 });
 
 // Weather data schemas
+// Device Catalog Tables
+export const deviceManufacturers = pgTable('device_manufacturers', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  logoUrl: text('logo_url'),
+  website: text('website'),
+  country: text('country'),
+  description: text('description'),
+  contactEmail: text('contact_email'),
+  contactPhone: text('contact_phone'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const deviceCatalog = pgTable('device_catalog', {
+  id: serial('id').primaryKey(),
+  manufacturerId: integer('manufacturer_id').notNull().references(() => deviceManufacturers.id),
+  name: text('name').notNull(),
+  modelNumber: text('model_number').notNull(),
+  type: deviceTypeEnum('type').notNull(),
+  releaseYear: integer('release_year'),
+  imageUrl: text('image_url'),
+  thumbnailUrl: text('thumbnail_url'),
+  capacity: numeric('capacity'),
+  maxPower: numeric('max_power'),
+  efficiency: numeric('efficiency'),
+  dimensions: text('dimensions'),
+  weight: numeric('weight'),
+  shortDescription: text('short_description'),
+  fullDescription: text('full_description'),
+  features: json('features'),
+  supportedProtocols: json('supported_protocols'),
+  warranty: text('warranty'),
+  price: numeric('price'),
+  currency: text('currency').default('USD'),
+  availability: boolean('availability').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const deviceCatalogDocuments = pgTable('device_catalog_documents', {
+  id: serial('id').primaryKey(),
+  deviceCatalogId: integer('device_catalog_id').notNull().references(() => deviceCatalog.id, { onDelete: 'cascade' }),
+  documentType: documentTypeEnum('document_type').notNull(),
+  title: text('title').notNull(),
+  fileUrl: text('file_url').notNull(),
+  fileSize: integer('file_size'),
+  language: text('language').default('en'),
+  version: text('version'),
+  uploadDate: timestamp('upload_date').defaultNow(),
+  description: text('description'),
+});
+
+export const deviceCatalogRegisters = pgTable('device_catalog_registers', {
+  id: serial('id').primaryKey(),
+  deviceCatalogId: integer('device_catalog_id').notNull().references(() => deviceCatalog.id, { onDelete: 'cascade' }),
+  protocol: communicationProtocolEnum('protocol').notNull(),
+  address: text('address').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  dataType: text('data_type').notNull(), // 'integer', 'float', 'string', 'boolean'
+  unit: text('unit'),
+  scale: numeric('scale'),
+  offset: numeric('offset'),
+  min: numeric('min'),
+  max: numeric('max'),
+  access: text('access').notNull(), // 'read', 'write', 'read-write'
+  isRequired: boolean('is_required').default(false),
+  defaultValue: text('default_value'),
+  notes: text('notes'),
+});
+
+export const deviceCatalogPresets = pgTable('device_catalog_presets', {
+  id: serial('id').primaryKey(),
+  deviceCatalogId: integer('device_catalog_id').notNull().references(() => deviceCatalog.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  configValues: json('config_values').notNull(),
+  isDefault: boolean('is_default').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 export const weatherData = pgTable('weather_data', {
   id: serial('id').primaryKey(),
   siteId: integer('site_id').references(() => sites.id, { onDelete: 'cascade' }).notNull(),
@@ -487,6 +595,42 @@ export const weatherData = pgTable('weather_data', {
   longitude: numeric('longitude'),
   metadata: json('metadata'),
 });
+
+// Device Catalog Relations
+export const deviceManufacturersRelations = relations(deviceManufacturers, ({ many }) => ({
+  catalogDevices: many(deviceCatalog),
+}));
+
+export const deviceCatalogRelations = relations(deviceCatalog, ({ one, many }) => ({
+  manufacturer: one(deviceManufacturers, {
+    fields: [deviceCatalog.manufacturerId],
+    references: [deviceManufacturers.id],
+  }),
+  documents: many(deviceCatalogDocuments),
+  registers: many(deviceCatalogRegisters),
+  presets: many(deviceCatalogPresets),
+}));
+
+export const deviceCatalogDocumentsRelations = relations(deviceCatalogDocuments, ({ one }) => ({
+  device: one(deviceCatalog, {
+    fields: [deviceCatalogDocuments.deviceCatalogId],
+    references: [deviceCatalog.id],
+  }),
+}));
+
+export const deviceCatalogRegistersRelations = relations(deviceCatalogRegisters, ({ one }) => ({
+  device: one(deviceCatalog, {
+    fields: [deviceCatalogRegisters.deviceCatalogId],
+    references: [deviceCatalog.id],
+  }),
+}));
+
+export const deviceCatalogPresetsRelations = relations(deviceCatalogPresets, ({ one }) => ({
+  device: one(deviceCatalog, {
+    fields: [deviceCatalogPresets.deviceCatalogId],
+    references: [deviceCatalog.id],
+  }),
+}));
 
 // Relations
 export const sitesRelations = relations(sites, ({ many }) => ({
@@ -840,6 +984,48 @@ export type InsertEnergyForecast = z.infer<typeof insertEnergyForecastSchema>;
 
 export type EventLog = typeof eventLogs.$inferSelect;
 export type InsertEventLog = z.infer<typeof insertEventLogSchema>;
+
+// Device Catalog insert schemas
+export const insertDeviceManufacturerSchema = createInsertSchema(deviceManufacturers)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertDeviceCatalogSchema = createInsertSchema(deviceCatalog, {
+  capacity: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  maxPower: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  efficiency: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  weight: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  price: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertDeviceCatalogDocumentSchema = createInsertSchema(deviceCatalogDocuments, {
+  fileSize: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true, uploadDate: true });
+
+export const insertDeviceCatalogRegisterSchema = createInsertSchema(deviceCatalogRegisters, {
+  scale: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  offset: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  min: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  max: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+}).omit({ id: true });
+
+export const insertDeviceCatalogPresetSchema = createInsertSchema(deviceCatalogPresets)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+
+// Device Catalog types
+export type DeviceManufacturer = typeof deviceManufacturers.$inferSelect;
+export type InsertDeviceManufacturer = z.infer<typeof insertDeviceManufacturerSchema>;
+
+export type DeviceCatalogEntry = typeof deviceCatalog.$inferSelect;
+export type InsertDeviceCatalogEntry = z.infer<typeof insertDeviceCatalogSchema>;
+
+export type DeviceCatalogDocument = typeof deviceCatalogDocuments.$inferSelect;
+export type InsertDeviceCatalogDocument = z.infer<typeof insertDeviceCatalogDocumentSchema>;
+
+export type DeviceCatalogRegister = typeof deviceCatalogRegisters.$inferSelect;
+export type InsertDeviceCatalogRegister = z.infer<typeof insertDeviceCatalogRegisterSchema>;
+
+export type DeviceCatalogPreset = typeof deviceCatalogPresets.$inferSelect;
+export type InsertDeviceCatalogPreset = z.infer<typeof insertDeviceCatalogPresetSchema>;
 
 export type GridConnection = typeof gridConnections.$inferSelect;
 export type InsertGridConnection = z.infer<typeof insertGridConnectionSchema>;
