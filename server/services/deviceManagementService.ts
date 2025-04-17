@@ -640,6 +640,12 @@ export class DeviceManagementService {
         case 'sunspec':
           await this.initializeSunspecDevice(device);
           break;
+        case 'tcpip':
+          await this.initializeTcpipDevice(device);
+          break;
+        case 'gateway':
+          await this.initializeGatewayDevice(device);
+          break;
         case 'mqtt':
           // MQTT devices are already handled through the MQTT service
           console.log(`Device ${device.id} uses MQTT protocol, no additional initialization needed`);
@@ -742,6 +748,83 @@ export class DeviceManagementService {
     console.log(`Initialized SunSpec device ${device.id}`);
   }
   
+  // Initialize a TCP/IP device (Generic TCP/IP based device)
+  private async initializeTcpipDevice(device: Device): Promise<void> {
+    if (!device.protocolConfig.connection) {
+      console.error(`Invalid TCP/IP configuration for device ${device.id}`);
+      return;
+    }
+    
+    const tcpipManager = getTCPIPManager();
+    const tcpipDevice: TCPIPDevice = {
+      id: device.id,
+      deviceId: device.id.toString(),
+      connection: {
+        host: device.protocolConfig.connection.host,
+        port: device.protocolConfig.connection.port,
+        dataFormat: device.protocolConfig.connection.dataFormat || 'utf8',
+        connectionTimeout: device.protocolConfig.connection.connectionTimeout,
+        reconnectInterval: device.protocolConfig.connection.reconnectInterval,
+        keepAlive: device.protocolConfig.connection.keepAlive,
+        mockMode: this.inDevelopment && (device.protocolConfig.connection.mockMode || false)
+      },
+      pollInterval: device.protocolConfig.pollInterval,
+      commands: device.protocolConfig.commands
+    };
+    
+    await tcpipManager.addDevice(tcpipDevice);
+    console.log(`Initialized TCP/IP device ${device.id}`);
+  }
+  
+  // Initialize a gateway device (Device that also serves as a connection point)
+  private async initializeGatewayDevice(device: Device): Promise<void> {
+    if (device.type !== 'gateway') {
+      console.warn(`Device ${device.id} has gateway protocol but is not a gateway device`);
+    }
+    
+    if (!device.protocolConfig.connection || !device.protocolConfig.childDevices) {
+      console.error(`Invalid gateway configuration for device ${device.id}`);
+      return;
+    }
+    
+    const gatewayManager = getGatewayManager();
+    const gatewayDevice: GatewayDevice = {
+      id: device.id,
+      name: device.name,
+      connection: {
+        host: device.protocolConfig.connection.host,
+        port: device.protocolConfig.connection.port,
+        type: device.protocolConfig.connection.type || 'modbus_gateway',
+        username: device.protocolConfig.connection.username,
+        password: device.protocolConfig.connection.password,
+        tlsEnabled: device.protocolConfig.connection.tlsEnabled,
+        reconnectInterval: device.protocolConfig.connection.reconnectInterval,
+        heartbeatInterval: device.protocolConfig.connection.heartbeatInterval,
+        mockMode: this.inDevelopment && (device.protocolConfig.connection.mockMode || false)
+      },
+      manufacturer: device.manufacturer,
+      model: device.model,
+      serialNumber: device.serialNumber,
+      firmware: device.firmwareVersion,
+      childDevices: device.protocolConfig.childDevices.map(child => ({
+        id: child.id,
+        name: child.name,
+        type: child.type,
+        address: child.address,
+        protocol: child.protocol,
+        pollInterval: child.pollInterval,
+        manufacturer: child.manufacturer,
+        model: child.model,
+        serialNumber: child.serialNumber,
+        commands: child.commands,
+        mappings: child.mappings
+      }))
+    };
+    
+    await gatewayManager.addGateway(gatewayDevice);
+    console.log(`Initialized gateway device ${device.id} with ${gatewayDevice.childDevices.length} child devices`);
+  }
+  
   // Update an existing device
   updateDevice(id: number, updates: Partial<Omit<Device, 'id' | 'createdAt' | 'updatedAt'>>): Device | undefined {
     return this.deviceRegistry.updateDevice(id, updates);
@@ -787,6 +870,8 @@ export class DeviceManagementService {
         return ['power_measurement', 'energy_measurement', 'voltage_measurement', 'frequency_measurement', 'bidirectional_metering'];
       case 'heat_pump':
         return ['power_measurement', 'energy_measurement', 'temperature_control', 'schedule_operation', 'mode_control'];
+      case 'gateway':
+        return ['device_management', 'protocol_translation', 'data_aggregation', 'remote_configuration', 'device_discovery'];
       default:
         return [];
     }
