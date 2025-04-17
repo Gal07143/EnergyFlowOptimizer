@@ -154,11 +154,13 @@ export class ElectricalDiagramService {
         }))
       ).returning();
       
-      // Create a mapping of frontend node IDs to database IDs
+      // Create a mapping of frontend temporary IDs to database IDs
       const nodeIdMap = new Map<string | number, number>();
       for (let i = 0; i < nodes.length; i++) {
-        if (typeof nodes[i].id !== 'undefined') {
-          nodeIdMap.set(nodes[i].id, newNodes[i].id);
+        // Use a temporary id field from the frontend if provided
+        const tempId = (nodes[i] as any).tempId;
+        if (tempId) {
+          nodeIdMap.set(tempId, newNodes[i].id);
         }
       }
       

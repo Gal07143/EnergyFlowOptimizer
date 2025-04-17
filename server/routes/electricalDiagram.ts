@@ -8,7 +8,7 @@ import {
   nodePropertiesSchema
 } from '../../shared/electricalDiagram';
 import { validateBody, validateQuery, validateParams } from '../middleware/validation';
-import { authenticate } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 
 const router = Router();
 
@@ -25,7 +25,7 @@ const siteQuerySchema = z.object({
 // Get all diagrams with optional site filter
 router.get(
   '/',
-  authenticate,
+  isAuthenticated,
   validateQuery(siteQuerySchema),
   async (req, res, next) => {
     try {
@@ -41,7 +41,7 @@ router.get(
 // Get diagram by ID with all nodes and edges
 router.get(
   '/:id',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   async (req, res, next) => {
     try {
@@ -62,7 +62,7 @@ router.get(
 // Create a new diagram
 router.post(
   '/',
-  authenticate,
+  isAuthenticated,
   validateBody(insertElectricalDiagramSchema),
   async (req, res, next) => {
     try {
@@ -77,7 +77,7 @@ router.post(
 // Update diagram
 router.put(
   '/:id',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   validateBody(insertElectricalDiagramSchema.partial()),
   async (req, res, next) => {
@@ -99,7 +99,7 @@ router.put(
 // Delete diagram
 router.delete(
   '/:id',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   async (req, res, next) => {
     try {
@@ -120,7 +120,7 @@ router.delete(
 // Add a node to a diagram
 router.post(
   '/:id/nodes',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   validateBody(insertDiagramNodeSchema),
   async (req, res, next) => {
@@ -138,7 +138,7 @@ router.post(
 // Update a node
 router.put(
   '/nodes/:id',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   validateBody(insertDiagramNodeSchema.partial()),
   async (req, res, next) => {
@@ -160,7 +160,7 @@ router.put(
 // Delete a node
 router.delete(
   '/nodes/:id',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   async (req, res, next) => {
     try {
@@ -181,7 +181,7 @@ router.delete(
 // Add an edge to a diagram
 router.post(
   '/:id/edges',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   validateBody(insertDiagramEdgeSchema),
   async (req, res, next) => {
@@ -199,7 +199,7 @@ router.post(
 // Update an edge
 router.put(
   '/edges/:id',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   validateBody(insertDiagramEdgeSchema.partial()),
   async (req, res, next) => {
@@ -221,7 +221,7 @@ router.put(
 // Delete an edge
 router.delete(
   '/edges/:id',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   async (req, res, next) => {
     try {
@@ -242,7 +242,7 @@ router.delete(
 // Bulk update entire diagram (nodes and edges)
 router.put(
   '/:id/bulk',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   validateBody(z.object({
     nodes: z.array(insertDiagramNodeSchema.omit({ diagramId: true })),
@@ -264,7 +264,7 @@ router.put(
 // Calculate electrical parameters for diagram
 router.post(
   '/:id/calculate',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   async (req, res, next) => {
     try {
@@ -280,7 +280,7 @@ router.post(
 // Get real-time state for diagram
 router.get(
   '/:id/real-time',
-  authenticate,
+  isAuthenticated,
   validateParams(diagramParamsSchema),
   async (req, res, next) => {
     try {

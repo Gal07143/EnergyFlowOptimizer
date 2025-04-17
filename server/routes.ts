@@ -501,6 +501,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Device Registry & Provisioning routes
   app.use('/api/device-registry', deviceRegistryRoutes);
   
+  // Electrical diagram routes
+  app.use('/api/electrical-diagrams', electricalDiagramRoutes);
+  
   // Development endpoint without auth for testing ML models
   app.post('/api/test/consumption-patterns/:id/train', ConsumptionPatternController.trainPatternModel);
   

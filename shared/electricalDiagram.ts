@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, jsonb, varchar, timestamp, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, jsonb, varchar, timestamp, pgEnum, boolean } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 import { relations } from 'drizzle-orm';
@@ -22,6 +22,20 @@ export const nodeTypeEnum = pgEnum('node_type', [
   'device' // Link to real device in the system
 ]);
 
+// Main table for electrical diagrams
+export const electricalDiagrams = pgTable('electrical_diagrams', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  siteId: integer('site_id').references(() => sites.id, { onDelete: 'cascade' }),
+  description: text('description'),
+  isActive: boolean('is_active').default(true).notNull(),
+  lastCalculatedAt: timestamp('last_calculated_at'),
+  customSettings: jsonb('custom_settings').default({}),
+  thumbnail: text('thumbnail'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
 // Table for diagram nodes
 export const diagramNodes = pgTable('diagram_nodes', {
   id: serial('id').primaryKey(),
@@ -44,20 +58,6 @@ export const diagramEdges = pgTable('diagram_edges', {
   targetId: integer('target_id').notNull().references(() => diagramNodes.id, { onDelete: 'cascade' }),
   type: varchar('type', { length: 50 }).default('standard').notNull(),
   properties: jsonb('properties').notNull().default({}),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
-});
-
-// Main table for electrical diagrams
-export const electricalDiagrams = pgTable('electrical_diagrams', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 100 }).notNull(),
-  siteId: integer('site_id').references(() => sites.id, { onDelete: 'cascade' }),
-  description: text('description'),
-  isActive: boolean('is_active').default(true).notNull(),
-  lastCalculatedAt: timestamp('last_calculated_at'),
-  customSettings: jsonb('custom_settings').default({}),
-  thumbnail: text('thumbnail'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull()
 });

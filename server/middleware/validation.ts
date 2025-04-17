@@ -1,20 +1,62 @@
-/**
- * Validation Middleware
- * 
- * Provides request validation using express-validator.
- */
-
 import { Request, Response, NextFunction } from 'express';
-import { validationResult } from 'express-validator';
+import { z } from 'zod';
 
-/**
- * Handles validation errors from express-validator
- * Returns 400 Bad Request with validation errors if any
- */
-export function handleValidationErrors(req: Request, res: Response, next: NextFunction) {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  next();
-}
+export const validateBody = (schema: z.ZodType<any, any>) => 
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const validated = await schema.parseAsync(req.body);
+      req.body = validated;
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      } else {
+        next(error);
+      }
+    }
+  };
+
+export const validateQuery = (schema: z.ZodType<any, any>) => 
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const validated = await schema.parseAsync(req.query);
+      req.query = validated;
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      } else {
+        next(error);
+      }
+    }
+  };
+
+export const validateParams = (schema: z.ZodType<any, any>) => 
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const validated = await schema.parseAsync(req.params);
+      req.params = validated as any;
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      } else {
+        next(error);
+      }
+    }
+  };
