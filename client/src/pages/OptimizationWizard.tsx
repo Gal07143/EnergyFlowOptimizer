@@ -1,17 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { 
   useOptimizationPresets, 
-  useApplyOptimizationPreset, 
-  type OptimizationPreset 
+  useApplyOptimizationPreset,
+  type OptimizationPreset,
+  type OptimizationPresetApplyParams
 } from '@/hooks/useOptimizationWizard';
-import { useSiteSelector } from '@/hooks/useSiteSelector';
+import { useSiteSelector } from '@/hooks/useSiteData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
@@ -33,7 +35,7 @@ import {
   SunIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { PageHeader } from '@/components/PageHeader';
+import PageHeader from '@/components/common/PageHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Icon mapping for optimization modes
@@ -90,13 +92,19 @@ const features: Record<string, { icon: React.ReactNode, title: string, descripti
 
 export default function OptimizationWizard() {
   const { currentSiteId } = useSiteSelector();
-  const { data: presets = [], isLoading: isLoadingPresets } = useOptimizationPresets();
+  const { data, isLoading: isLoadingPresets } = useOptimizationPresets({ siteId: currentSiteId });
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [step, setStep] = useState<'select' | 'review' | 'success'>('select');
   const [customFeatures, setCustomFeatures] = useState<Record<string, boolean>>({});
+  const [scheduleAdjustments, setScheduleAdjustments] = useState<OptimizationPreset['schedules']>({});
   const { mutate: applyPreset, isPending } = useApplyOptimizationPreset(currentSiteId);
   const [, setLocation] = useLocation();
 
+  // Extract the presets array from the data response
+  const presets = data?.presets || [];
+  const deviceSummary = data?.deviceSummary || {};
+  const currentSettings = data?.currentSettings || {};
+  
   // Find the currently selected preset
   const activePreset = presets.find(p => p.id === selectedPreset);
 
@@ -122,18 +130,25 @@ export default function OptimizationWizard() {
     if (step === 'select' && selectedPreset) {
       setStep('review');
     } else if (step === 'review') {
-      applyPreset(
-        { 
-          presetMode: selectedPreset!,
-          // Only include custom settings if they differ from the preset
-          deviceConfiguration: Object.keys(customFeatures).some(
-            key => customFeatures[key] !== (activePreset as any)[key]
-          ) ? customFeatures : undefined
-        },
-        {
-          onSuccess: () => setStep('success')
-        }
+      // Determine if custom settings were changed
+      const hasCustomFeatureChanges = Object.keys(customFeatures).some(
+        key => customFeatures[key] !== (activePreset as any)[key]
       );
+      
+      // Prepare the optimization parameters
+      const optimizationParams: OptimizationPresetApplyParams = {
+        presetMode: selectedPreset!,
+        // Only include if changes were made
+        customizationOptions: hasCustomFeatureChanges ? customFeatures : undefined,
+        // Include schedule adjustments if modified
+        scheduleAdjustments: Object.keys(scheduleAdjustments).length > 0 ? scheduleAdjustments : undefined,
+        // Include device info from device summary
+        deviceConfiguration: deviceSummary
+      };
+      
+      applyPreset(optimizationParams, {
+        onSuccess: () => setStep('success')
+      });
     } else if (step === 'success') {
       setLocation('/optimization');
     }
@@ -216,30 +231,96 @@ export default function OptimizationWizard() {
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
-                    {presetIcons[preset.id] || <CogIcon className="h-6 w-6 text-gray-500" />}
+                    {presetIcons[preset.id] || 
+                     preset.iconType && 
+                     preset.iconType === 'dollar' ? <DollarSignIcon className="h-6 w-6 text-green-500" /> :
+                     preset.iconType === 'sun' ? <SunIcon className="h-6 w-6 text-blue-500" /> :
+                     preset.iconType === 'bar-chart' ? <LineChartIcon className="h-6 w-6 text-purple-500" /> :
+                     preset.iconType === 'leaf' ? <GlobeIcon className="h-6 w-6 text-emerald-500" /> :
+                     preset.iconType === 'zap' ? <NetworkIcon className="h-6 w-6 text-orange-500" /> :
+                     <CogIcon className="h-6 w-6 text-gray-500" />
+                    }
+                    {preset.isCurrentlyActive && (
+                      <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 border-green-300 dark:border-green-700">
+                        Active
+                      </Badge>
+                    )}
                     {selectedPreset === preset.id && (
                       <CheckCircleIcon className="h-5 w-5 text-primary" />
                     )}
                   </div>
                   <CardTitle className="text-xl mt-2">{preset.name}</CardTitle>
                   <CardDescription>{preset.description}</CardDescription>
+                  
+                  {preset.estimatedSavings && (
+                    <div className="mt-2 flex items-center">
+                      <div className="bg-green-100 dark:bg-green-900 px-2 py-1 rounded-md text-green-800 dark:text-green-300 text-sm font-medium flex items-center">
+                        <DollarSignIcon className="h-3.5 w-3.5 mr-1" />
+                        Up to {preset.estimatedSavings.percentage}% savings
+                      </div>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {Object.entries(preset)
-                      .filter(([key, value]) => typeof value === 'boolean' && value === true && key in features)
-                      .map(([key]) => (
-                        <div key={key} className="flex items-center gap-2">
-                          <div className="h-4 w-4 text-primary">
-                            {(features as any)[key]?.icon}
+                  {/* Show compatibility score if available */}
+                  {preset.compatibilityScore !== undefined && (
+                    <div className="mb-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Compatibility</span>
+                        <span className="text-xs font-medium">
+                          {preset.compatibilityScore >= 80 ? 'Excellent' : 
+                           preset.compatibilityScore >= 60 ? 'Good' : 
+                           preset.compatibilityScore >= 40 ? 'Moderate' : 'Limited'}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={preset.compatibilityScore} 
+                        className="h-1.5" 
+                        indicatorClassName={
+                          preset.compatibilityScore >= 80 ? 'bg-green-500' : 
+                          preset.compatibilityScore >= 60 ? 'bg-blue-500' : 
+                          preset.compatibilityScore >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                        }
+                      />
+                    </div>
+                  )}
+                
+                  {/* Show main features if available */}
+                  {preset.mainFeatures && preset.mainFeatures.length > 0 ? (
+                    <div className="space-y-2">
+                      {preset.mainFeatures.slice(0, 3).map((feature, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className="h-4 w-4 flex-shrink-0 text-green-500">
+                            <CheckCircleIcon className="h-4 w-4" />
                           </div>
                           <span className="text-sm text-gray-600 dark:text-gray-300">
-                            {(features as any)[key]?.title}
+                            {feature}
                           </span>
                         </div>
-                      ))
-                    }
-                  </div>
+                      ))}
+                      {preset.mainFeatures.length > 3 && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          +{preset.mainFeatures.length - 3} more features
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {Object.entries(preset)
+                        .filter(([key, value]) => typeof value === 'boolean' && value === true && key in features)
+                        .map(([key]) => (
+                          <div key={key} className="flex items-center gap-2">
+                            <div className="h-4 w-4 text-primary">
+                              {(features as any)[key]?.icon}
+                            </div>
+                            <span className="text-sm text-gray-600 dark:text-gray-300">
+                              {(features as any)[key]?.title}
+                            </span>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter>
                   <Button 
@@ -284,12 +365,66 @@ export default function OptimizationWizard() {
           <Card className="border shadow-sm mb-8">
             <CardHeader>
               <div className="flex items-center gap-3">
-                {presetIcons[activePreset.id] || <CogIcon className="h-6 w-6 text-gray-500" />}
+                {presetIcons[activePreset.id] || 
+                 activePreset.iconType && 
+                 activePreset.iconType === 'dollar' ? <DollarSignIcon className="h-6 w-6 text-green-500" /> :
+                 activePreset.iconType === 'sun' ? <SunIcon className="h-6 w-6 text-blue-500" /> :
+                 activePreset.iconType === 'bar-chart' ? <LineChartIcon className="h-6 w-6 text-purple-500" /> :
+                 activePreset.iconType === 'leaf' ? <GlobeIcon className="h-6 w-6 text-emerald-500" /> :
+                 activePreset.iconType === 'zap' ? <NetworkIcon className="h-6 w-6 text-orange-500" /> :
+                 <CogIcon className="h-6 w-6 text-gray-500" />
+                }
                 <div>
                   <CardTitle>{activePreset.name}</CardTitle>
                   <CardDescription>{activePreset.description}</CardDescription>
                 </div>
               </div>
+              
+              {activePreset.estimatedSavings && (
+                <div className="mt-4 flex items-center">
+                  <div className="bg-green-100 dark:bg-green-900 px-3 py-2 rounded-md text-green-800 dark:text-green-300 text-sm font-medium flex items-center">
+                    <DollarSignIcon className="h-4 w-4 mr-2" />
+                    <div>
+                      <div>Up to {activePreset.estimatedSavings.percentage}% savings</div>
+                      {activePreset.estimatedSavings.note && (
+                        <div className="text-xs opacity-75 mt-0.5">{activePreset.estimatedSavings.note}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {activePreset.compatibilityScore !== undefined && (
+                <div className="mt-4">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Compatibility with your system</span>
+                    <span className="text-sm font-medium">
+                      {activePreset.compatibilityScore >= 80 ? 'Excellent' : 
+                       activePreset.compatibilityScore >= 60 ? 'Good' : 
+                       activePreset.compatibilityScore >= 40 ? 'Moderate' : 'Limited'}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={activePreset.compatibilityScore} 
+                    className="h-2" 
+                    indicatorClassName={
+                      activePreset.compatibilityScore >= 80 ? 'bg-green-500' : 
+                      activePreset.compatibilityScore >= 60 ? 'bg-blue-500' : 
+                      activePreset.compatibilityScore >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                    }
+                  />
+                  {activePreset.compatibilityNotes && activePreset.compatibilityNotes.length > 0 && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      {activePreset.compatibilityNotes.map((note, index) => (
+                        <div key={index} className="flex items-start gap-1 mt-1">
+                          <div className="mt-0.5 text-gray-400">•</div>
+                          <div>{note}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="features" className="w-full">
