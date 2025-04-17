@@ -43,7 +43,7 @@ export default function Layout({ children }: LayoutProps) {
       {isMobile && (
         <div className="bg-white dark:bg-dark-100 border-b border-gray-200 dark:border-gray-800 fixed top-0 left-0 right-0 z-10">
           <div className="flex items-center justify-between h-16 px-4">
-            <span className="text-xl font-bold text-primary dark:text-primary-foreground">EnergySage</span>
+            <span className="text-xl font-bold text-primary dark:text-primary-foreground">EnergyEMS</span>
             <button
               type="button"
               className="text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary"

@@ -14,6 +14,7 @@ import {
   LogOut,
   Cloud,
   UserCog,
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,8 +43,8 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/devices', label: 'Energy Assets', icon: Zap },
-    { path: '/analytics', label: 'Analytics', icon: BarChart2 },
+    { path: '/devices', label: 'Devices', icon: Zap },
+    { path: '/locations', label: 'Locations', icon: MapPin },
     { path: '/optimization', label: 'Optimization', icon: Lightbulb },
     { path: '/weather', label: 'Weather', icon: Cloud },
     { path: '/settings', label: 'Settings', icon: Settings },
@@ -79,7 +80,7 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           )}
           {!isMobile && (
             <span className="text-2xl font-bold text-primary dark:text-primary-foreground">
-              EnergySage
+              EnergyEMS
             </span>
           )}
         </div>
