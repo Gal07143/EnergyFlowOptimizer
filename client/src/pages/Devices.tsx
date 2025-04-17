@@ -10,6 +10,7 @@ import SolarCard from '@/components/devices/SolarCard';
 import BatteryCard from '@/components/devices/BatteryCard';
 import EVChargerCard from '@/components/devices/EVChargerCard';
 import SmartMeterCard from '@/components/devices/SmartMeterCard';
+import HeatPumpCard from '@/components/devices/HeatPumpCard';
 import { deviceTypeToIcon } from '@/lib/icons';
 import {
   Dialog,
@@ -55,7 +56,7 @@ type DeviceFormValues = z.infer<typeof deviceFormSchema>;
 
 export default function DevicesPage() {
   const { currentSiteId } = useSiteSelector();
-  const { data: devices, isLoading } = useDevices(currentSiteId);
+  const { data: devices = [], isLoading } = useDevices(currentSiteId);
   const [activeTab, setActiveTab] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const { mutate: createDevice, isPending: isCreating } = useCreateDevice();
@@ -77,6 +78,7 @@ export default function DevicesPage() {
   const batteryDevices = devices?.filter(d => d.type === 'battery_storage') || [];
   const evChargerDevices = devices?.filter(d => d.type === 'ev_charger') || [];
   const smartMeterDevices = devices?.filter(d => d.type === 'smart_meter') || [];
+  const heatPumpDevices = devices?.filter(d => d.type === 'heat_pump') || [];
 
   const onSubmit = (data: DeviceFormValues) => {
     createDevice(data, {
@@ -108,6 +110,8 @@ export default function DevicesPage() {
               return <EVChargerCard key={device.id} device={device} />;
             case 'smart_meter':
               return <SmartMeterCard key={device.id} device={device} />;
+            case 'heat_pump':
+              return <HeatPumpCard key={device.id} device={device} />;
             default:
               return null;
           }
@@ -277,6 +281,9 @@ export default function DevicesPage() {
           <TabsTrigger value="smart_meter">
             Smart Meters ({getDeviceCountByType('smart_meter')})
           </TabsTrigger>
+          <TabsTrigger value="heat_pump">
+            Heat Pumps ({getDeviceCountByType('heat_pump')})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="all">{renderDevicesByType('all')}</TabsContent>
@@ -284,6 +291,7 @@ export default function DevicesPage() {
         <TabsContent value="battery_storage">{renderDevicesByType('battery_storage')}</TabsContent>
         <TabsContent value="ev_charger">{renderDevicesByType('ev_charger')}</TabsContent>
         <TabsContent value="smart_meter">{renderDevicesByType('smart_meter')}</TabsContent>
+        <TabsContent value="heat_pump">{renderDevicesByType('heat_pump')}</TabsContent>
       </Tabs>
     </div>
   );
