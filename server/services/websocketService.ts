@@ -438,3 +438,133 @@ export function sendMessageToClient(ws: WebSocket, message: any) {
     console.error('Error sending message to client:', error);
   }
 }
+
+// Broadcast device command execution result to all subscribed clients
+export function broadcastCommandExecution(deviceId: number, command: string, result: any) {
+  const message = JSON.stringify({
+    type: 'deviceCommand',
+    deviceId,
+    command,
+    result,
+    timestamp: Date.now()
+  });
+  
+  let sentCount = 0;
+  
+  for (const connection of activeConnections) {
+    // Send to clients subscribed to this device or the site containing the device
+    if ((connection.deviceId === deviceId || 
+        (connection.siteId && deviceBelongsToSite(deviceId, connection.siteId))) && 
+        connection.ws.readyState === WebSocket.OPEN) {
+      try {
+        connection.ws.send(message);
+        sentCount++;
+      } catch (error) {
+        console.error('Error broadcasting command execution:', error);
+      }
+    }
+  }
+  
+  if (sentCount > 0) {
+    console.log(`Broadcast command execution to ${sentCount} clients for device ${deviceId}`);
+  }
+}
+
+// Check if a device belongs to a site
+async function deviceBelongsToSite(deviceId: number, siteId: number): Promise<boolean> {
+  try {
+    const device = await storage.getDevice(deviceId);
+    return device?.siteId === siteId;
+  } catch (error) {
+    console.error('Error checking if device belongs to site:', error);
+    return false;
+  }
+}
+
+// Simulate device reading in development mode
+export function simulateDeviceReading(deviceId: number, deviceType: string) {
+  if (process.env.NODE_ENV !== 'development') {
+    return;
+  }
+  
+  // Generate simulated reading based on device type
+  const reading: any = {
+    deviceId,
+    timestamp: new Date().toISOString()
+  };
+  
+  // Generate type-specific simulated data
+  switch (deviceType) {
+    case 'solar_pv':
+      reading.power = Math.random() * 5000; // 0-5kW
+      reading.energy = Math.random() * 20; // 0-20kWh daily
+      reading.voltage = 230 + (Math.random() * 10 - 5); // ~230V
+      reading.temperature = 25 + (Math.random() * 20 - 10); // 15-35°C
+      reading.additionalData = {
+        irradiance: Math.random() * 1000, // 0-1000 W/m²
+        panelEfficiency: 0.18 + (Math.random() * 0.04 - 0.02) // ~18%
+      };
+      break;
+      
+    case 'battery_storage':
+      reading.power = (Math.random() > 0.5 ? 1 : -1) * Math.random() * 3000; // -3kW to 3kW
+      reading.energy = Math.random() * 10; // 0-10kWh
+      reading.stateOfCharge = Math.random() * 100; // 0-100%
+      reading.voltage = 48 + (Math.random() * 4 - 2); // ~48V
+      reading.temperature = 20 + (Math.random() * 15); // 20-35°C
+      reading.additionalData = {
+        cycleCount: Math.floor(Math.random() * 500),
+        healthStatus: "good"
+      };
+      break;
+      
+    case 'ev_charger':
+      const isCharging = Math.random() > 0.3;
+      reading.power = isCharging ? Math.random() * 11000 : 0; // 0-11kW when charging
+      reading.energy = Math.random() * 30; // 0-30kWh session
+      reading.voltage = 400 + (Math.random() * 20 - 10); // ~400V
+      reading.additionalData = {
+        isCharging,
+        chargingMode: isCharging ? "normal" : "idle",
+        connectedVehicle: isCharging ? "EV_ID_12345" : null
+      };
+      break;
+      
+    case 'smart_meter':
+      const importing = Math.random() > 0.5;
+      reading.power = (importing ? 1 : -1) * Math.random() * 5000; // -5kW to 5kW
+      reading.energy = Math.random() * 50; // 0-50kWh daily
+      reading.voltage = 230 + (Math.random() * 10 - 5); // ~230V
+      reading.frequency = 50 + (Math.random() * 0.2 - 0.1); // ~50Hz
+      reading.additionalData = {
+        importEnergy: Math.random() * 30,
+        exportEnergy: Math.random() * 20,
+        powerFactor: 0.95 + (Math.random() * 0.1 - 0.05)
+      };
+      break;
+      
+    case 'heat_pump':
+      reading.power = Math.random() * 3000; // 0-3kW
+      reading.energy = Math.random() * 15; // 0-15kWh daily
+      reading.temperature = 35 + (Math.random() * 10); // 35-45°C output temp
+      reading.additionalData = {
+        mode: Math.random() > 0.7 ? "cooling" : "heating",
+        targetTemp: 21 + (Math.random() * 4 - 2), // 19-23°C
+        ambientTemp: 18 + (Math.random() * 10 - 5), // 13-23°C
+        cop: 3 + Math.random() * 2 // COP between 3-5
+      };
+      break;
+      
+    default:
+      reading.power = Math.random() * 1000; // Generic reading
+      reading.status = "unknown";
+  }
+  
+  // Broadcast the simulated reading
+  broadcastDeviceReading(deviceId, reading);
+  
+  // Log the simulation
+  console.log(`Development mode: Simulated ${deviceType} reading for device ${deviceId}`);
+  
+  return reading;
+}
