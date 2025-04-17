@@ -248,3 +248,33 @@ export const createIsraeliTariff = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to create Israeli tariff', error: error?.message || 'Unknown error' });
   }
 };
+
+// Delete a tariff
+export const deleteTariff = async (req: Request, res: Response) => {
+  try {
+    const tariffId = parseInt(req.params.id);
+    
+    if (isNaN(tariffId)) {
+      return res.status(400).json({ message: 'Invalid tariff ID' });
+    }
+    
+    // Check if tariff exists
+    const existingTariff = await storage.getTariff(tariffId);
+    
+    if (!existingTariff) {
+      return res.status(404).json({ message: 'Tariff not found' });
+    }
+    
+    // Delete the tariff
+    const result = await storage.deleteTariff(tariffId);
+    
+    if (result) {
+      res.status(200).json({ message: 'Tariff deleted successfully' });
+    } else {
+      res.status(500).json({ message: 'Failed to delete tariff' });
+    }
+  } catch (error: any) {
+    console.error('Error deleting tariff:', error);
+    res.status(500).json({ message: 'Failed to delete tariff', error: error?.message || 'Unknown error' });
+  }
+};

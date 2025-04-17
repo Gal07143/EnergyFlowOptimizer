@@ -78,6 +78,7 @@ export interface IStorage {
   getTariff(id: number): Promise<Tariff | undefined>;
   createTariff(tariff: InsertTariff): Promise<Tariff>;
   updateTariff(id: number, tariff: Partial<Tariff>): Promise<Tariff | undefined>;
+  deleteTariff(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -383,6 +384,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tariffs.id, id))
       .returning();
     return updatedTariff || undefined;
+  }
+  
+  async deleteTariff(id: number): Promise<boolean> {
+    const deletedTariffs = await db
+      .delete(tariffs)
+      .where(eq(tariffs.id, id))
+      .returning();
+    return deletedTariffs.length > 0;
   }
 }
 
