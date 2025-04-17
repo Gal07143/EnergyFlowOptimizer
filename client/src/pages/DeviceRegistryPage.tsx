@@ -102,7 +102,7 @@ const templateCreationSchema = z.object({
 // Zod schema for registration code generation
 const registrationCodeSchema = z.object({
   deviceType: z.enum(['solar_pv', 'battery_storage', 'ev_charger', 'smart_meter', 'heat_pump', 'inverter', 'load_controller', 'energy_gateway']).optional(),
-  templateId: z.number().optional(),
+  templateId: z.string().optional(),
   expiryHours: z.number().min(1).default(24),
   isOneTime: z.boolean().default(true),
   maxUses: z.number().min(1).default(1),
@@ -1181,11 +1181,6 @@ const DeviceRegistryPage: React.FC = () => {
     });
     
     const onSubmitCreateCode = (data: z.infer<typeof registrationCodeSchema>) => {
-      // Convert templateId to number if present
-      if (data.templateId) {
-        data.templateId = Number(data.templateId);
-      }
-      
       createCodeMutation.mutate(data);
     };
     
