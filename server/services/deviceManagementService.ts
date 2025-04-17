@@ -6,12 +6,14 @@ import { getModbusManager, ModbusDevice } from '../adapters/modbusAdapter';
 import { getOCPPManager, OCPPDevice } from '../adapters/ocppAdapter';
 import { getEEBusManager, EEBusDevice } from '../adapters/eebusAdapter';
 import { getSunSpecManager, SunSpecDevice } from '../adapters/sunspecAdapter';
+import { getTCPIPManager, TCPIPDevice } from '../adapters/tcpipAdapter';
+import { getGatewayManager, GatewayDevice } from '../adapters/gatewayAdapter';
 
 // Device types supported by the system
-export type DeviceType = 'solar_pv' | 'battery_storage' | 'ev_charger' | 'smart_meter' | 'heat_pump';
+export type DeviceType = 'solar_pv' | 'battery_storage' | 'ev_charger' | 'smart_meter' | 'heat_pump' | 'gateway' | 'generic';
 
 // Communication protocols supported by devices
-export type ProtocolType = 'mqtt' | 'modbus' | 'ocpp' | 'eebus' | 'sunspec' | 'rest';
+export type ProtocolType = 'mqtt' | 'modbus' | 'ocpp' | 'eebus' | 'sunspec' | 'tcpip' | 'gateway' | 'rest';
 
 // Device status
 export type DeviceStatus = 'online' | 'offline' | 'error' | 'maintenance' | 'standby';
