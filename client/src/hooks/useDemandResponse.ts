@@ -1,62 +1,36 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { z } from 'zod';
 
-// Interface definitions
+// Define demand response types
 export interface DemandResponseProgram {
   id: number;
-  siteId: number;
   name: string;
-  description: string;
   provider: string;
   programType: string;
+  description?: string;
   isActive: boolean;
-  minReductionAmount: number | null;
-  maxReductionAmount: number | null;
-  incentiveRate: number | null;
-  startDate: string | null;
-  endDate: string | null;
-  maxEventDuration: number | null;
-  notificationLeadTime: number | null;
-  maxEventsPerYear: number | null;
-  maxEventsPerMonth: number | null;
-  createdAt: string;
-  updatedAt: string;
+  startDate?: string;
+  endDate?: string;
+  incentiveRate?: number;
+  notificationLeadTime?: number;
+  maxEventDuration?: number;
+  participationRequirements?: Record<string, unknown>;
 }
 
 export interface DemandResponseEvent {
   id: number;
-  siteId: number;
   programId: number;
-  programName?: string;
+  programName: string;
   name: string;
-  description: string;
+  description?: string;
   status: 'scheduled' | 'pending' | 'active' | 'completed' | 'cancelled';
   startTime: string;
   endTime: string;
-  notificationTime: string | null;
-  targetReduction: number | null;
-  actualReduction: number | null;
-  incentiveModifier: number | null;
-  notes: string | null;
+  targetReduction?: number;
+  incentiveModifier?: number;
   isEmergency: boolean;
-  weatherConditions: any;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface SiteDemandResponseSettings {
-  id: number;
-  siteId: number;
-  isEnrolled: boolean;
-  maxReductionCapacity: number | null;
-  defaultParticipation: 'opt_in' | 'opt_out' | 'automatic';
-  autoResponseEnabled: boolean;
-  notificationEmail: string | null;
-  notificationSms: string | null;
-  notificationPush: boolean;
-  minimumIncentiveThreshold: number | null;
-  devicePriorities: Record<string, unknown>;
-  responseStrategy: Record<string, unknown>;
+  notificationTime?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,148 +40,66 @@ export interface SiteEventParticipation {
   siteId: number;
   eventId: number;
   participationStatus: 'opt_in' | 'opt_out' | 'automatic';
-  responseMethod: 'manual' | 'automatic';
-  reductionAchieved: number | null;
-  incentiveEarned: number | null;
-  startTime: string | null;
-  endTime: string | null;
-  notes: string | null;
+  responseMethod?: string;
+  reductionAchieved?: number;
+  incentiveEarned?: number;
+  startTime?: string;
+  endTime?: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface DemandResponseAction {
+export interface SiteDemandResponseSettings {
   id: number;
-  participationId: number;
-  deviceId: number;
-  actionType: string;
-  startTime: string;
-  endTime: string;
-  setPoint?: number;
-  estimatedReduction: number | null;
-  actualReduction: number | null;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+  siteId: number;
+  isEnrolled: boolean;
+  maxReductionCapacity?: number;
+  defaultParticipation: 'opt_in' | 'opt_out' | 'automatic';
+  autoResponseEnabled: boolean;
+  notificationEmail?: string;
+  notificationSms?: string;
+  notificationPush: boolean;
+  minimumIncentiveThreshold?: number;
+  devicePriorities?: Record<string, number>;
+  responseStrategy?: Record<string, boolean>;
   createdAt: string;
   updatedAt: string;
 }
 
-// Programs
+// Get demand response programs for a site
 export function useDemandResponsePrograms(siteId: number | undefined) {
   return useQuery<DemandResponseProgram[]>({
-    queryKey: ['/api/sites', siteId, 'demand-response/programs'],
+    queryKey: ['/api/sites', siteId, 'demand-response', 'programs'],
     enabled: !!siteId,
   });
 }
 
-export function useDemandResponseProgram(programId: number | undefined) {
-  return useQuery<DemandResponseProgram>({
-    queryKey: ['/api/demand-response/programs', programId],
-    enabled: !!programId,
-  });
-}
-
-export function useCreateDemandResponseProgram() {
-  return useMutation({
-    mutationFn: async (programData: Omit<DemandResponseProgram, 'id' | 'createdAt' | 'updatedAt'>) => {
-      const response = await apiRequest('POST', '/api/demand-response/programs', programData);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/programs'] });
-    },
-  });
-}
-
-export function useUpdateDemandResponseProgram() {
-  return useMutation({
-    mutationFn: async ({ 
-      programId, 
-      programData 
-    }: { 
-      programId: number; 
-      programData: Partial<Omit<DemandResponseProgram, 'id' | 'createdAt' | 'updatedAt'>>
-    }) => {
-      const response = await apiRequest('PUT', `/api/demand-response/programs/${programId}`, programData);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/programs'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/demand-response/programs', data.id] });
-    },
-  });
-}
-
-// Events
+// Get demand response events for a site
 export function useDemandResponseEvents(siteId: number | undefined) {
   return useQuery<DemandResponseEvent[]>({
-    queryKey: ['/api/sites', siteId, 'demand-response/events'],
+    queryKey: ['/api/sites', siteId, 'demand-response', 'events'],
     enabled: !!siteId,
   });
 }
 
-export function useDemandResponseEvent(eventId: number | undefined) {
-  return useQuery<DemandResponseEvent>({
-    queryKey: ['/api/demand-response/events', eventId],
-    enabled: !!eventId,
-  });
-}
-
-export function useCreateDemandResponseEvent() {
-  return useMutation({
-    mutationFn: async (eventData: Omit<DemandResponseEvent, 'id' | 'createdAt' | 'updatedAt'>) => {
-      const response = await apiRequest('POST', '/api/demand-response/events', eventData);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/events'] });
-    },
-  });
-}
-
-export function useUpdateDemandResponseEvent() {
-  return useMutation({
-    mutationFn: async ({ 
-      eventId, 
-      eventData 
-    }: { 
-      eventId: number; 
-      eventData: Partial<Omit<DemandResponseEvent, 'id' | 'createdAt' | 'updatedAt'>>
-    }) => {
-      const response = await apiRequest('PUT', `/api/demand-response/events/${eventId}`, eventData);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/events'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/demand-response/events', data.id] });
-    },
-  });
-}
-
-// Settings
+// Get demand response settings for a site
 export function useDemandResponseSettings(siteId: number | undefined) {
   return useQuery<SiteDemandResponseSettings>({
-    queryKey: ['/api/sites', siteId, 'demand-response/settings'],
+    queryKey: ['/api/sites', siteId, 'demand-response', 'settings'],
     enabled: !!siteId,
   });
 }
 
-export function useCreateDemandResponseSettings() {
-  return useMutation({
-    mutationFn: async (settingsData: Omit<SiteDemandResponseSettings, 'id' | 'createdAt' | 'updatedAt'>) => {
-      const response = await apiRequest('POST', '/api/demand-response/settings', settingsData);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/settings'] });
-    },
+// Get site participations in events
+export function useSiteEventParticipations(siteId: number | undefined) {
+  return useQuery<SiteEventParticipation[]>({
+    queryKey: ['/api/sites', siteId, 'demand-response', 'participations'],
+    enabled: !!siteId,
   });
 }
 
+// Update demand response settings
 export function useUpdateDemandResponseSettings() {
   return useMutation({
     mutationFn: async ({ 
@@ -215,86 +107,44 @@ export function useUpdateDemandResponseSettings() {
       settingsData 
     }: { 
       siteId: number; 
-      settingsData: Partial<Omit<SiteDemandResponseSettings, 'id' | 'createdAt' | 'updatedAt'>>
+      settingsData: Partial<SiteDemandResponseSettings> 
     }) => {
       const response = await apiRequest('PUT', `/api/sites/${siteId}/demand-response/settings`, settingsData);
       return await response.json();
     },
     onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response', 'settings'] });
     },
   });
 }
 
-// Participations
-export function useSiteEventParticipations(siteId: number | undefined) {
-  return useQuery<SiteEventParticipation[]>({
-    queryKey: ['/api/sites', siteId, 'demand-response/participations'],
-    enabled: !!siteId,
-  });
-}
-
-export function useSiteEventParticipation(participationId: number | undefined) {
-  return useQuery<SiteEventParticipation>({
-    queryKey: ['/api/demand-response/participations', participationId],
-    enabled: !!participationId,
-  });
-}
-
-export function useCreateSiteEventParticipation() {
-  return useMutation({
-    mutationFn: async (participationData: Omit<SiteEventParticipation, 'id' | 'createdAt' | 'updatedAt'>) => {
-      const response = await apiRequest('POST', '/api/demand-response/participations', participationData);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/participations'] });
-    },
-  });
-}
-
-export function useUpdateSiteEventParticipation() {
-  return useMutation({
-    mutationFn: async ({ 
-      participationId, 
-      participationData 
-    }: { 
-      participationId: number; 
-      participationData: Partial<Omit<SiteEventParticipation, 'id' | 'createdAt' | 'updatedAt'>>
-    }) => {
-      const response = await apiRequest('PUT', `/api/demand-response/participations/${participationId}`, participationData);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/participations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/demand-response/participations', data.id] });
-    },
-  });
-}
-
-// DR Event Opt-in/Opt-out
+// Opt-in to a demand response event
 export function useOptInDemandResponseEvent() {
   return useMutation({
-    mutationFn: async ({ siteId, eventId }: { siteId: number; eventId: number }) => {
-      const response = await apiRequest('POST', '/api/demand-response/participations', {
-        siteId,
-        eventId,
-        participationStatus: 'opt_in',
-        responseMethod: 'manual'
-      });
+    mutationFn: async ({ 
+      siteId, 
+      eventId,
+      participationId
+    }: { 
+      siteId: number; 
+      eventId: number;
+      participationId?: number;
+    }) => {
+      const url = participationId 
+        ? `/api/sites/${siteId}/demand-response/events/${eventId}/participations/${participationId}/opt-in`
+        : `/api/sites/${siteId}/demand-response/events/${eventId}/participations/opt-in`;
+      
+      const response = await apiRequest('POST', url);
       return await response.json();
     },
     onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/participations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response', 'participations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response', 'events'] });
     },
   });
 }
 
+// Opt-out of a demand response event
 export function useOptOutDemandResponseEvent() {
   return useMutation({
     mutationFn: async ({ 
@@ -308,54 +158,32 @@ export function useOptOutDemandResponseEvent() {
       participationId?: number;
       notes?: string;
     }) => {
-      // If we have an existing participation, update it
-      if (participationId) {
-        const response = await apiRequest('PUT', `/api/demand-response/participations/${participationId}`, {
-          participationStatus: 'opt_out',
-          responseMethod: 'manual',
-          notes
-        });
-        return await response.json();
-      } 
-      // Otherwise create a new opt-out participation
-      else {
-        const response = await apiRequest('POST', '/api/demand-response/participations', {
-          siteId,
-          eventId,
-          participationStatus: 'opt_out',
-          responseMethod: 'manual',
-          notes
-        });
-        return await response.json();
-      }
-    },
-    onSuccess: (data) => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/participations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response/events'] });
-    },
-  });
-}
-
-// DR Actions
-export function useDemandResponseActions(eventId: number | undefined) {
-  return useQuery<DemandResponseAction[]>({
-    queryKey: ['/api/demand-response/events', eventId, 'actions'],
-    enabled: !!eventId,
-  });
-}
-
-export function useCreateDemandResponseAction() {
-  return useMutation({
-    mutationFn: async (actionData: Omit<DemandResponseAction, 'id' | 'createdAt' | 'updatedAt'>) => {
-      const response = await apiRequest('POST', '/api/demand-response/actions', actionData);
+      const url = participationId 
+        ? `/api/sites/${siteId}/demand-response/events/${eventId}/participations/${participationId}/opt-out`
+        : `/api/sites/${siteId}/demand-response/events/${eventId}/participations/opt-out`;
+      
+      const response = await apiRequest('POST', url, { notes });
       return await response.json();
     },
-    onSuccess: (data, variables) => {
-      // Find the relevant participation
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/demand-response/events', variables.participationId, 'actions'] 
-      });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response', 'participations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'demand-response', 'events'] });
     },
+  });
+}
+
+// Get event details
+export function useEventDetails(siteId: number | undefined, eventId: number | undefined) {
+  return useQuery<DemandResponseEvent>({
+    queryKey: ['/api/sites', siteId, 'demand-response', 'events', eventId],
+    enabled: !!siteId && !!eventId,
+  });
+}
+
+// Get program details
+export function useProgramDetails(siteId: number | undefined, programId: number | undefined) {
+  return useQuery<DemandResponseProgram>({
+    queryKey: ['/api/sites', siteId, 'demand-response', 'programs', programId],
+    enabled: !!siteId && !!programId,
   });
 }

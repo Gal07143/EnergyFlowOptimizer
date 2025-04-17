@@ -1,166 +1,135 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { DeviceReading, CommandResult, WebSocketMessage } from './useDeviceWebSocket';
-import { useToast } from './use-toast';
-import { webSocketManager } from '@/lib/websocket';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
-// WebSocket connection states
-type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
-
-// WebSocket context type
 interface WebSocketContextType {
-  connectionState: ConnectionState;
-  connectionId: string | null;
-  lastMessage: WebSocketMessage | null;
-  lastReading: DeviceReading | null;
-  lastCommandResult: CommandResult | null;
-  sendMessage: (message: Record<string, any>) => boolean;
-  connect: () => void;
-  disconnect: () => void;
+  socket: WebSocket | null;
+  connected: boolean;
+  reconnect: () => void;
+  send: (data: any) => void;
 }
-
-// Create context with default values
-const WebSocketContext = createContext<WebSocketContextType>({
-  connectionState: 'disconnected',
-  connectionId: null,
-  lastMessage: null,
-  lastReading: null,
-  lastCommandResult: null,
-  sendMessage: () => false,
-  connect: () => {},
-  disconnect: () => {},
-});
 
 interface WebSocketProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export function WebSocketProvider({ children }: WebSocketProviderProps) {
-  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
-  const [connectionId, setConnectionId] = useState<string | null>(null);
-  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  const [lastReading, setLastReading] = useState<DeviceReading | null>(null);
-  const [lastCommandResult, setLastCommandResult] = useState<CommandResult | null>(null);
-  const { toast } = useToast();
+const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
-  // Connect to WebSocket using the singleton manager
-  const connect = () => {
-    // Only try to connect if not already connected
-    if (!webSocketManager.isConnected()) {
-      setConnectionState('connecting');
-      webSocketManager.connect();
-    }
-  };
-  
-  // Disconnect from WebSocket
-  const disconnect = () => {
-    webSocketManager.disconnect();
-    setConnectionState('disconnected');
-    setConnectionId(null);
-  };
-  
-  // Send a message through the WebSocket
-  const sendMessage = (message: Record<string, any>): boolean => {
-    if (webSocketManager.isConnected()) {
-      webSocketManager.send({
-        ...message,
-        timestamp: Date.now()
+export function WebSocketProvider({ children }: WebSocketProviderProps) {
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 5;
+  const reconnectDelay = 2000; // 2 seconds
+
+  // Connect to WebSocket
+  const connect = useCallback(() => {
+    try {
+      // Create WebSocket connection
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      console.log('Connecting to WebSocket at', wsUrl);
+      
+      const newSocket = new WebSocket(wsUrl);
+      
+      // Connection opened
+      newSocket.addEventListener('open', () => {
+        console.log('WebSocket connection established');
+        setConnected(true);
+        setRetryCount(0);
       });
-      return true;
-    } else {
-      console.warn('Cannot send message: WebSocket not initialized');
-      return false;
-    }
-  };
-  
-  // Set up event listeners and connect on initial render
-  useEffect(() => {
-    // Event handlers
-    const handleConnected = (data: { connectionId: string }) => {
-      setConnectionState('connected');
-      setConnectionId(data.connectionId);
-    };
-    
-    const handleDisconnected = () => {
-      setConnectionState('disconnected');
-      setConnectionId(null);
-    };
-    
-    const handleError = (error: Error) => {
-      setConnectionState('error');
-      toast({
-        title: 'Connection Error',
-        description: error.message || 'Failed to connect to the real-time data service',
-        variant: 'destructive',
+      
+      // Listen for messages
+      newSocket.addEventListener('message', (event) => {
+        // Handle message events
       });
-    };
-    
-    const handleMessage = (message: WebSocketMessage) => {
-      setLastMessage(message);
-    };
-    
-    const handleDeviceReading = (reading: any) => {
-      setLastReading(reading as DeviceReading);
-    };
-    
-    const handleDeviceCommand = (command: { deviceId: number; command: string; result: any }) => {
-      const result: CommandResult = {
-        deviceId: command.deviceId,
-        command: command.command,
-        status: command.result?.success ? 'success' : 'failure',
-        message: command.result?.message,
-        result: command.result,
-        timestamp: Date.now()
+      
+      // Handle errors
+      newSocket.addEventListener('error', (event) => {
+        console.error('WebSocket error:', event);
+      });
+      
+      // Connection closed
+      newSocket.addEventListener('close', (event) => {
+        console.log(`WebSocket connection closed (code: ${event.code}, reason: ${event.reason})`);
+        setConnected(false);
+        
+        // Auto-reconnect if not a normal closure and under max retries
+        if (event.code !== 1000 && retryCount < maxRetries) {
+          console.log(`Attempting to reconnect (${retryCount + 1}/${maxRetries})...`);
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            connect();
+          }, reconnectDelay);
+        }
+      });
+      
+      setSocket(newSocket);
+      
+      // Clean up on unmount
+      return () => {
+        newSocket.close();
       };
-      setLastCommandResult(result);
-    };
-    
-    // Set up listeners
-    webSocketManager
-      .on('connected', handleConnected)
-      .on('disconnected', handleDisconnected)
-      .on('error', handleError)
-      .on('message', handleMessage)
-      .on('deviceReading', handleDeviceReading)
-      .on('deviceCommand', handleDeviceCommand);
-    
-    // Initialize connection - the manager will handle reconnection
+    } catch (error) {
+      console.error('Failed to establish WebSocket connection:', error);
+    }
+  }, [retryCount]);
+
+  // Initial connection
+  useEffect(() => {
     connect();
     
-    // Clean up on unmount
+    // Add heartbeat to keep connection alive
+    const heartbeatInterval = setInterval(() => {
+      if (socket && connected && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'heartbeat' }));
+      }
+    }, 30000); // 30 seconds
+    
     return () => {
-      webSocketManager
-        .off('connected', handleConnected)
-        .off('disconnected', handleDisconnected)
-        .off('error', handleError)
-        .off('message', handleMessage)
-        .off('deviceReading', handleDeviceReading)
-        .off('deviceCommand', handleDeviceCommand);
+      clearInterval(heartbeatInterval);
+      if (socket) {
+        socket.close();
+      }
     };
-  }, []);
+  }, [connect]);
 
-  const contextValue: WebSocketContextType = {
-    connectionState,
-    connectionId,
-    lastMessage,
-    lastReading,
-    lastCommandResult,
-    sendMessage,
-    connect,
-    disconnect,
+  // Force reconnect
+  const reconnect = useCallback(() => {
+    if (socket) {
+      socket.close();
+    }
+    setRetryCount(0);
+    connect();
+  }, [socket, connect]);
+
+  // Send data through WebSocket
+  const send = useCallback((data: any) => {
+    if (socket && connected && socket.readyState === WebSocket.OPEN) {
+      socket.send(typeof data === 'string' ? data : JSON.stringify(data));
+    } else {
+      console.warn('Cannot send message: WebSocket is not connected');
+    }
+  }, [socket, connected]);
+
+  const value = {
+    socket,
+    connected,
+    reconnect,
+    send
   };
 
   return (
-    <WebSocketContext.Provider value={contextValue}>
+    <WebSocketContext.Provider value={value}>
       {children}
     </WebSocketContext.Provider>
   );
 }
 
-// Custom hook for using WebSocket context
 export function useWebSocket() {
   const context = useContext(WebSocketContext);
+  
   if (!context) {
     throw new Error('useWebSocket must be used within a WebSocketProvider');
   }
+  
   return context;
 }

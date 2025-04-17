@@ -1,40 +1,96 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useWebSocketContext } from '@/hooks/WebSocketProvider';
-import { DemandResponseEvent } from './useDemandResponse';
-import { useToast } from '@/hooks/use-toast';
+import { useWebSocket } from '@/hooks/WebSocketProvider';
 import { useSiteContext } from '@/hooks/use-site-context';
+import { DemandResponseEvent } from '@/hooks/useDemandResponse';
 
-// Define the notification types
+// Define notification types
+export type NotificationType = 
+  | 'event_scheduled' 
+  | 'event_upcoming' 
+  | 'event_started' 
+  | 'event_ended' 
+  | 'event_cancelled'
+  | 'program_enrollment'
+  | 'system';
+
 export interface DemandResponseNotification {
   id: string;
-  type: 'event_scheduled' | 'event_upcoming' | 'event_started' | 'event_ended' | 'event_cancelled';
+  type: NotificationType;
   title: string;
   message: string;
-  event: DemandResponseEvent;
   timestamp: string;
   read: boolean;
+  event?: {
+    id: number;
+    name: string;
+  };
+  program?: {
+    id: number;
+    name: string;
+  };
 }
 
-interface DemandResponseNotificationContextValue {
+// Context type
+type NotificationContextType = {
   notifications: DemandResponseNotification[];
   unreadCount: number;
+  addNotification: (notification: Omit<DemandResponseNotification, 'id' | 'timestamp' | 'read'>) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
-}
+};
 
-const DemandResponseNotificationContext = createContext<DemandResponseNotificationContextValue | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | null>(null);
 
+// Provider component
 export function DemandResponseNotificationProvider({ children }: { children: ReactNode }) {
+  const { currentSite } = useSiteContext();
+  const { socket, connected } = useWebSocket();
   const [notifications, setNotifications] = useState<DemandResponseNotification[]>([]);
-  const { ws } = useWebSocketContext();
-  const { toast } = useToast();
-  const { currentSiteId } = useSiteContext();
-
-  // Calculate unread count
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Functions to handle notifications
+  // Handle WebSocket events
+  useEffect(() => {
+    if (!socket || !connected || !currentSite?.id) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'demand_response_notification' && data.siteId === currentSite.id) {
+          addNotification({
+            type: data.notificationType,
+            title: data.title,
+            message: data.message,
+            event: data.event,
+            program: data.program
+          });
+        }
+      } catch (err) {
+        console.error('Error parsing WebSocket message:', err);
+      }
+    };
+
+    socket.addEventListener('message', handleMessage);
+
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+    };
+  }, [socket, connected, currentSite?.id]);
+
+  // Add a notification
+  const addNotification = (notification: Omit<DemandResponseNotification, 'id' | 'timestamp' | 'read'>) => {
+    const newNotification: DemandResponseNotification = {
+      ...notification,
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+
+    setNotifications(prev => [newNotification, ...prev]);
+  };
+
+  // Mark a notification as read
   const markAsRead = (id: string) => {
     setNotifications(prev => 
       prev.map(notification => 
@@ -45,76 +101,39 @@ export function DemandResponseNotificationProvider({ children }: { children: Rea
     );
   };
 
+  // Mark all notifications as read
   const markAllAsRead = () => {
     setNotifications(prev => 
       prev.map(notification => ({ ...notification, read: true }))
     );
   };
 
+  // Clear all notifications
   const clearNotifications = () => {
     setNotifications([]);
   };
 
-  // Listen for WebSocket messages related to demand response
-  useEffect(() => {
-    if (!ws || !currentSiteId) return;
-
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        // Only process messages related to demand response events for the current site
-        if (data.type?.startsWith('demand_response_') && data.siteId === currentSiteId) {
-          const newNotification: DemandResponseNotification = {
-            id: `dr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            type: data.type.replace('demand_response_', '') as any,
-            title: data.title || 'Demand Response Update',
-            message: data.message || '',
-            event: data.event,
-            timestamp: new Date().toISOString(),
-            read: false
-          };
-          
-          setNotifications(prev => [newNotification, ...prev]);
-          
-          // Also show a toast notification
-          toast({
-            title: newNotification.title,
-            description: newNotification.message,
-            variant: newNotification.type === 'event_cancelled' ? 'destructive' : 'default',
-          });
-        }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-      }
-    };
-
-    ws.addEventListener('message', handleMessage);
-    
-    return () => {
-      ws.removeEventListener('message', handleMessage);
-    };
-  }, [ws, currentSiteId, toast]);
-
   return (
-    <DemandResponseNotificationContext.Provider 
-      value={{ 
-        notifications, 
-        unreadCount, 
-        markAsRead, 
-        markAllAsRead, 
-        clearNotifications 
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        addNotification,
+        markAsRead,
+        markAllAsRead,
+        clearNotifications
       }}
     >
       {children}
-    </DemandResponseNotificationContext.Provider>
+    </NotificationContext.Provider>
   );
 }
 
+// Custom hook for using the context
 export function useDemandResponseNotifications() {
-  const context = useContext(DemandResponseNotificationContext);
+  const context = useContext(NotificationContext);
   
-  if (context === undefined) {
+  if (context === null) {
     throw new Error('useDemandResponseNotifications must be used within a DemandResponseNotificationProvider');
   }
   

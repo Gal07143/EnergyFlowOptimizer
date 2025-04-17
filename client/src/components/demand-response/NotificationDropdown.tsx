@@ -20,7 +20,7 @@ import {
   useDemandResponseNotifications, 
   DemandResponseNotification 
 } from '@/hooks/useDemandResponseNotifications';
-import { useNavigate } from 'wouter';
+import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -33,16 +33,16 @@ export default function NotificationDropdown() {
     clearNotifications 
   } = useDemandResponseNotifications();
   const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const handleNotificationClick = (notification: DemandResponseNotification) => {
     markAsRead(notification.id);
     
     // Navigate to the event details based on the notification
     if (notification.event?.id) {
-      navigate(`/demand-response/events/${notification.event.id}`);
+      setLocation(`/demand-response/events/${notification.event.id}`);
     } else {
-      navigate('/demand-response');
+      setLocation('/demand-response');
     }
     
     setOpen(false);

@@ -1,134 +1,169 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, Zap, Info, Bell, Settings, History, AlertTriangle } from 'lucide-react';
+import { CalendarDays, History, AlertTriangle, Sparkles, RefreshCw, DownloadIcon } from 'lucide-react';
 import { useSiteContext } from '@/hooks/use-site-context';
 import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+
+// Import the demand response hooks and components
+import { 
+  useDemandResponsePrograms, 
+  useDemandResponseEvents, 
+  useDemandResponseSettings,
+  useSiteEventParticipations
+} from '@/hooks/useDemandResponse';
+import ProgramCard from '@/components/demand-response/ProgramCard';
+import EventCard from '@/components/demand-response/EventCard';
+import SettingsForm from '@/components/demand-response/SettingsForm';
+import NotificationDropdown from '@/components/demand-response/NotificationDropdown';
+import { DemandResponseNotificationProvider } from '@/hooks/useDemandResponseNotifications';
 
 export default function DemandResponse() {
   const { currentSiteId } = useSiteContext();
   const [activeTab, setActiveTab] = useState('programs');
+  const { toast } = useToast();
 
-  // Fetch demand response programs
-  const { data: programs = [], isLoading: programsLoading } = useQuery({
-    queryKey: [`/api/sites/${currentSiteId}/demand-response/programs`],
-    enabled: !!currentSiteId,
-  });
+  // Fetch demand response data using our custom hooks
+  const { 
+    data: programs = [], 
+    isLoading: programsLoading,
+    refetch: refetchPrograms
+  } = useDemandResponsePrograms(currentSiteId);
 
-  // Fetch demand response events
-  const { data: events = [], isLoading: eventsLoading } = useQuery({
-    queryKey: [`/api/sites/${currentSiteId}/demand-response/events`],
-    enabled: !!currentSiteId,
-  });
+  const { 
+    data: events = [], 
+    isLoading: eventsLoading,
+    refetch: refetchEvents
+  } = useDemandResponseEvents(currentSiteId);
 
-  // Fetch site demand response settings
-  const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: [`/api/sites/${currentSiteId}/demand-response/settings`],
-    enabled: !!currentSiteId,
-  });
+  const { 
+    data: settings, 
+    isLoading: settingsLoading,
+    refetch: refetchSettings
+  } = useDemandResponseSettings(currentSiteId);
 
-  // Fetch site event participations
-  const { data: participations = [], isLoading: participationsLoading } = useQuery({
-    queryKey: [`/api/sites/${currentSiteId}/demand-response/participations`],
-    enabled: !!currentSiteId,
-  });
+  const { 
+    data: participations = [], 
+    isLoading: participationsLoading,
+    refetch: refetchParticipations
+  } = useSiteEventParticipations(currentSiteId);
 
   const isLoading = programsLoading || eventsLoading || settingsLoading || participationsLoading;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'scheduled': return 'bg-blue-500';
-      case 'pending': return 'bg-yellow-500';
-      case 'active': return 'bg-green-500';
-      case 'completed': return 'bg-gray-500';
-      case 'cancelled': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
+  // Filter events by status for different sections
+  const upcomingEvents = events.filter((event: any) => 
+    ['scheduled', 'pending'].includes(event.status)
+  );
+  
+  const activeEvents = events.filter((event: any) => 
+    event.status === 'active'
+  );
+  
+  const pastEvents = events
+    .filter((event: any) => ['completed', 'cancelled'].includes(event.status))
+    .sort((a: any, b: any) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime());
+
+  // Function to refresh all data
+  const refreshData = () => {
+    refetchPrograms();
+    refetchEvents();
+    refetchSettings();
+    refetchParticipations();
+    
+    toast({
+      title: "Data Refreshed",
+      description: "The latest demand response data has been loaded.",
+    });
   };
 
-  const getParticipationStatusColor = (status: string) => {
-    switch (status) {
-      case 'opt_in': return 'bg-green-500';
-      case 'opt_out': return 'bg-red-500';
-      case 'automatic': return 'bg-blue-500';
-      default: return 'bg-gray-500';
-    }
+  // Get total earnings from past participations
+  const totalEarnings = participations
+    .filter((p: any) => p.incentiveEarned && p.endTime && new Date(p.endTime) < new Date())
+    .reduce((sum: number, p: any) => sum + (p.incentiveEarned || 0), 0);
+
+  // Handle program enrollment change
+  const handleProgramEnrollmentChange = () => {
+    refetchSettings();
+    refetchPrograms();
+  };
+
+  // Handle event participation change
+  const handleEventParticipationChange = () => {
+    refetchParticipations();
+    refetchEvents();
+  };
+
+  // Handle settings update
+  const handleSettingsUpdate = () => {
+    refetchSettings();
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Demand Response Management</h1>
-        <Button>
-          <Bell className="mr-2 h-4 w-4" />
-          Notify Me
-        </Button>
-      </div>
+    <DemandResponseNotificationProvider>
+      <div className="container mx-auto py-6 px-4">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Demand Response Management</h1>
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={refreshData}
+              title="Refresh data"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </Button>
+            <NotificationDropdown />
+          </div>
+        </div>
 
-      <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="programs">Programs</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="programs">Programs</TabsTrigger>
+            <TabsTrigger value="events">Events</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="programs" className="pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Programs Tab */}
+          <TabsContent value="programs" className="pt-4">
             {isLoading ? (
-              <p>Loading programs...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2].map((i) => (
+                  <Card key={i} className="overflow-hidden">
+                    <CardHeader>
+                      <Skeleton className="h-8 w-64 mb-2" />
+                      <Skeleton className="h-4 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <Skeleton className="h-20 w-full" />
+                          <Skeleton className="h-20 w-full" />
+                          <Skeleton className="h-20 w-full" />
+                          <Skeleton className="h-20 w-full" />
+                        </div>
+                        <Skeleton className="h-20 w-full" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : programs.length > 0 ? (
-              programs.map((program: any) => (
-                <Card key={program.id} className="overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-                    <div className="flex justify-between items-center">
-                      <CardTitle>{program.name}</CardTitle>
-                      <Badge className={program.isActive ? "bg-green-500" : "bg-gray-500"}>
-                        {program.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-gray-100">
-                      Provider: {program.provider}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm text-gray-500">Program Type</span>
-                        <span className="font-medium">{program.programType.replace(/_/g, ' ')}</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm text-gray-500">Incentive Rate</span>
-                        <span className="font-medium">${program.incentiveRate}/kW</span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm text-gray-500">Duration</span>
-                        <span className="font-medium">
-                          {program.startDate && program.endDate
-                            ? `${format(new Date(program.startDate), 'MMM d, yyyy')} - ${format(new Date(program.endDate), 'MMM d, yyyy')}`
-                            : 'Ongoing'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-sm text-gray-500">Notification Lead Time</span>
-                        <span className="font-medium">{program.notificationLeadTime} minutes</span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">{program.description}</p>
-                    <div className="flex justify-between items-center">
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                      <Button>
-                        {settings?.isEnrolled ? 'Manage Enrollment' : 'Enroll Now'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {programs.map((program: any) => (
+                  <ProgramCard
+                    key={program.id}
+                    program={program}
+                    settings={settings}
+                    siteId={currentSiteId!}
+                    onEnrollmentChange={handleProgramEnrollmentChange}
+                  />
+                ))}
+              </div>
             ) : (
               <Card>
                 <CardHeader>
@@ -138,285 +173,287 @@ export default function DemandResponse() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 mb-4">Check back later for new program opportunities.</p>
-                  <Button variant="outline">Notify Me of New Programs</Button>
+                  <p className="text-muted-foreground mb-4">
+                    Check back later for new program opportunities or contact your energy provider for information.
+                  </p>
+                  <Button variant="outline">Request Program Information</Button>
                 </CardContent>
               </Card>
             )}
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="events" className="pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Events Tab */}
+          <TabsContent value="events" className="pt-4">
             {isLoading ? (
-              <p>Loading events...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[1, 2].map((i) => (
+                  <Card key={i}>
+                    <CardHeader>
+                      <Skeleton className="h-8 w-64 mb-2" />
+                      <Skeleton className="h-4 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-12 w-full" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : events.length > 0 ? (
-              events.map((event: any) => (
-                <Card key={event.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>{event.name}</CardTitle>
-                      <Badge className={getStatusColor(event.status)}>
-                        {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-                      </Badge>
+              <div className="space-y-8">
+                {/* Active Events Section */}
+                {activeEvents.length > 0 && (
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                      <h2 className="text-xl font-semibold">Active Events</h2>
                     </div>
-                    <CardDescription>
-                      Program: {event.programName}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 gap-3 mb-4">
-                      <div className="flex items-center">
-                        <CalendarDays className="mr-2 h-4 w-4 text-gray-500" />
-                        <span>
-                          {format(new Date(event.startTime), 'MMM d, yyyy')}
-                          {' '}{format(new Date(event.startTime), 'h:mm a')} - 
-                          {' '}{format(new Date(event.endTime), 'h:mm a')}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="mr-2 h-4 w-4 text-gray-500" />
-                        <span>Duration: {
-                          Math.round((new Date(event.endTime).getTime() - new Date(event.startTime).getTime()) / (1000 * 60))
-                        } minutes</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Zap className="mr-2 h-4 w-4 text-gray-500" />
-                        <span>Target Reduction: {event.targetReduction} kW</span>
-                      </div>
-                      {event.isEmergency && (
-                        <div className="flex items-center text-red-500">
-                          <AlertTriangle className="mr-2 h-4 w-4" />
-                          <span>Emergency Event</span>
-                        </div>
-                      )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {activeEvents.map((event: any) => {
+                        const participation = participations.find(
+                          (p: any) => p.eventId === event.id
+                        );
+                        return (
+                          <EventCard
+                            key={event.id}
+                            event={event}
+                            participation={participation}
+                            siteId={currentSiteId!}
+                            onParticipationChange={handleEventParticipationChange}
+                            className="border-green-200 shadow-md"
+                          />
+                        );
+                      })}
                     </div>
-                    
-                    {/* Participation status if found */}
-                    {participations.find((p: any) => p.eventId === event.id) && (
-                      <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-medium">Your Participation</span>
-                          <Badge className={getParticipationStatusColor(
-                            participations.find((p: any) => p.eventId === event.id)?.participationStatus
-                          )}>
-                            {participations.find((p: any) => p.eventId === event.id)?.participationStatus.replace('_', ' ')}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {event.status === 'completed' && (
-                            <div>
-                              <div className="flex justify-between mb-1">
-                                <span>Reduction achieved:</span>
-                                <span className="font-medium">{
-                                  participations.find((p: any) => p.eventId === event.id)?.reductionAchieved
-                                } kW</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Incentive earned:</span>
-                                <span className="font-medium">${
-                                  participations.find((p: any) => p.eventId === event.id)?.incentiveEarned?.toFixed(2)
-                                }</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                  </div>
+                )}
+
+                {/* Upcoming Events Section */}
+                {upcomingEvents.length > 0 && (
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                      <h2 className="text-xl font-semibold">Upcoming Events</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {upcomingEvents.map((event: any) => {
+                        const participation = participations.find(
+                          (p: any) => p.eventId === event.id
+                        );
+                        return (
+                          <EventCard
+                            key={event.id}
+                            event={event}
+                            participation={participation}
+                            siteId={currentSiteId!}
+                            onParticipationChange={handleEventParticipationChange}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Past Events Section (Limited to 4) */}
+                {pastEvents.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-gray-400 mr-2"></div>
+                        <h2 className="text-xl font-semibold">Past Events</h2>
                       </div>
-                    )}
-                    
-                    <div className="flex space-x-2 justify-end">
-                      {['scheduled', 'pending'].includes(event.status) && (
-                        <>
-                          <Button variant="outline" size="sm">Opt Out</Button>
-                          <Button size="sm">Participate</Button>
-                        </>
-                      )}
-                      {event.status === 'active' && (
-                        <Button size="sm">View Live Status</Button>
-                      )}
-                      {event.status === 'completed' && (
-                        <Button variant="outline" size="sm">View Report</Button>
+                      {pastEvents.length > 4 && (
+                        <Button 
+                          variant="link"
+                          onClick={() => setActiveTab('history')}
+                        >
+                          View All Past Events
+                        </Button>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {pastEvents.slice(0, 4).map((event: any) => {
+                        const participation = participations.find(
+                          (p: any) => p.eventId === event.id
+                        );
+                        return (
+                          <EventCard
+                            key={event.id}
+                            event={event}
+                            participation={participation}
+                            siteId={currentSiteId!}
+                            onParticipationChange={handleEventParticipationChange}
+                            className="opacity-80"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle>No Upcoming Events</CardTitle>
+                  <CardTitle>No Events Scheduled</CardTitle>
                   <CardDescription>
-                    There are currently no demand response events scheduled.
+                    There are currently no demand response events scheduled for your site.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">You'll be notified when new events are announced.</p>
+                <CardContent className="flex flex-col items-center text-center py-8">
+                  <CalendarDays className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                  <p className="text-muted-foreground max-w-md">
+                    You'll be notified when new events are announced based on your notification preferences.
+                  </p>
                 </CardContent>
               </Card>
             )}
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="settings" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Demand Response Settings</CardTitle>
-              <CardDescription>
-                Configure how your site participates in demand response programs
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <p>Loading settings...</p>
-              ) : settings ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="font-medium flex items-center">
-                        <Settings className="h-4 w-4 mr-2" /> Enrollment Status
-                      </h3>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={settings.isEnrolled ? "bg-green-500" : "bg-gray-500"}>
-                          {settings.isEnrolled ? "Enrolled" : "Not Enrolled"}
-                        </Badge>
-                        <Button variant="outline" size="sm">
-                          {settings.isEnrolled ? "Update Enrollment" : "Enroll Now"}
-                        </Button>
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="pt-4">
+            {isLoading ? (
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-8 w-64 mb-2" />
+                  <Skeleton className="h-4 w-full" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <SettingsForm
+                settings={settings}
+                siteId={currentSiteId!}
+                onSettingsUpdate={handleSettingsUpdate}
+              />
+            )}
+          </TabsContent>
+
+          {/* History Tab */}
+          <TabsContent value="history" className="pt-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Participation History</CardTitle>
+                    <CardDescription>
+                      Review your historical demand response participation and earnings
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    disabled={pastEvents.length === 0}
+                  >
+                    <DownloadIcon className="h-4 w-4 mr-1.5" />
+                    Export Report
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ) : pastEvents.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="rounded-md border">
+                      {/* Table header */}
+                      <div className="flex items-center p-3 bg-muted/50 font-medium border-b">
+                        <div className="w-1/3">Event</div>
+                        <div className="w-1/4">Date</div>
+                        <div className="w-1/6">Status</div>
+                        <div className="w-1/6 text-right">Reduction</div>
+                        <div className="w-1/6 text-right">Earnings</div>
                       </div>
+                      
+                      {/* Table body */}
+                      {pastEvents.map((event: any) => {
+                        const participation = participations.find(
+                          (p: any) => p.eventId === event.id
+                        );
+                        
+                        return (
+                          <div key={event.id} className="flex items-center p-3 border-b last:border-b-0 hover:bg-muted/20">
+                            <div className="w-1/3 font-medium">{event.name}</div>
+                            <div className="w-1/4">{format(new Date(event.startTime), 'MMM d, yyyy')}</div>
+                            <div className="w-1/6">
+                              <Badge 
+                                variant="outline"
+                                className={
+                                  participation?.participationStatus === 'opt_in' 
+                                    ? "border-green-200 text-green-700 bg-green-50" 
+                                    : participation?.participationStatus === 'opt_out'
+                                      ? "border-red-200 text-red-700 bg-red-50"
+                                      : "border-blue-200 text-blue-700 bg-blue-50"
+                                }
+                              >
+                                {participation?.participationStatus === 'opt_in' 
+                                  ? 'Participated' 
+                                  : participation?.participationStatus === 'opt_out' 
+                                    ? 'Opted Out' 
+                                    : 'Auto'}
+                              </Badge>
+                            </div>
+                            <div className="w-1/6 text-right">
+                              {participation?.reductionAchieved 
+                                ? `${participation.reductionAchieved} kW` 
+                                : '--'}
+                            </div>
+                            <div className="w-1/6 text-right font-medium">
+                              ${participation?.incentiveEarned?.toFixed(2) || '0.00'}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                     
-                    <div className="space-y-2">
-                      <h3 className="font-medium flex items-center">
-                        <Zap className="h-4 w-4 mr-2" /> Reduction Capacity
-                      </h3>
-                      <p>{settings.maxReductionCapacity || 0} kW</p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="font-medium flex items-center">
-                        <Bell className="h-4 w-4 mr-2" /> Notifications
-                      </h3>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span>Email</span>
-                          <span>{settings.notificationEmail || 'Not set'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>SMS</span>
-                          <span>{settings.notificationSms || 'Not set'}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span>Push Notifications</span>
-                          <Badge className={settings.notificationPush ? "bg-green-500" : "bg-gray-500"}>
-                            {settings.notificationPush ? "Enabled" : "Disabled"}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="font-medium flex items-center">
-                        <Info className="h-4 w-4 mr-2" /> Default Participation
-                      </h3>
-                      <Badge className={getParticipationStatusColor(settings.defaultParticipation)}>
-                        {settings.defaultParticipation.replace('_', ' ')}
-                      </Badge>
+                    {/* Total earnings summary */}
+                    <div className="flex justify-between items-center p-4 bg-muted/50 rounded-md">
+                      <span className="font-medium">Total Earnings</span>
+                      <span className="text-xl font-bold text-green-600">
+                        ${totalEarnings.toFixed(2)}
+                      </span>
                     </div>
                   </div>
-                  
-                  <div className="pt-4 border-t">
-                    <h3 className="font-medium mb-3">Device Participation Priority</h3>
-                    {settings.devicePriorities ? (
-                      <div className="space-y-2">
-                        {Object.entries(settings.devicePriorities).map(([deviceId, priority]: [string, any]) => (
-                          <div key={deviceId} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                            <span>Device {deviceId}</span>
-                            <span>Priority: {priority}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-500">No device priorities configured</p>
+                ) : (
+                  <div className="text-center py-12">
+                    <History className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Historical Data</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      You haven't participated in any demand response events yet. 
+                      Your participation history will appear here once you've completed events.
+                    </p>
+                    
+                    {programs.length > 0 && (
+                      <Button 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={() => setActiveTab('programs')}
+                      >
+                        <Sparkles className="h-4 w-4 mr-1.5" />
+                        View Available Programs
+                      </Button>
                     )}
                   </div>
-                  
-                  <div className="flex justify-end space-x-2 pt-4">
-                    <Button variant="outline">Cancel</Button>
-                    <Button>Save Settings</Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center p-6">
-                  <p className="mb-4">No demand response settings found for this site.</p>
-                  <Button>Create Settings</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history" className="pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Participation History</CardTitle>
-              <CardDescription>
-                Review your past participation in demand response events
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <p>Loading history...</p>
-              ) : participations.length > 0 ? (
-                <div className="space-y-4">
-                  {participations
-                    .filter((p: any) => p.eventStatus === 'completed')
-                    .map((participation: any) => (
-                      <div key={participation.id} className="border rounded-md p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h3 className="font-medium">{participation.eventName}</h3>
-                          <Badge className={getParticipationStatusColor(participation.participationStatus)}>
-                            {participation.participationStatus.replace('_', ' ')}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-gray-500 mb-2">
-                          {format(new Date(participation.eventDate), 'MMMM d, yyyy')}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 mb-2">
-                          <div>
-                            <span className="text-xs text-gray-500">Baseline</span>
-                            <p>{participation.baselineConsumption} kW</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-gray-500">Actual</span>
-                            <p>{participation.actualConsumption} kW</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-gray-500">Reduction</span>
-                            <p>{participation.reductionAchieved} kW</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-gray-500">Incentive</span>
-                            <p>${participation.incentiveEarned?.toFixed(2) || '0.00'}</p>
-                          </div>
-                        </div>
-                        <div className="flex justify-end">
-                          <Button variant="outline" size="sm">View Details</Button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center p-6">
-                  <p>No participation history found.</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Once you participate in demand response events, your history will appear here.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </DemandResponseNotificationProvider>
   );
 }
