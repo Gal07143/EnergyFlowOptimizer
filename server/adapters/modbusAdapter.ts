@@ -1,1046 +1,503 @@
 import ModbusRTU from 'modbus-serial';
-import { sendDeviceCommand } from '../services/mqttService';
-import { storage } from '../storage';
+import { getMqttService, formatDeviceTopic } from '../services/mqttService';
+import { TOPIC_PATTERNS } from '@shared/messageSchema';
+import { v4 as uuidv4 } from 'uuid';
 
-interface ModbusDevice {
-  id: number;
-  siteId: number;
-  ipAddress: string;
-  port: number;
-  unitId: number;
-  deviceType: string;
-  connectionType: 'tcp' | 'rtu' | 'ascii';
-  registerMap: RegisterMap;
-  client?: ModbusRTU;
-  connected: boolean;
-  lastError?: string;
-  connectionAttempts: number;
-  pollingInterval?: NodeJS.Timeout;
+// Types for ModbusDevice configuration
+export interface ModbusDevice {
+  id: number;               // Unique device ID
+  address: number;          // Modbus address/ID
+  connection: ModbusConnectionConfig;
+  registers: ModbusRegisterConfig[];
+  scanInterval: number;     // Milliseconds between scans
+  timeout?: number;         // Connection timeout in milliseconds
+  retryCount?: number;      // Number of retry attempts
+  publishRaw?: boolean;     // Whether to publish raw register values
 }
 
-interface RegisterMap {
-  [key: string]: {
-    address: number;
-    length?: number;
-    type: 'coil' | 'discrete' | 'input' | 'holding';
-    dataType?: 'uint16' | 'int16' | 'uint32' | 'int32' | 'float32';
-    scaleFactor?: number;
-    description?: string;
-    readOnly?: boolean;
-  };
+// Connection configuration
+export interface ModbusConnectionConfig {
+  type: 'tcp' | 'rtu' | 'ascii' | 'mock';  // Connection type
+  host?: string;            // IP address (for TCP)
+  port?: number;            // Port number (for TCP)
+  baudRate?: number;        // Baud rate (for serial)
+  parity?: 'none' | 'even' | 'odd' | 'mark' | 'space';  // Serial parity
+  dataBits?: 5 | 6 | 7 | 8; // Data bits (for serial)
+  stopBits?: 1 | 2;         // Stop bits (for serial)
+  path?: string;            // Serial port path (for RTU)
 }
 
-// Store active Modbus connections
-const modbusDevices: Map<number, ModbusDevice> = new Map();
+// Register configuration
+export interface ModbusRegisterConfig {
+  name: string;             // Register name
+  type: 'holding' | 'input' | 'coil' | 'discrete'; // Register type
+  address: number;          // Register address
+  length: number;           // Number of registers
+  dataType: 'int16' | 'uint16' | 'int32' | 'uint32' | 'float32' | 'boolean' | 'buffer'; // Data type
+  scale?: number;           // Scaling factor
+  unit?: string;            // Engineering unit
+  byteOrder?: 'BE' | 'LE';  // Byte order (big-endian or little-endian)
+  bitOffset?: number;       // Bit offset for boolean values
+  description?: string;     // Register description
+}
 
-// Polling interval in milliseconds
-const DEFAULT_POLLING_INTERVAL = 60000; // 1 minute
-const MAX_CONNECTION_ATTEMPTS = 5;
-const RECONNECT_DELAY = 5000; // 5 seconds
+// Convert data based on its type
+function convertModbusData(buffer: Buffer, dataType: string, byteOrder: 'BE' | 'LE' = 'BE', scale: number = 1): any {
+  if (!buffer || buffer.length === 0) return null;
+  
+  switch (dataType) {
+    case 'int16':
+      return (byteOrder === 'BE' ? buffer.readInt16BE(0) : buffer.readInt16LE(0)) * scale;
+    case 'uint16':
+      return (byteOrder === 'BE' ? buffer.readUInt16BE(0) : buffer.readUInt16LE(0)) * scale;
+    case 'int32':
+      if (buffer.length < 4) return null;
+      return (byteOrder === 'BE' ? buffer.readInt32BE(0) : buffer.readInt32LE(0)) * scale;
+    case 'uint32':
+      if (buffer.length < 4) return null;
+      return (byteOrder === 'BE' ? buffer.readUInt32BE(0) : buffer.readUInt32LE(0)) * scale;
+    case 'float32':
+      if (buffer.length < 4) return null;
+      return (byteOrder === 'BE' ? buffer.readFloatBE(0) : buffer.readFloatLE(0)) * scale;
+    case 'boolean':
+      return buffer[0] !== 0;
+    case 'buffer':
+      return buffer.toString('hex');
+    default:
+      return null;
+  }
+}
 
-// Initialize Modbus adapter for a device
-export async function initModbusDevice(deviceId: number): Promise<boolean> {
+// Mock data generator for development mode
+function generateMockModbusData(register: ModbusRegisterConfig): any {
+  const scale = register.scale || 1;
+  
+  switch (register.dataType) {
+    case 'int16':
+      return Math.floor(Math.random() * 200 - 100) * scale;
+    case 'uint16':
+      return Math.floor(Math.random() * 65535) * scale;
+    case 'int32':
+      return Math.floor(Math.random() * 20000 - 10000) * scale;
+    case 'uint32':
+      return Math.floor(Math.random() * 4294967295) * scale;
+    case 'float32':
+      return parseFloat((Math.random() * 200 - 100).toFixed(2)) * scale;
+    case 'boolean':
+      return Math.random() > 0.5;
+    case 'buffer':
+      const arr = new Uint8Array(register.length * 2);
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = Math.floor(Math.random() * 256);
+      }
+      return Buffer.from(arr).toString('hex');
+    default:
+      return null;
+  }
+}
+
+// Read specific register types
+async function readRegister(client: ModbusRTU, register: ModbusRegisterConfig): Promise<Buffer | null> {
   try {
-    // Skip actual Modbus initialization in development mode
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`Development mode: Skipping Modbus initialization for device ${deviceId}`);
+    let result;
+    switch (register.type) {
+      case 'holding':
+        result = await client.readHoldingRegisters(register.address, register.length);
+        return result.buffer;
+      case 'input':
+        result = await client.readInputRegisters(register.address, register.length);
+        return result.buffer;
+      case 'coil':
+        result = await client.readCoils(register.address, register.length);
+        return result.buffer;
+      case 'discrete':
+        result = await client.readDiscreteInputs(register.address, register.length);
+        return result.buffer;
+      default:
+        console.error(`Unsupported register type: ${register.type}`);
+        return null;
+    }
+  } catch (error) {
+    console.error(`Error reading ${register.type} register at address ${register.address}:`, error);
+    return null;
+  }
+}
+
+// Class for managing Modbus device connections
+export class ModbusAdapter {
+  private client: ModbusRTU;
+  private device: ModbusDevice;
+  private connected: boolean = false;
+  private scanIntervalId: NodeJS.Timeout | null = null;
+  private retryCount: number = 0;
+  private mqttService = getMqttService();
+  private inDevelopment: boolean = process.env.NODE_ENV === 'development';
+
+  constructor(device: ModbusDevice) {
+    this.device = {
+      ...device,
+      timeout: device.timeout || 5000,
+      retryCount: device.retryCount || 3
+    };
+    this.client = new ModbusRTU();
+    
+    if (this.inDevelopment) {
+      console.log(`Development mode: Using simulated data for Modbus device ${device.id}`);
+    }
+  }
+
+  // Connect to the Modbus device
+  async connect(): Promise<boolean> {
+    if (this.connected) return true;
+    
+    // For development mode or mock connections, don't actually connect
+    if (this.inDevelopment || this.device.connection.type === 'mock') {
+      this.connected = true;
+      console.log(`Simulated connection to Modbus device ${this.device.id}`);
       return true;
     }
     
-    // Check if device already initialized
-    if (modbusDevices.has(deviceId)) {
-      const device = modbusDevices.get(deviceId);
-      if (device && device.connected) {
-        console.log(`Modbus device ${deviceId} already initialized and connected`);
-        return true;
-      }
-    }
-
-    // Fetch device details from storage
-    const deviceData = await storage.getDevice(deviceId);
-    
-    if (!deviceData) {
-      console.error(`Device ${deviceId} not found`);
-      return false;
-    }
-    
-    // Check if device has connection settings
-    if (!deviceData.settings) {
-      console.error(`Device ${deviceId} has no connection settings`);
-      return false;
-    }
-
-    const settings = deviceData.settings as any;
-    
-    // Ensure we have modbus settings
-    if (!settings.modbus) {
-      console.error(`Device ${deviceId} has no Modbus settings`);
-      return false;
-    }
-
-    const modbusSettings = settings.modbus;
-    
-    // Create a Modbus client
-    const client = new ModbusRTU();
-    
-    // Create device configuration
-    const modbusDevice: ModbusDevice = {
-      id: deviceId,
-      siteId: deviceData.siteId,
-      ipAddress: modbusSettings.ipAddress || deviceData.ipAddress,
-      port: modbusSettings.port || 502,
-      unitId: modbusSettings.unitId || 1,
-      deviceType: deviceData.type,
-      connectionType: modbusSettings.connectionType || 'tcp',
-      registerMap: modbusSettings.registerMap || {},
-      client: client,
-      connected: false,
-      connectionAttempts: 0,
-      pollingInterval: undefined
-    };
-
-    // Store in device map
-    modbusDevices.set(deviceId, modbusDevice);
-    
-    // Connect to the device
-    await connectModbusDevice(deviceId);
-
-    // Start polling
-    startDevicePolling(deviceId);
-
-    return true;
-  } catch (error) {
-    console.error(`Error initializing Modbus device ${deviceId}:`, error);
-    return false;
-  }
-}
-
-// Connect to a Modbus device
-async function connectModbusDevice(deviceId: number): Promise<boolean> {
-  const device = modbusDevices.get(deviceId);
-  
-  if (!device) {
-    console.error(`Modbus device ${deviceId} not found in device map`);
-    return false;
-  }
-  
-  // Check if already connected
-  if (device.connected) {
-    return true;
-  }
-  
-  // Increment connection attempts
-  device.connectionAttempts += 1;
-  
-  try {
-    // Connect based on connection type
-    switch (device.connectionType) {
-      case 'tcp':
-        await device.client!.connectTCP(device.ipAddress, { port: device.port });
-        break;
-        
-      case 'rtu':
-        // RTU over TCP/IP (RTU over a TCP socket)
-        await device.client!.connectTcpRTUBuffered(device.ipAddress, { port: device.port });
-        break;
-        
-      case 'ascii':
-        // ASCII over serial (would typically require a serial port)
-        console.error('ASCII connection type not supported in this adapter');
-        return false;
-        
-      default:
-        console.error(`Unknown connection type: ${device.connectionType}`);
-        return false;
-    }
-    
-    // Set the slave ID (unit ID)
-    device.client!.setID(device.unitId);
-    
-    // Mark as connected
-    device.connected = true;
-    device.connectionAttempts = 0;
-    
-    console.log(`Connected to Modbus device ${deviceId} at ${device.ipAddress}:${device.port}`);
-    
-    return true;
-  } catch (error) {
-    device.connected = false;
-    device.lastError = error instanceof Error ? error.message : String(error);
-    
-    console.error(`Failed to connect to Modbus device ${deviceId}:`, error);
-    
-    // Check if we should retry
-    if (device.connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
-      console.log(`Will retry connection to device ${deviceId} after delay`);
-      
-      // Schedule reconnect
-      setTimeout(() => {
-        connectModbusDevice(deviceId);
-      }, RECONNECT_DELAY);
-    } else {
-      console.error(`Max connection attempts reached for device ${deviceId}`);
-      
-      // Update device status in storage
-      try {
-        await storage.updateDevice(deviceId, {
-          status: 'error',
-          settings: {
-            ...device,
-            lastError: device.lastError,
-            lastConnectionAttempt: new Date()
-          }
-        });
-      } catch (updateError) {
-        console.error(`Failed to update device status:`, updateError);
-      }
-    }
-    
-    return false;
-  }
-}
-
-// Start polling a device
-function startDevicePolling(deviceId: number) {
-  const device = modbusDevices.get(deviceId);
-  
-  if (!device) {
-    console.error(`Modbus device ${deviceId} not found in device map`);
-    return;
-  }
-  
-  // Clear existing interval if any
-  if (device.pollingInterval) {
-    clearInterval(device.pollingInterval);
-  }
-  
-  // Set polling interval
-  const pollingInterval = device.pollingInterval = setInterval(async () => {
     try {
-      // Only poll if connected
-      if (!device.connected) {
-        console.log(`Skipping poll for device ${deviceId} - not connected`);
+      const connection = this.device.connection;
+      
+      switch (connection.type) {
+        case 'tcp':
+          if (!connection.host || !connection.port) {
+            throw new Error('TCP connection requires host and port');
+          }
+          await this.client.connectTCP(connection.host, { port: connection.port });
+          break;
+        
+        case 'rtu':
+          if (!connection.path) {
+            throw new Error('RTU connection requires serial port path');
+          }
+          await this.client.connectRTU(connection.path, {
+            baudRate: connection.baudRate || 9600,
+            parity: connection.parity || 'none',
+            dataBits: connection.dataBits || 8,
+            stopBits: connection.stopBits || 1
+          });
+          break;
+        
+        case 'ascii':
+          if (!connection.path) {
+            throw new Error('ASCII connection requires serial port path');
+          }
+          await this.client.connectAscii(connection.path, {
+            baudRate: connection.baudRate || 9600,
+            parity: connection.parity || 'none',
+            dataBits: connection.dataBits || 8,
+            stopBits: connection.stopBits || 1
+          });
+          break;
+        
+        default:
+          throw new Error(`Unsupported connection type: ${connection.type}`);
+      }
+      
+      // Set the device address/ID
+      this.client.setID(this.device.address);
+      
+      // Set the timeout
+      this.client.setTimeout(this.device.timeout);
+      
+      this.connected = true;
+      this.retryCount = 0;
+      console.log(`Connected to Modbus device ${this.device.id} at address ${this.device.address}`);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error connecting to Modbus device ${this.device.id}:`, error);
+      
+      // Retry logic
+      if (this.retryCount < this.device.retryCount) {
+        this.retryCount++;
+        console.log(`Retrying connection to Modbus device ${this.device.id} (attempt ${this.retryCount}/${this.device.retryCount})`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return this.connect();
+      }
+      
+      // Emit device status update via MQTT
+      this.publishDeviceStatus('error', `Connection error: ${error.message}`);
+      
+      return false;
+    }
+  }
+
+  // Disconnect from the Modbus device
+  async disconnect(): Promise<void> {
+    if (!this.connected) return;
+    
+    if (this.scanIntervalId) {
+      clearInterval(this.scanIntervalId);
+      this.scanIntervalId = null;
+    }
+    
+    // For development mode or mock connections, just reset state
+    if (this.inDevelopment || this.device.connection.type === 'mock') {
+      this.connected = false;
+      console.log(`Simulated disconnection from Modbus device ${this.device.id}`);
+      return;
+    }
+    
+    try {
+      await this.client.close();
+      this.connected = false;
+      console.log(`Disconnected from Modbus device ${this.device.id}`);
+      
+      // Emit device status update via MQTT
+      this.publishDeviceStatus('offline');
+    } catch (error) {
+      console.error(`Error disconnecting from Modbus device ${this.device.id}:`, error);
+    }
+  }
+
+  // Start periodic scanning of registers
+  async startScanning(): Promise<void> {
+    if (this.scanIntervalId) {
+      console.log(`Scanning already in progress for Modbus device ${this.device.id}`);
+      return;
+    }
+    
+    // Ensure we're connected first
+    if (!this.connected) {
+      const connected = await this.connect();
+      if (!connected) {
+        console.error(`Cannot start scanning - device ${this.device.id} is not connected`);
         return;
       }
+    }
+    
+    // Emit device status update via MQTT
+    this.publishDeviceStatus('online');
+    
+    // Start periodic scanning
+    this.scanIntervalId = setInterval(async () => {
+      await this.scanRegisters();
+    }, this.device.scanInterval);
+    
+    console.log(`Started scanning Modbus device ${this.device.id} every ${this.device.scanInterval}ms`);
+  }
+
+  // Stop periodic scanning of registers
+  stopScanning(): void {
+    if (!this.scanIntervalId) return;
+    
+    clearInterval(this.scanIntervalId);
+    this.scanIntervalId = null;
+    console.log(`Stopped scanning Modbus device ${this.device.id}`);
+  }
+
+  // Scan all registers and publish data
+  private async scanRegisters(): Promise<void> {
+    if (!this.connected) {
+      console.log(`Cannot scan - device ${this.device.id} is not connected`);
+      return;
+    }
+    
+    try {
+      const readingsData: Record<string, any> = {};
       
-      // Read device data
-      await pollDeviceData(deviceId);
+      // Read each register in sequence
+      for (const register of this.device.registers) {
+        let value: any;
+        
+        if (this.inDevelopment || this.device.connection.type === 'mock') {
+          // Generate mock data in development mode
+          value = generateMockModbusData(register);
+        } else {
+          // Read actual register
+          const buffer = await readRegister(this.client, register);
+          
+          if (buffer === null) {
+            console.warn(`Failed to read register ${register.name} from device ${this.device.id}`);
+            continue;
+          }
+          
+          // Convert based on data type
+          value = convertModbusData(
+            buffer, 
+            register.dataType, 
+            register.byteOrder || 'BE', 
+            register.scale || 1
+          );
+          
+          // Publish raw register data if requested
+          if (this.device.publishRaw) {
+            readingsData[`${register.name}_raw`] = buffer.toString('hex');
+          }
+        }
+        
+        // Store the processed value
+        readingsData[register.name] = value;
+      }
+      
+      // If we have actual readings, publish them
+      if (Object.keys(readingsData).length > 0) {
+        // Map standard register names to EMS telemetry fields
+        const telemetryData: Record<string, any> = {};
+        
+        // Map common Modbus registers to standard telemetry fields
+        for (const register of this.device.registers) {
+          // Use register name to map to standard fields
+          switch (register.name.toLowerCase()) {
+            case 'power':
+            case 'active_power':
+            case 'output_power':
+              telemetryData.power = readingsData[register.name];
+              break;
+            case 'energy':
+            case 'total_energy':
+            case 'energy_delivered':
+              telemetryData.energy = readingsData[register.name];
+              break;
+            case 'voltage':
+            case 'ac_voltage':
+            case 'dc_voltage':
+              telemetryData.voltage = readingsData[register.name];
+              break;
+            case 'current':
+            case 'ac_current':
+            case 'dc_current':
+              telemetryData.current = readingsData[register.name];
+              break;
+            case 'frequency':
+            case 'ac_frequency':
+              telemetryData.frequency = readingsData[register.name];
+              break;
+            case 'temperature':
+            case 'internal_temperature':
+              telemetryData.temperature = readingsData[register.name];
+              break;
+            case 'soc':
+            case 'state_of_charge':
+              telemetryData.stateOfCharge = readingsData[register.name];
+              break;
+            default:
+              // No standard mapping, will be included in additional readings
+              break;
+          }
+        }
+        
+        // Publish telemetry message to MQTT
+        const telemetryMessage = {
+          messageId: uuidv4(),
+          messageType: 'telemetry',
+          timestamp: new Date().toISOString(),
+          deviceId: this.device.id,
+          readings: telemetryData,
+          metadata: {
+            rawReadings: readingsData,
+            source: 'modbus'
+          }
+        };
+        
+        const topic = formatDeviceTopic(TOPIC_PATTERNS.TELEMETRY, this.device.id);
+        await this.mqttService.publish(topic, telemetryMessage);
+        
+        // Emit device status update via MQTT (occasional heartbeat)
+        if (Math.random() < 0.05) { // ~5% chance per scan to update status
+          this.publishDeviceStatus('online');
+        }
+      }
     } catch (error) {
-      console.error(`Error polling device ${deviceId}:`, error);
+      console.error(`Error scanning registers for device ${this.device.id}:`, error);
       
       // Check if it's a connection error
-      if (error instanceof Error && 
-          (error.message.includes('Port is closed') || 
-           error.message.includes('not connected'))) {
-        // Mark as disconnected
-        device.connected = false;
-        
-        // Try to reconnect
-        console.log(`Attempting to reconnect to device ${deviceId}`);
-        connectModbusDevice(deviceId);
+      if (error.message && (
+        error.message.includes('Port is closed') || 
+        error.message.includes('Connection timed out') || 
+        error.message.includes('Not connected')
+      )) {
+        console.log(`Reconnecting to Modbus device ${this.device.id} after connection error`);
+        this.connected = false;
+        await this.connect();
       }
+      
+      // Emit device status update via MQTT
+      this.publishDeviceStatus('error', `Scan error: ${error.message}`);
     }
-  }, DEFAULT_POLLING_INTERVAL);
-  
-  console.log(`Started polling for device ${deviceId} at ${DEFAULT_POLLING_INTERVAL}ms intervals`);
-}
-
-// Poll device data and create telemetry
-async function pollDeviceData(deviceId: number) {
-  const device = modbusDevices.get(deviceId);
-  
-  if (!device || !device.connected) {
-    return;
   }
-  
-  try {
-    // Create telemetry data object
-    const telemetryData: any = {
-      timestamp: new Date()
+
+  // Publish device status via MQTT
+  private async publishDeviceStatus(status: 'online' | 'offline' | 'error', details?: string): Promise<void> {
+    const statusMessage = {
+      messageId: uuidv4(),
+      messageType: 'status',
+      timestamp: new Date().toISOString(),
+      deviceId: this.device.id,
+      status,
+      details
     };
     
-    // Read key registers based on device type
-    switch (device.deviceType) {
-      case 'solar_pv':
-        await readSolarInverterData(device, telemetryData);
-        break;
-        
-      case 'battery_storage':
-        await readBatteryData(device, telemetryData);
-        break;
-        
-      case 'smart_meter':
-        await readSmartMeterData(device, telemetryData);
-        break;
-        
-      case 'heat_pump':
-        await readHeatPumpData(device, telemetryData);
-        break;
-        
-      case 'ev_charger':
-        await readEVChargerData(device, telemetryData);
-        break;
-        
-      default:
-        console.log(`Unknown device type for Modbus: ${device.deviceType}`);
-        return;
+    const topic = formatDeviceTopic(TOPIC_PATTERNS.STATUS, this.device.id);
+    try {
+      await this.mqttService.publish(topic, statusMessage);
+    } catch (error) {
+      console.error(`Error publishing status for device ${this.device.id}:`, error);
+    }
+  }
+}
+
+// Manager for all Modbus devices
+export class ModbusManager {
+  private adapters: Map<number, ModbusAdapter> = new Map();
+  private inDevelopment: boolean = process.env.NODE_ENV === 'development';
+  
+  // Initialize and start a Modbus device
+  async addDevice(deviceConfig: ModbusDevice): Promise<void> {
+    if (this.adapters.has(deviceConfig.id)) {
+      console.log(`Modbus device ${deviceConfig.id} already exists, updating configuration`);
+      await this.removeDevice(deviceConfig.id);
     }
     
-    // Create device reading via MQTT
-    await sendDeviceCommand(device.siteId, deviceId, 'telemetry', telemetryData);
+    // Create adapter
+    const adapter = new ModbusAdapter(deviceConfig);
+    this.adapters.set(deviceConfig.id, adapter);
     
-    console.log(`Successfully polled data for device ${deviceId}`);
-  } catch (error) {
-    console.error(`Error polling data for device ${deviceId}:`, error);
+    // Connect and start scanning
+    try {
+      await adapter.connect();
+      await adapter.startScanning();
+    } catch (error) {
+      console.error(`Error initializing Modbus device ${deviceConfig.id}:`, error);
+    }
+  }
+  
+  // Remove and stop a Modbus device
+  async removeDevice(deviceId: number): Promise<void> {
+    const adapter = this.adapters.get(deviceId);
+    if (!adapter) return;
     
-    // Update device status
-    await storage.updateDevice(deviceId, {
-      status: 'error',
-      updatedAt: new Date()
-    });
-  }
-}
-
-// Read solar inverter data
-async function readSolarInverterData(device: ModbusDevice, telemetryData: any) {
-  const client = device.client!;
-  const map = device.registerMap;
-  
-  // Common solar inverter registers
-  if (map.power && map.power.address !== undefined) {
-    const powerRegs = await readRegister(client, map.power);
-    telemetryData.power = powerRegs;
+    adapter.stopScanning();
+    await adapter.disconnect();
+    this.adapters.delete(deviceId);
+    console.log(`Removed Modbus device ${deviceId}`);
   }
   
-  if (map.energy && map.energy.address !== undefined) {
-    const energyRegs = await readRegister(client, map.energy);
-    telemetryData.energy = energyRegs;
-  }
-  
-  if (map.voltage && map.voltage.address !== undefined) {
-    const voltageRegs = await readRegister(client, map.voltage);
-    telemetryData.voltage = voltageRegs;
-  }
-  
-  if (map.current && map.current.address !== undefined) {
-    const currentRegs = await readRegister(client, map.current);
-    telemetryData.current = currentRegs;
-  }
-  
-  if (map.frequency && map.frequency.address !== undefined) {
-    const frequencyRegs = await readRegister(client, map.frequency);
-    telemetryData.frequency = frequencyRegs;
-  }
-  
-  if (map.temperature && map.temperature.address !== undefined) {
-    const temperatureRegs = await readRegister(client, map.temperature);
-    telemetryData.temperature = temperatureRegs;
-  }
-  
-  // Additional data specific to solar inverters
-  const additionalData: any = {};
-  
-  if (map.irradiance && map.irradiance.address !== undefined) {
-    const irradianceRegs = await readRegister(client, map.irradiance);
-    additionalData.irradiance = irradianceRegs;
-  }
-  
-  if (map.efficiency && map.efficiency.address !== undefined) {
-    const efficiencyRegs = await readRegister(client, map.efficiency);
-    additionalData.panelEfficiency = efficiencyRegs;
-  }
-  
-  if (Object.keys(additionalData).length > 0) {
-    telemetryData.additionalData = additionalData;
-  }
-}
-
-// Read battery storage data
-async function readBatteryData(device: ModbusDevice, telemetryData: any) {
-  const client = device.client!;
-  const map = device.registerMap;
-  
-  // Common battery registers
-  if (map.power && map.power.address !== undefined) {
-    const powerRegs = await readRegister(client, map.power);
-    telemetryData.power = powerRegs;
-  }
-  
-  if (map.stateOfCharge && map.stateOfCharge.address !== undefined) {
-    const socRegs = await readRegister(client, map.stateOfCharge);
-    telemetryData.stateOfCharge = socRegs;
-  }
-  
-  if (map.voltage && map.voltage.address !== undefined) {
-    const voltageRegs = await readRegister(client, map.voltage);
-    telemetryData.voltage = voltageRegs;
-  }
-  
-  if (map.current && map.current.address !== undefined) {
-    const currentRegs = await readRegister(client, map.current);
-    telemetryData.current = currentRegs;
-  }
-  
-  if (map.temperature && map.temperature.address !== undefined) {
-    const temperatureRegs = await readRegister(client, map.temperature);
-    telemetryData.temperature = temperatureRegs;
-  }
-  
-  // Additional data specific to batteries
-  const additionalData: any = {};
-  
-  if (map.cycleCount && map.cycleCount.address !== undefined) {
-    const cycleCountRegs = await readRegister(client, map.cycleCount);
-    additionalData.cycleCount = cycleCountRegs;
-  }
-  
-  if (map.chargeStatus && map.chargeStatus.address !== undefined) {
-    const chargeStatusRegs = await readRegister(client, map.chargeStatus);
-    additionalData.chargeStatus = chargeStatusRegs === 1 ? 'charging' : 
-                               chargeStatusRegs === 2 ? 'discharging' : 'idle';
-  }
-  
-  if (Object.keys(additionalData).length > 0) {
-    telemetryData.additionalData = additionalData;
-  }
-}
-
-// Read smart meter data
-async function readSmartMeterData(device: ModbusDevice, telemetryData: any) {
-  const client = device.client!;
-  const map = device.registerMap;
-  
-  // Common smart meter registers
-  if (map.power && map.power.address !== undefined) {
-    const powerRegs = await readRegister(client, map.power);
-    telemetryData.power = powerRegs;
-  }
-  
-  if (map.energy && map.energy.address !== undefined) {
-    const energyRegs = await readRegister(client, map.energy);
-    telemetryData.energy = energyRegs;
-  }
-  
-  if (map.voltage && map.voltage.address !== undefined) {
-    const voltageRegs = await readRegister(client, map.voltage);
-    telemetryData.voltage = voltageRegs;
-  }
-  
-  if (map.current && map.current.address !== undefined) {
-    const currentRegs = await readRegister(client, map.current);
-    telemetryData.current = currentRegs;
-  }
-  
-  if (map.frequency && map.frequency.address !== undefined) {
-    const frequencyRegs = await readRegister(client, map.frequency);
-    telemetryData.frequency = frequencyRegs;
-  }
-  
-  // Additional data specific to smart meters
-  const additionalData: any = {};
-  
-  if (map.importEnergy && map.importEnergy.address !== undefined) {
-    const importEnergyRegs = await readRegister(client, map.importEnergy);
-    additionalData.importEnergy = importEnergyRegs;
-  }
-  
-  if (map.exportEnergy && map.exportEnergy.address !== undefined) {
-    const exportEnergyRegs = await readRegister(client, map.exportEnergy);
-    additionalData.exportEnergy = exportEnergyRegs;
-  }
-  
-  if (map.powerFactor && map.powerFactor.address !== undefined) {
-    const powerFactorRegs = await readRegister(client, map.powerFactor);
-    additionalData.powerFactor = powerFactorRegs;
-  }
-  
-  if (Object.keys(additionalData).length > 0) {
-    telemetryData.additionalData = additionalData;
-  }
-}
-
-// Read heat pump data
-async function readHeatPumpData(device: ModbusDevice, telemetryData: any) {
-  const client = device.client!;
-  const map = device.registerMap;
-  
-  // Common heat pump registers
-  if (map.power && map.power.address !== undefined) {
-    const powerRegs = await readRegister(client, map.power);
-    telemetryData.power = powerRegs;
-  }
-  
-  if (map.energy && map.energy.address !== undefined) {
-    const energyRegs = await readRegister(client, map.energy);
-    telemetryData.energy = energyRegs;
-  }
-  
-  if (map.temperature && map.temperature.address !== undefined) {
-    const temperatureRegs = await readRegister(client, map.temperature);
-    telemetryData.temperature = temperatureRegs;
-  }
-  
-  // Additional data specific to heat pumps
-  const additionalData: any = {};
-  
-  if (map.mode && map.mode.address !== undefined) {
-    const modeRegs = await readRegister(client, map.mode);
-    additionalData.mode = modeRegs === 1 ? 'heating' : 
-                      modeRegs === 2 ? 'cooling' : 
-                      modeRegs === 3 ? 'hot_water' : 'off';
-  }
-  
-  if (map.targetTemp && map.targetTemp.address !== undefined) {
-    const targetTempRegs = await readRegister(client, map.targetTemp);
-    additionalData.targetTemp = targetTempRegs;
-  }
-  
-  if (map.ambientTemp && map.ambientTemp.address !== undefined) {
-    const ambientTempRegs = await readRegister(client, map.ambientTemp);
-    additionalData.ambientTemp = ambientTempRegs;
-  }
-  
-  if (map.cop && map.cop.address !== undefined) {
-    const copRegs = await readRegister(client, map.cop);
-    additionalData.cop = copRegs;
-  }
-  
-  if (Object.keys(additionalData).length > 0) {
-    telemetryData.additionalData = additionalData;
-  }
-}
-
-// Read EV charger data
-async function readEVChargerData(device: ModbusDevice, telemetryData: any) {
-  const client = device.client!;
-  const map = device.registerMap;
-  
-  // Common EV charger registers
-  if (map.power && map.power.address !== undefined) {
-    const powerRegs = await readRegister(client, map.power);
-    telemetryData.power = powerRegs;
-  }
-  
-  if (map.energy && map.energy.address !== undefined) {
-    const energyRegs = await readRegister(client, map.energy);
-    telemetryData.energy = energyRegs;
-  }
-  
-  if (map.voltage && map.voltage.address !== undefined) {
-    const voltageRegs = await readRegister(client, map.voltage);
-    telemetryData.voltage = voltageRegs;
-  }
-  
-  if (map.current && map.current.address !== undefined) {
-    const currentRegs = await readRegister(client, map.current);
-    telemetryData.current = currentRegs;
-  }
-  
-  // Additional data specific to EV chargers
-  const additionalData: any = {};
-  
-  if (map.chargingStatus && map.chargingStatus.address !== undefined) {
-    const statusRegs = await readRegister(client, map.chargingStatus);
-    additionalData.isCharging = statusRegs === 1;
-    additionalData.chargingMode = statusRegs === 1 ? 'charging' : 
-                               statusRegs === 2 ? 'connected' : 'idle';
-  }
-  
-  if (map.connectedVehicle && map.connectedVehicle.address !== undefined) {
-    const vehicleRegs = await readRegister(client, map.connectedVehicle);
-    additionalData.connectedVehicle = vehicleRegs === 1 ? 'connected' : null;
-  }
-  
-  if (Object.keys(additionalData).length > 0) {
-    telemetryData.additionalData = additionalData;
-  }
-}
-
-// Helper function to read registers based on type
-async function readRegister(client: ModbusRTU, register: RegisterMap[string]): Promise<number> {
-  try {
-    // Default length is 1 if not specified
-    const length = register.length || 1;
-    
-    let data;
-    
-    // Read based on register type
-    switch (register.type) {
-      case 'coil':
-        data = await client.readCoils(register.address, length);
-        break;
-        
-      case 'discrete':
-        data = await client.readDiscreteInputs(register.address, length);
-        break;
-        
-      case 'input':
-        data = await client.readInputRegisters(register.address, length);
-        break;
-        
-      case 'holding':
-        data = await client.readHoldingRegisters(register.address, length);
-        break;
-        
-      default:
-        throw new Error(`Unknown register type: ${register.type}`);
+  // Stop and disconnect all devices
+  async shutdown(): Promise<void> {
+    const shutdownPromises: Promise<void>[] = [];
+    for (const [deviceId, adapter] of this.adapters.entries()) {
+      adapter.stopScanning();
+      shutdownPromises.push(adapter.disconnect());
+      console.log(`Shutting down Modbus device ${deviceId}`);
     }
     
-    // Get the raw value based on data type
-    let value = 0;
-    
-    // Handle different data types
-    if (register.dataType === 'int16') {
-      value = data.buffer.readInt16BE(0);
-    } else if (register.dataType === 'uint32') {
-      value = data.buffer.readUInt32BE(0);
-    } else if (register.dataType === 'int32') {
-      value = data.buffer.readInt32BE(0);
-    } else if (register.dataType === 'float32') {
-      value = data.buffer.readFloatBE(0);
-    } else {
-      // Default to uint16
-      value = data.buffer.readUInt16BE(0);
-    }
-    
-    // Apply scale factor if provided
-    if (register.scaleFactor !== undefined) {
-      value = value * register.scaleFactor;
-    }
-    
-    return value;
-  } catch (error) {
-    console.error(`Error reading register ${register.address}:`, error);
-    throw error;
+    await Promise.all(shutdownPromises);
+    this.adapters.clear();
+    console.log('All Modbus devices shut down');
   }
 }
 
-// Write to a register
-export async function writeModbusRegister(
-  deviceId: number,
-  registerName: string,
-  value: number
-): Promise<boolean> {
-  // In development mode, simulate successful register write
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`Development mode: Simulating Modbus register write for device ${deviceId}, register ${registerName}, value ${value}`);
-    return true;
-  }
+// Singleton instance
+let modbusManagerInstance: ModbusManager | null = null;
 
-  const device = modbusDevices.get(deviceId);
-  
-  if (!device || !device.connected) {
-    console.error(`Device ${deviceId} not found or not connected`);
-    return false;
+// Get or create the Modbus manager instance
+export function getModbusManager(): ModbusManager {
+  if (!modbusManagerInstance) {
+    modbusManagerInstance = new ModbusManager();
   }
-  
-  const register = device.registerMap[registerName];
-  
-  if (!register) {
-    console.error(`Register ${registerName} not found in device ${deviceId} register map`);
-    return false;
-  }
-  
-  if (register.readOnly) {
-    console.error(`Register ${registerName} is read-only`);
-    return false;
-  }
-  
-  try {
-    // Handle different register types
-    switch (register.type) {
-      case 'coil':
-        await device.client!.writeCoil(register.address, value === 1);
-        break;
-        
-      case 'holding':
-        // Apply scale factor in reverse if provided
-        let scaledValue = value;
-        if (register.scaleFactor !== undefined && register.scaleFactor !== 0) {
-          scaledValue = value / register.scaleFactor;
-        }
-        
-        // Handle different data types
-        if (register.dataType === 'int16') {
-          const buffer = Buffer.alloc(2);
-          buffer.writeInt16BE(scaledValue, 0);
-          await device.client!.writeRegisters(register.address, [buffer.readUInt16BE(0)]);
-        } else if (register.dataType === 'uint32' || register.dataType === 'int32' || register.dataType === 'float32') {
-          const buffer = Buffer.alloc(4);
-          
-          if (register.dataType === 'uint32') {
-            buffer.writeUInt32BE(scaledValue, 0);
-          } else if (register.dataType === 'int32') {
-            buffer.writeInt32BE(scaledValue, 0);
-          } else if (register.dataType === 'float32') {
-            buffer.writeFloatBE(scaledValue, 0);
-          }
-          
-          // For 32-bit values, we need to write two 16-bit registers
-          await device.client!.writeRegisters(
-            register.address, 
-            [buffer.readUInt16BE(0), buffer.readUInt16BE(2)]
-          );
-        } else {
-          // Default to uint16
-          await device.client!.writeRegister(register.address, scaledValue);
-        }
-        break;
-        
-      default:
-        console.error(`Cannot write to register type: ${register.type}`);
-        return false;
-    }
-    
-    console.log(`Successfully wrote ${value} to register ${registerName} on device ${deviceId}`);
-    return true;
-  } catch (error) {
-    console.error(`Error writing to register ${registerName} on device ${deviceId}:`, error);
-    return false;
-  }
-}
-
-// Execute a command on a Modbus device
-export async function executeModbusCommand(
-  deviceId: number,
-  command: string,
-  parameters: any = {}
-): Promise<{ success: boolean; message?: string; data?: any }> {
-  // In development mode, simulate successful command execution
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`Development mode: Simulating Modbus command ${command} for device ${deviceId}`);
-    return {
-      success: true,
-      message: `Command ${command} simulated in development mode`,
-      data: { 
-        ...parameters,
-        simulatedAt: new Date().toISOString(),
-        deviceId
-      }
-    };
-  }
-
-  const device = modbusDevices.get(deviceId);
-  
-  if (!device) {
-    return { 
-      success: false, 
-      message: `Device ${deviceId} not found in Modbus device map` 
-    };
-  }
-  
-  if (!device.connected) {
-    return { 
-      success: false, 
-      message: `Device ${deviceId} not connected` 
-    };
-  }
-  
-  try {
-    // Execute commands based on device type and command
-    switch (device.deviceType) {
-      case 'solar_pv':
-        return executeSolarInverterCommand(device, command, parameters);
-        
-      case 'battery_storage':
-        return executeBatteryCommand(device, command, parameters);
-        
-      case 'heat_pump':
-        return executeHeatPumpCommand(device, command, parameters);
-        
-      case 'ev_charger':
-        return executeEVChargerCommand(device, command, parameters);
-        
-      case 'smart_meter':
-        return { 
-          success: false, 
-          message: `Smart meters typically don't support commands` 
-        };
-        
-      default:
-        return { 
-          success: false, 
-          message: `Unknown device type: ${device.deviceType}` 
-        };
-    }
-  } catch (error) {
-    return { 
-      success: false, 
-      message: `Error executing command: ${error instanceof Error ? error.message : String(error)}` 
-    };
-  }
-}
-
-// Execute a command on a solar inverter
-async function executeSolarInverterCommand(
-  device: ModbusDevice,
-  command: string,
-  parameters: any
-): Promise<{ success: boolean; message?: string; data?: any }> {
-  switch (command) {
-    case 'setLimits':
-      if (parameters.powerLimit !== undefined && device.registerMap.powerLimit) {
-        const success = await writeModbusRegister(device.id, 'powerLimit', parameters.powerLimit);
-        return { 
-          success, 
-          message: success 
-            ? `Power limit set to ${parameters.powerLimit}W` 
-            : 'Failed to set power limit' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Power limit parameter missing or register not defined' 
-      };
-      
-    case 'getStatus':
-      // Poll the device immediately
-      await pollDeviceData(device.id);
-      return { 
-        success: true, 
-        message: 'Status updated' 
-      };
-      
-    default:
-      return { 
-        success: false, 
-        message: `Unknown command for solar inverter: ${command}` 
-      };
-  }
-}
-
-// Execute a command on a battery storage device
-async function executeBatteryCommand(
-  device: ModbusDevice,
-  command: string,
-  parameters: any
-): Promise<{ success: boolean; message?: string; data?: any }> {
-  switch (command) {
-    case 'setChargingMode':
-      if (parameters.mode !== undefined && device.registerMap.chargeMode) {
-        let modeValue = 0;
-        
-        // Convert mode string to register value
-        if (parameters.mode === 'charge') {
-          modeValue = 1;
-        } else if (parameters.mode === 'discharge') {
-          modeValue = 2;
-        } else if (parameters.mode === 'idle') {
-          modeValue = 0;
-        } else {
-          return { 
-            success: false, 
-            message: `Invalid charging mode: ${parameters.mode}` 
-          };
-        }
-        
-        const success = await writeModbusRegister(device.id, 'chargeMode', modeValue);
-        return { 
-          success, 
-          message: success 
-            ? `Charging mode set to ${parameters.mode}` 
-            : 'Failed to set charging mode' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Mode parameter missing or register not defined' 
-      };
-      
-    case 'setChargeLimits':
-      if (parameters.chargeLimit !== undefined && device.registerMap.chargeLimit) {
-        const success = await writeModbusRegister(device.id, 'chargeLimit', parameters.chargeLimit);
-        return { 
-          success, 
-          message: success 
-            ? `Charge limit set to ${parameters.chargeLimit}W` 
-            : 'Failed to set charge limit' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Charge limit parameter missing or register not defined' 
-      };
-      
-    case 'setDischargeLimits':
-      if (parameters.dischargeLimit !== undefined && device.registerMap.dischargeLimit) {
-        const success = await writeModbusRegister(device.id, 'dischargeLimit', parameters.dischargeLimit);
-        return { 
-          success, 
-          message: success 
-            ? `Discharge limit set to ${parameters.dischargeLimit}W` 
-            : 'Failed to set discharge limit' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Discharge limit parameter missing or register not defined' 
-      };
-      
-    default:
-      return { 
-        success: false, 
-        message: `Unknown command for battery storage: ${command}` 
-      };
-  }
-}
-
-// Execute a command on a heat pump
-async function executeHeatPumpCommand(
-  device: ModbusDevice,
-  command: string,
-  parameters: any
-): Promise<{ success: boolean; message?: string; data?: any }> {
-  switch (command) {
-    case 'setMode':
-      if (parameters.mode !== undefined && device.registerMap.mode) {
-        let modeValue = 0;
-        
-        // Convert mode string to register value
-        if (parameters.mode === 'heating') {
-          modeValue = 1;
-        } else if (parameters.mode === 'cooling') {
-          modeValue = 2;
-        } else if (parameters.mode === 'hot_water') {
-          modeValue = 3;
-        } else if (parameters.mode === 'off') {
-          modeValue = 0;
-        } else {
-          return { 
-            success: false, 
-            message: `Invalid mode: ${parameters.mode}` 
-          };
-        }
-        
-        const success = await writeModbusRegister(device.id, 'mode', modeValue);
-        return { 
-          success, 
-          message: success 
-            ? `Mode set to ${parameters.mode}` 
-            : 'Failed to set mode' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Mode parameter missing or register not defined' 
-      };
-      
-    case 'setTemperature':
-      if (parameters.temperature !== undefined && device.registerMap.targetTemp) {
-        const success = await writeModbusRegister(device.id, 'targetTemp', parameters.temperature);
-        return { 
-          success, 
-          message: success 
-            ? `Temperature set to ${parameters.temperature}°C` 
-            : 'Failed to set temperature' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Temperature parameter missing or register not defined' 
-      };
-      
-    default:
-      return { 
-        success: false, 
-        message: `Unknown command for heat pump: ${command}` 
-      };
-  }
-}
-
-// Execute a command on an EV charger
-async function executeEVChargerCommand(
-  device: ModbusDevice,
-  command: string,
-  parameters: any
-): Promise<{ success: boolean; message?: string; data?: any }> {
-  switch (command) {
-    case 'startCharging':
-      if (device.registerMap.chargingStatus) {
-        const success = await writeModbusRegister(device.id, 'chargingStatus', 1);
-        return { 
-          success, 
-          message: success 
-            ? 'Charging started' 
-            : 'Failed to start charging' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Charging status register not defined' 
-      };
-      
-    case 'stopCharging':
-      if (device.registerMap.chargingStatus) {
-        const success = await writeModbusRegister(device.id, 'chargingStatus', 0);
-        return { 
-          success, 
-          message: success 
-            ? 'Charging stopped' 
-            : 'Failed to stop charging' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Charging status register not defined' 
-      };
-      
-    case 'setChargingCurrent':
-      if (parameters.current !== undefined && device.registerMap.chargingCurrent) {
-        const success = await writeModbusRegister(device.id, 'chargingCurrent', parameters.current);
-        return { 
-          success, 
-          message: success 
-            ? `Charging current set to ${parameters.current}A` 
-            : 'Failed to set charging current' 
-        };
-      }
-      return { 
-        success: false, 
-        message: 'Current parameter missing or register not defined' 
-      };
-      
-    default:
-      return { 
-        success: false, 
-        message: `Unknown command for EV charger: ${command}` 
-      };
-  }
-}
-
-// Close all Modbus connections
-export function closeAllModbusConnections() {
-  // Use Array.from to convert the iterator to an array to avoid downlevelIteration issues
-  Array.from(modbusDevices.entries()).forEach(([deviceId, device]) => {
-    // Clear polling interval
-    if (device.pollingInterval) {
-      clearInterval(device.pollingInterval);
-    }
-    
-    // Close connection
-    if (device.client && device.connected) {
-      device.client.close(() => {
-        console.log(`Closed Modbus connection for device ${deviceId}`);
-      });
-    }
-  });
-  
-  // Clear device map
-  modbusDevices.clear();
-}
-
-// Get all connected Modbus devices
-export function getConnectedModbusDevices(): { deviceId: number; connected: boolean; deviceType: string }[] {
-  const connectedDevices: { deviceId: number; connected: boolean; deviceType: string }[] = [];
-  
-  // Use Array.from to convert the iterator to an array to avoid downlevelIteration issues
-  Array.from(modbusDevices.entries()).forEach(([deviceId, device]) => {
-    connectedDevices.push({
-      deviceId,
-      connected: device.connected,
-      deviceType: device.deviceType
-    });
-  });
-  
-  return connectedDevices;
+  return modbusManagerInstance;
 }

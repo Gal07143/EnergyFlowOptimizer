@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
 import { storage } from '../storage';
+import { subscribeToDevice, unsubscribeFromDevice } from './deviceSimulator';
 
 interface ActiveConnection {
   ws: WebSocket;
@@ -254,6 +255,9 @@ function handleSubscription(connection: ActiveConnection, data: any) {
     connection.deviceId = data.deviceId;
     console.log(`Client subscribed to device ${data.deviceId}`);
     
+    // Start device simulation in development mode
+    subscribeToDevice(data.deviceId);
+    
     // Send confirmation
     try {
       if (connection.ws.readyState === WebSocket.OPEN) {
@@ -290,15 +294,21 @@ function handleUnsubscription(connection: ActiveConnection, data: any) {
   }
   
   if (data.deviceId && connection.deviceId === data.deviceId) {
+    const deviceId = connection.deviceId;
     delete connection.deviceId;
-    console.log(`Client unsubscribed from device ${data.deviceId}`);
+    console.log(`Client unsubscribed from device ${deviceId}`);
+    
+    // Stop device simulation in development mode
+    if (deviceId !== undefined) {
+      unsubscribeFromDevice(deviceId);
+    }
     
     // Send confirmation
     try {
       if (connection.ws.readyState === WebSocket.OPEN) {
         connection.ws.send(JSON.stringify({ 
           type: 'unsubscribed', 
-          deviceId: data.deviceId,
+          deviceId: deviceId,
           timestamp: Date.now()
         }));
       }

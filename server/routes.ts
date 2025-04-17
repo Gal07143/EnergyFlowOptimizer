@@ -10,7 +10,7 @@ import { db } from "./db";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { requireAdmin, requireManager, canManageSite } from './middleware/roleAuth';
-import { initDeviceServices } from './services/deviceManagementService';
+import { initDeviceManagementService } from './services/deviceManagementService';
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
@@ -36,10 +36,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Initialize device management services
   try {
-    const initialized = await initDeviceServices();
-    console.log(`Device management services ${initialized ? 'successfully initialized' : 'failed to initialize'}`);
+    const deviceService = initDeviceManagementService();
+    console.log('Device management service successfully initialized');
   } catch (error) {
-    console.error('Error initializing device management services:', error);
+    console.error('Error initializing device management service:', error);
   }
   
   // API routes

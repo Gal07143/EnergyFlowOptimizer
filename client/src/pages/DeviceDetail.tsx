@@ -1,44 +1,42 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { useWebSocketContext } from "@/hooks/WebSocketProvider";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from 'react';
+import { useParams, useLocation } from 'wouter';
+import { useDevice, useDeviceReadings } from '@/hooks/useDevices';
+import { useDeviceWebSocket, DeviceReading } from '@/hooks/useDeviceWebSocket';
+import PageHeader from '@/components/common/PageHeader';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronLeft, Power, Battery, Zap, Thermometer, Gauge, Droplet, Info, BarChart4 } from 'lucide-react';
+import { useSiteSelector } from '@/hooks/useSiteData';
+import { deviceTypeToIcon } from '@/lib/icons';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { format } from 'date-fns';
+import { Line } from 'react-chartjs-2';
 import {
-  ChevronLeft,
-  Activity,
-  Battery,
-  Zap,
-  Thermometer,
-  BarChart3,
-  RefreshCw,
-  Play,
-  Pause,
-  Power,
-  AlertTriangle,
-  Check,
-} from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { WebSocketStatus } from "@/components/ui/websocket-status";
-import { getQueryFn } from "@/lib/queryClient";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  TimeScale,
+} from 'chart.js';
+import 'chartjs-adapter-date-fns';
 
-// Device reading types
-interface DeviceReading {
-  deviceId: number;
-  timestamp: string;
-  power?: number;
-  energy?: number;
-  voltage?: number;
-  temperature?: number;
-  stateOfCharge?: number;
-  frequency?: number;
-  additionalData?: Record<string, any>;
-}
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  TimeScale,
+  Title,
+  Tooltip,
+  Legend
+);
 
-// Device type
+// Interface for device details
 interface Device {
   id: number;
   name: string;
@@ -50,653 +48,524 @@ interface Device {
   createdAt: string;
 }
 
-// Component for displaying the latest reading data
-const LatestReadingCard = ({ 
-  title, 
-  value, 
-  unit, 
-  icon, 
-  className = "", 
-  loading = false,
-  trend = 0 // 1 = up, -1 = down, 0 = neutral
-}) => {
-  if (loading) {
-    return (
-      <Card className="col-span-1">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            <Skeleton className="h-4 w-24" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-9 w-20" />
-            <Skeleton className="h-8 w-8 rounded-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  return (
-    <Card className="col-span-1">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            <p className="text-2xl font-bold">
-              {value !== undefined && value !== null 
-                ? typeof value === 'number' 
-                  ? value.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
-                  : value
-                : 'N/A'}
-              <span className="text-sm ml-1 text-muted-foreground">{unit}</span>
-            </p>
-            {trend !== 0 && (
-              <p className={`text-xs ${trend > 0 ? 'text-green-500' : 'text-red-500'} flex items-center`}>
-                {trend > 0 ? '↑' : '↓'} {Math.abs(trend).toFixed(1)}% from last reading
-              </p>
-            )}
-          </div>
-          <div className={`p-2 rounded-full ${className}`}>
-            {icon}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+// Interface for DataPoint component props
+interface DataPointProps {
+  title: string;
+  value: number | string | null | undefined;
+  unit: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}
 
-// Status badge component
-const StatusBadge = ({ status }: { status: string }) => {
-  const getStatusDetails = () => {
-    switch (status?.toLowerCase()) {
-      case 'online':
-        return { variant: 'default', icon: <Check className="h-3 w-3 mr-1" />, label: 'Online' };
-      case 'offline':
-        return { variant: 'destructive', icon: <Power className="h-3 w-3 mr-1" />, label: 'Offline' };
-      case 'warning':
-        return { variant: 'warning', icon: <AlertTriangle className="h-3 w-3 mr-1" />, label: 'Warning' };
-      case 'error':
-        return { variant: 'destructive', icon: <AlertTriangle className="h-3 w-3 mr-1" />, label: 'Error' };
-      case 'idle':
-        return { variant: 'secondary', icon: <Pause className="h-3 w-3 mr-1" />, label: 'Idle' };
-      case 'active':
-        return { variant: 'success', icon: <Play className="h-3 w-3 mr-1" />, label: 'Active' };
-      default:
-        return { variant: 'outline', icon: <Activity className="h-3 w-3 mr-1" />, label: status || 'Unknown' };
+// Interface for DataChart component props
+interface DataChartProps {
+  data: DeviceReading[];
+  label: string;
+  color?: string;
+  dataKey?: string;
+}
+
+// DataPoint component for displaying readings
+const DataPoint = ({ title, value, unit, icon: Icon }: DataPointProps) => (
+  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+    <div className="flex items-center mb-2">
+      <Icon className="h-5 w-5 text-primary mr-2" />
+      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</h3>
+    </div>
+    <p className="text-2xl font-semibold">
+      {typeof value === 'number' ? value.toFixed(1) : value || 'N/A'} {unit}
+    </p>
+  </div>
+);
+
+// Chart component for historical data
+const DataChart = ({ data, label, color = 'rgb(99, 102, 241)', dataKey = 'power' }: DataChartProps) => {
+  if (!data || data.length === 0) {
+    return <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg">No data available</div>;
+  }
+
+  const chartData = {
+    datasets: [
+      {
+        label,
+        data: data.map((reading: DeviceReading) => ({
+          x: new Date(reading.timestamp),
+          y: reading[dataKey as keyof DeviceReading] as number || 0
+        })),
+        borderColor: color,
+        backgroundColor: `${color}33`, // Add transparency
+        fill: true,
+        tension: 0.2,
+        borderWidth: 2,
+      }
+    ]
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        type: 'time' as const,
+        time: {
+          unit: 'minute' as const,
+          displayFormats: {
+            minute: 'HH:mm'
+          }
+        },
+        title: {
+          display: true,
+          text: 'Time'
+        }
+      },
+      y: {
+        beginAtZero: true,
+        title: {
+          display: true,
+          text: dataKey === 'power' ? 'Power (W)' : 
+                dataKey === 'energy' ? 'Energy (kWh)' : 
+                dataKey === 'stateOfCharge' ? 'SoC (%)' :
+                dataKey === 'temperature' ? 'Temperature (°C)' : 'Value'
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        display: false
+      }
     }
   };
-  
-  const { variant, icon, label } = getStatusDetails();
-  
+
   return (
-    <Badge variant={variant as any} className="ml-2 flex items-center">
-      {icon}
-      <span>{label}</span>
-    </Badge>
+    <div className="h-64 bg-white dark:bg-gray-800 rounded-lg p-2">
+      <Line data={chartData} options={options} />
+    </div>
   );
 };
 
-// Main component
 export default function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
+  const { currentSiteId } = useSiteSelector();
   const deviceId = parseInt(id);
-  const [, navigate] = useLocation();
-  const [tab, setTab] = useState("overview");
-  
-  // WebSocket connection
-  const { 
-    subscribeDevice, 
-    unsubscribeDevice, 
-    isConnected, 
-    lastMessages, 
-    registerHandler 
-  } = useWebSocketContext();
-  
-  // Latest device reading from WebSocket
-  const [liveReading, setLiveReading] = useState<DeviceReading | null>(null);
-  
-  // Previous reading for trend calculation
-  const [previousReading, setPreviousReading] = useState<DeviceReading | null>(null);
   
   // Fetch device details
-  const { 
-    data: device, 
-    isLoading: isLoadingDevice,
-    error: deviceError
-  } = useQuery<Device>({
-    queryKey: ['/api/devices', deviceId],
-    queryFn: getQueryFn(),
-    retry: 1,
-    enabled: !isNaN(deviceId),
-  });
+  const { data: device, isLoading: isLoadingDevice } = useDevice(deviceId);
   
-  // Fetch historical readings
-  const { 
-    data: readings, 
-    isLoading: isLoadingReadings,
-    refetch: refetchReadings
-  } = useQuery<DeviceReading[]>({
-    queryKey: ['/api/devices', deviceId, 'readings'],
-    queryFn: getQueryFn(),
-    retry: 1,
-    enabled: !isNaN(deviceId) && !!device,
-  });
+  // Fetch historical device readings
+  const { data: historicalReadings = [], isLoading: isLoadingReadings } = useDeviceReadings(deviceId, 50);
   
-  // Subscribe to device updates via WebSocket
-  useEffect(() => {
-    if (deviceId && !isNaN(deviceId) && isConnected) {
-      console.log(`Subscribing to device ${deviceId} updates`);
-      subscribeDevice(deviceId);
-      
-      // Return cleanup function
-      return () => {
-        console.log(`Unsubscribing from device ${deviceId} updates`);
-        unsubscribeDevice();
-      };
-    }
-  }, [deviceId, isConnected, subscribeDevice, unsubscribeDevice]);
+  // Use our WebSocket hook for real-time readings
+  const { readings: wsReadings, latestReading, isConnected } = useDeviceWebSocket(deviceId);
   
-  // Handle device reading updates
-  useEffect(() => {
-    if (!deviceId || isNaN(deviceId)) return;
-    
-    const handleDeviceReading = (data: DeviceReading) => {
-      if (data.deviceId === deviceId) {
-        console.log('Received device reading:', data);
-        
-        // Save previous reading for trend calculation
-        if (liveReading) {
-          setPreviousReading(liveReading);
-        }
-        
-        // Update with new reading
-        setLiveReading(data);
-      }
-    };
-    
-    // Register handler
-    const cleanupHandler = registerHandler('deviceReading', handleDeviceReading);
-    
-    // Get last device reading message if available
-    const lastDeviceReading = lastMessages['deviceReading'];
-    if (lastDeviceReading && lastDeviceReading.deviceId === deviceId) {
-      setLiveReading(lastDeviceReading);
-    }
-    
-    return cleanupHandler;
-  }, [deviceId, lastMessages, registerHandler, liveReading]);
+  // Combine WebSocket readings with historical readings
+  const allReadings = [...wsReadings, ...historicalReadings.filter(hr => 
+    !wsReadings.some(r => r.timestamp === hr.timestamp)
+  )].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   
-  // Calculate trend percentage between readings
-  const calculateTrend = (current?: number, previous?: number): number => {
-    if (current === undefined || previous === undefined || previous === 0) {
-      return 0;
-    }
-    return ((current - previous) / Math.abs(previous)) * 100;
-  };
+  // Set active reading to either latest from WebSocket or first historical
+  const activeReading = latestReading || (historicalReadings.length > 0 ? historicalReadings[0] : null);
   
-  // Format the device type for display
-  const formatDeviceType = (type: string) => {
-    return type.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
+  // Get icon based on device type
+  const DeviceIcon = device ? deviceTypeToIcon(device.type) : Info;
   
-  // If device is not found or loading
   if (isLoadingDevice) {
     return (
-      <div className="container mx-auto p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-64" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Skeleton className="h-32 col-span-1" />
-          <Skeleton className="h-32 col-span-1" />
-          <Skeleton className="h-32 col-span-1" />
-          <Skeleton className="h-32 col-span-1" />
-        </div>
-        <Skeleton className="h-64 w-full" />
+      <div className="py-6 px-4 sm:px-6 lg:px-8 flex items-center justify-center h-[80vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
   }
   
-  if (deviceError || !device) {
+  if (!device) {
     return (
-      <div className="container mx-auto p-4">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            Failed to load device information. The device may have been deleted or you do not have access.
-          </AlertDescription>
-        </Alert>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/devices')}>
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back to Devices
-        </Button>
+      <div className="py-6 px-4 sm:px-6 lg:px-8">
+        <Card className="mx-auto max-w-2xl">
+          <CardHeader>
+            <CardTitle>Device Not Found</CardTitle>
+            <CardDescription>The device you're looking for doesn't exist or you don't have access to it.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => setLocation('/devices')}>
+              <ChevronLeft className="mr-2 h-4 w-4" /> Back to Devices
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
   
-  // Display device details
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center">
-          <Button variant="outline" size="sm" onClick={() => navigate('/devices')}>
+    <div className="py-6 px-4 sm:px-6 lg:px-8">
+      <PageHeader 
+        title={device.name} 
+        subtitle={`${device.manufacturer} ${device.model} • ${device.type.replace('_', ' ')}`}>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setLocation('/devices')}>
             <ChevronLeft className="mr-2 h-4 w-4" /> Back
           </Button>
-          <h1 className="ml-4 text-xl font-bold">
-            {device.name}
-            <StatusBadge status={liveReading?.additionalData?.status || device.status} />
-          </h1>
         </div>
-        
-        <div className="flex items-center gap-2">
-          <WebSocketStatus className="mr-1" />
-          <Badge variant="outline" className="mr-2">
-            {formatDeviceType(device.type)}
-          </Badge>
-          <Button size="sm" variant="outline" onClick={() => refetchReadings()}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
-          </Button>
-        </div>
+      </PageHeader>
+      
+      {/* Connection status indicator */}
+      <div className="flex items-center my-2">
+        <div className={`h-2 w-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+        <span className="text-sm text-gray-500">
+          {isConnected ? 'Real-time connection active' : 'Offline mode'}
+        </span>
       </div>
       
-      <Tabs defaultValue="overview" value={tab} onValueChange={setTab} className="space-y-4">
-        <div className="flex justify-between items-center">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="readings">Readings</TabsTrigger>
-            <TabsTrigger value="controls">Controls</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-          <div className="text-sm text-muted-foreground">
-            Last update: {liveReading ? new Date(liveReading.timestamp).toLocaleString() : 'No live data'}
-          </div>
-        </div>
-        
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Power reading */}
-            <LatestReadingCard
-              title="Power"
-              value={liveReading?.power}
-              unit="W"
-              icon={<Zap className="h-6 w-6 text-yellow-500" />}
-              className="bg-yellow-100 dark:bg-yellow-900/20"
-              loading={isLoadingReadings && !liveReading}
-              trend={calculateTrend(liveReading?.power, previousReading?.power)}
-            />
-            
-            {/* Energy reading */}
-            <LatestReadingCard
-              title="Energy"
-              value={liveReading?.energy}
-              unit="kWh"
-              icon={<Activity className="h-6 w-6 text-blue-500" />}
-              className="bg-blue-100 dark:bg-blue-900/20"
-              loading={isLoadingReadings && !liveReading}
-              trend={calculateTrend(liveReading?.energy, previousReading?.energy)}
-            />
-            
-            {/* Based on device type, show relevant readings */}
-            {device.type === 'battery_storage' && (
-              <LatestReadingCard
-                title="State of Charge"
-                value={liveReading?.stateOfCharge}
-                unit="%"
-                icon={<Battery className="h-6 w-6 text-green-500" />}
-                className="bg-green-100 dark:bg-green-900/20"
-                loading={isLoadingReadings && !liveReading}
-                trend={calculateTrend(liveReading?.stateOfCharge, previousReading?.stateOfCharge)}
-              />
-            )}
-            
-            {/* Temperature reading (if available) */}
-            {(liveReading?.temperature !== undefined || device.type === 'heat_pump' || device.type === 'solar_pv') && (
-              <LatestReadingCard
-                title="Temperature"
-                value={liveReading?.temperature}
-                unit="°C"
-                icon={<Thermometer className="h-6 w-6 text-red-500" />}
-                className="bg-red-100 dark:bg-red-900/20"
-                loading={isLoadingReadings && !liveReading}
-                trend={calculateTrend(liveReading?.temperature, previousReading?.temperature)}
-              />
-            )}
-            
-            {/* Voltage reading */}
-            <LatestReadingCard
-              title="Voltage"
-              value={liveReading?.voltage}
-              unit="V"
-              icon={<BarChart3 className="h-6 w-6 text-purple-500" />}
-              className="bg-purple-100 dark:bg-purple-900/20"
-              loading={isLoadingReadings && !liveReading}
-              trend={calculateTrend(liveReading?.voltage, previousReading?.voltage)}
-            />
-          </div>
-          
-          {/* Device info card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Device Information</CardTitle>
-              <CardDescription>
-                Technical details and specifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium text-sm text-muted-foreground mb-2">Basic Information</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Device ID:</span>
-                      <span>{device.id}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Manufacturer:</span>
-                      <span>{device.manufacturer}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Model:</span>
-                      <span>{device.model}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Type:</span>
-                      <span>{formatDeviceType(device.type)}</span>
-                    </div>
-                  </div>
+      {/* Device status card */}
+      <div className="mt-4">
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <div className="p-3 rounded-full bg-primary/10 mr-3">
+                  <DeviceIcon className="h-6 w-6 text-primary" />
                 </div>
-                
                 <div>
-                  <h3 className="font-medium text-sm text-muted-foreground mb-2">Additional Data</h3>
-                  <div className="space-y-2">
-                    {liveReading?.additionalData && Object.entries(liveReading.additionalData).map(([key, value]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="font-medium">
-                          {key.split(/(?=[A-Z])/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}:
-                        </span>
-                        <span>
-                          {typeof value === 'number' 
-                            ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                            : typeof value === 'boolean'
-                              ? value ? 'Yes' : 'No'
-                              : value === null
-                                ? 'N/A'
-                                : String(value)
-                          }
-                        </span>
-                      </div>
-                    ))}
-                    
-                    {(!liveReading?.additionalData || Object.keys(liveReading.additionalData).length === 0) && (
-                      <div className="text-muted-foreground text-sm">No additional data available</div>
-                    )}
-                  </div>
+                  <h3 className="text-lg font-semibold">{device.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    ID: {device.id} • Added on {format(new Date(device.createdAt), 'MMM d, yyyy')}
+                  </p>
                 </div>
               </div>
-            </CardContent>
-            <CardFooter>
-              <p className="text-sm text-muted-foreground">
-                Last status update: {new Date(device.createdAt).toLocaleString()}
+              <div>
+                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                  ${device.status === 'online' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
+                    device.status === 'offline' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' : 
+                    device.status === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' : 
+                    'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'}`}>
+                  {device.status.charAt(0).toUpperCase() + device.status.slice(1)}
+                </div>
+              </div>
+            </div>
+            
+            {/* Last updated */}
+            {activeReading && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Last updated: {format(new Date(activeReading.timestamp), 'MMM d, yyyy HH:mm:ss')}
               </p>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="readings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historical Readings</CardTitle>
-              <CardDescription>
-                Recent device readings and measurements
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingReadings ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : readings && readings.length > 0 ? (
-                <div className="rounded-md border">
-                  <div className="overflow-x-auto">
-                    <table className="w-full caption-bottom text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="h-12 px-4 text-left align-middle font-medium">Timestamp</th>
-                          <th className="h-12 px-4 text-left align-middle font-medium">Power (W)</th>
-                          <th className="h-12 px-4 text-left align-middle font-medium">Energy (kWh)</th>
-                          <th className="h-12 px-4 text-left align-middle font-medium">Voltage (V)</th>
-                          {device.type === 'battery_storage' && (
-                            <th className="h-12 px-4 text-left align-middle font-medium">State of Charge (%)</th>
-                          )}
-                          {(device.type === 'heat_pump' || device.type === 'solar_pv') && (
-                            <th className="h-12 px-4 text-left align-middle font-medium">Temperature (°C)</th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {readings.map((reading, idx) => (
-                          <tr key={idx} className="border-b">
-                            <td className="p-4 align-middle">{new Date(reading.timestamp).toLocaleString()}</td>
-                            <td className="p-4 align-middle">{reading.power?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'N/A'}</td>
-                            <td className="p-4 align-middle">{reading.energy?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'N/A'}</td>
-                            <td className="p-4 align-middle">{reading.voltage?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'N/A'}</td>
-                            {device.type === 'battery_storage' && (
-                              <td className="p-4 align-middle">{reading.stateOfCharge?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'N/A'}</td>
-                            )}
-                            {(device.type === 'heat_pump' || device.type === 'solar_pv') && (
-                              <td className="p-4 align-middle">{reading.temperature?.toLocaleString(undefined, { maximumFractionDigits: 2 }) || 'N/A'}</td>
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  No historical readings available
-                </div>
+            )}
+            
+            {/* Current readings grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+              {/* Show appropriate data points based on device type */}
+              {device.type === 'solar_pv' && (
+                <>
+                  <DataPoint 
+                    title="Current Output" 
+                    value={activeReading?.power ? activeReading.power / 1000 : null} 
+                    unit="kW" 
+                    icon={Power} 
+                  />
+                  <DataPoint 
+                    title="Today's Yield" 
+                    value={activeReading?.energy} 
+                    unit="kWh" 
+                    icon={Zap} 
+                  />
+                  <DataPoint 
+                    title="Voltage" 
+                    value={activeReading?.voltage} 
+                    unit="V" 
+                    icon={Zap} 
+                  />
+                  <DataPoint 
+                    title="Temperature" 
+                    value={activeReading?.temperature} 
+                    unit="°C" 
+                    icon={Thermometer} 
+                  />
+                </>
               )}
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" size="sm" onClick={() => refetchReadings()}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Data
-              </Button>
-              {readings && readings.length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                  Showing {readings.length} readings
-                </div>
-              )}
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="controls" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Device Controls</CardTitle>
-              <CardDescription>
-                Control and manage device operations
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              
               {device.type === 'battery_storage' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Charge Control</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span>Charge Mode:</span>
-                        <Badge variant="outline">
-                          {liveReading?.additionalData?.mode || 'Auto'}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between pt-2">
-                        <Button variant="outline" size="sm">
-                          Start Charging
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Stop Charging
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Discharge Control</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span>Current SoC:</span>
-                        <Badge>
-                          {liveReading?.stateOfCharge?.toFixed(1) || 'N/A'}%
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between pt-2">
-                        <Button variant="outline" size="sm">
-                          Start Discharging
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Stop Discharging
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <>
+                  <DataPoint 
+                    title="Power" 
+                    value={activeReading?.power ? activeReading.power / 1000 : null} 
+                    unit="kW" 
+                    icon={Power} 
+                  />
+                  <DataPoint 
+                    title="State of Charge" 
+                    value={activeReading?.stateOfCharge} 
+                    unit="%" 
+                    icon={Battery} 
+                  />
+                  <DataPoint 
+                    title="Energy" 
+                    value={activeReading?.energy} 
+                    unit="kWh" 
+                    icon={Zap} 
+                  />
+                  <DataPoint 
+                    title="Temperature" 
+                    value={activeReading?.temperature} 
+                    unit="°C" 
+                    icon={Thermometer} 
+                  />
+                </>
               )}
               
               {device.type === 'ev_charger' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Charging Control</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span>Status:</span>
-                        <Badge variant={liveReading?.additionalData?.isCharging ? 'default' : 'secondary'}>
-                          {liveReading?.additionalData?.isCharging ? 'Charging' : 'Idle'}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between pt-2">
-                        <Button variant="outline" size="sm">
-                          Start Charging
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Stop Charging
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Power Limit</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span>Current Power:</span>
-                        <Badge variant="outline">
-                          {liveReading?.power?.toFixed(0) || 'N/A'} W
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between pt-2">
-                        <Button variant="outline" size="sm">
-                          Set Limit
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Reset Limit
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <>
+                  <DataPoint 
+                    title="Charging Power" 
+                    value={activeReading?.power ? activeReading.power / 1000 : null} 
+                    unit="kW" 
+                    icon={Power} 
+                  />
+                  <DataPoint 
+                    title="Session Energy" 
+                    value={activeReading?.energy} 
+                    unit="kWh" 
+                    icon={Zap} 
+                  />
+                  <DataPoint 
+                    title="Voltage" 
+                    value={activeReading?.voltage} 
+                    unit="V" 
+                    icon={Zap} 
+                  />
+                  <DataPoint 
+                    title="Status" 
+                    value={activeReading?.additionalData?.isCharging ? 'Charging' : 'Idle'} 
+                    unit="" 
+                    icon={Info} 
+                  />
+                </>
+              )}
+              
+              {device.type === 'smart_meter' && (
+                <>
+                  <DataPoint 
+                    title="Power" 
+                    value={activeReading?.power ? activeReading.power / 1000 : null} 
+                    unit="kW" 
+                    icon={Power} 
+                  />
+                  <DataPoint 
+                    title="Energy" 
+                    value={activeReading?.energy} 
+                    unit="kWh" 
+                    icon={Zap} 
+                  />
+                  <DataPoint 
+                    title="Frequency" 
+                    value={activeReading?.frequency} 
+                    unit="Hz" 
+                    icon={Gauge} 
+                  />
+                  <DataPoint 
+                    title="Voltage" 
+                    value={activeReading?.voltage} 
+                    unit="V" 
+                    icon={Zap} 
+                  />
+                </>
               )}
               
               {device.type === 'heat_pump' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Mode Control</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span>Current Mode:</span>
-                        <Badge variant="outline">
-                          {liveReading?.additionalData?.mode || 'Unknown'}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between pt-2">
-                        <Button variant="outline" size="sm">
-                          Heating Mode
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Cooling Mode
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Temperature Control</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span>Target Temp:</span>
-                        <Badge>
-                          {liveReading?.additionalData?.targetTemp?.toFixed(1) || 'N/A'}°C
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between pt-2">
-                        <Button variant="outline" size="sm">
-                          Decrease
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Increase
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <>
+                  <DataPoint 
+                    title="Power" 
+                    value={activeReading?.power ? activeReading.power / 1000 : null} 
+                    unit="kW" 
+                    icon={Power} 
+                  />
+                  <DataPoint 
+                    title="Energy" 
+                    value={activeReading?.energy} 
+                    unit="kWh" 
+                    icon={Zap} 
+                  />
+                  <DataPoint 
+                    title="Output Temperature" 
+                    value={activeReading?.temperature} 
+                    unit="°C" 
+                    icon={Thermometer} 
+                  />
+                  <DataPoint 
+                    title="COP" 
+                    value={activeReading?.additionalData?.cop} 
+                    unit="" 
+                    icon={Droplet} 
+                  />
+                </>
               )}
-              
-              {(device.type === 'solar_pv' || device.type === 'smart_meter') && (
-                <div className="text-center py-4 text-muted-foreground">
-                  This device type does not support direct controls
-                </div>
-              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Tabs for different charts */}
+      <Tabs defaultValue="power" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="power">Power</TabsTrigger>
+          {device.type === 'battery_storage' && (
+            <TabsTrigger value="soc">State of Charge</TabsTrigger>
+          )}
+          <TabsTrigger value="energy">Energy</TabsTrigger>
+          {(device.type === 'solar_pv' || device.type === 'battery_storage' || device.type === 'heat_pump') && (
+            <TabsTrigger value="temperature">Temperature</TabsTrigger>
+          )}
+        </TabsList>
+        
+        <TabsContent value="power">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BarChart4 className="h-5 w-5 mr-2" />
+                Power History
+              </CardTitle>
+              <CardDescription>
+                {device.type === 'solar_pv' ? 'Solar power output' : 
+                 device.type === 'battery_storage' ? 'Battery power flow (positive = discharge, negative = charge)' :
+                 device.type === 'ev_charger' ? 'EV charging power' :
+                 device.type === 'smart_meter' ? 'Grid power flow (positive = import, negative = export)' :
+                 'Power consumption'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataChart 
+                data={allReadings} 
+                label="Power (kW)" 
+                color={
+                  device.type === 'solar_pv' ? 'rgb(234, 179, 8)' : 
+                  device.type === 'battery_storage' ? 'rgb(6, 182, 212)' :
+                  device.type === 'ev_charger' ? 'rgb(16, 185, 129)' :
+                  device.type === 'smart_meter' ? 'rgb(99, 102, 241)' :
+                  'rgb(236, 72, 153)'
+                }
+                dataKey="power" 
+              />
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="settings" className="space-y-4">
+        {device.type === 'battery_storage' && (
+          <TabsContent value="soc">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Battery className="h-5 w-5 mr-2" />
+                  State of Charge History
+                </CardTitle>
+                <CardDescription>
+                  Battery state of charge as a percentage of total capacity
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataChart 
+                  data={allReadings} 
+                  label="SoC (%)" 
+                  color="rgb(6, 182, 212)" 
+                  dataKey="stateOfCharge" 
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+        
+        <TabsContent value="energy">
           <Card>
             <CardHeader>
-              <CardTitle>Device Settings</CardTitle>
+              <CardTitle className="flex items-center">
+                <Zap className="h-5 w-5 mr-2" />
+                Energy History
+              </CardTitle>
               <CardDescription>
-                Configuration and preferences
+                {device.type === 'solar_pv' ? 'Solar energy generation' : 
+                 device.type === 'battery_storage' ? 'Battery energy throughput' :
+                 device.type === 'ev_charger' ? 'EV charging session energy' :
+                 device.type === 'smart_meter' ? 'Energy consumption/export' :
+                 'Energy consumption'}
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-center py-4 text-muted-foreground">
-              Device settings will be implemented in a future update
+            <CardContent>
+              <DataChart 
+                data={allReadings} 
+                label="Energy (kWh)" 
+                color={
+                  device.type === 'solar_pv' ? 'rgb(234, 179, 8)' : 
+                  device.type === 'battery_storage' ? 'rgb(6, 182, 212)' :
+                  device.type === 'ev_charger' ? 'rgb(16, 185, 129)' :
+                  device.type === 'smart_meter' ? 'rgb(99, 102, 241)' :
+                  'rgb(236, 72, 153)'
+                }
+                dataKey="energy" 
+              />
             </CardContent>
           </Card>
         </TabsContent>
+        
+        {(device.type === 'solar_pv' || device.type === 'battery_storage' || device.type === 'heat_pump') && (
+          <TabsContent value="temperature">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Thermometer className="h-5 w-5 mr-2" />
+                  Temperature History
+                </CardTitle>
+                <CardDescription>
+                  {device.type === 'solar_pv' ? 'Solar panel temperature' : 
+                   device.type === 'battery_storage' ? 'Battery temperature' :
+                   'Heat pump output temperature'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataChart 
+                  data={allReadings} 
+                  label="Temperature (°C)" 
+                  color={
+                    device.type === 'solar_pv' ? 'rgb(234, 179, 8)' : 
+                    device.type === 'battery_storage' ? 'rgb(6, 182, 212)' :
+                    'rgb(236, 72, 153)'
+                  }
+                  dataKey="temperature" 
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
+      
+      {/* Additional device details */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Device Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Manufacturer</h4>
+              <p className="mt-1">{device.manufacturer || 'N/A'}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Model</h4>
+              <p className="mt-1">{device.model || 'N/A'}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Type</h4>
+              <p className="mt-1">{device.type.replace('_', ' ')}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Device ID</h4>
+              <p className="mt-1">{device.id}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h4>
+              <p className="mt-1">{device.status}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Site ID</h4>
+              <p className="mt-1">{device.siteId}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,642 +1,551 @@
-import mqtt, { MqttClient, IClientOptions } from 'mqtt';
-import { storage } from '../storage';
-import { broadcastDeviceReading, broadcastEnergyReading } from './websocketService';
-import mqttPattern from 'mqtt-pattern';
+import mqtt from 'mqtt';
+import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
+import { TOPIC_PATTERNS } from '@shared/messageSchema';
 
-// MQTT topic patterns
-const TOPIC_PATTERNS = {
-  DEVICE_TELEMETRY: 'ems/+siteId/devices/+deviceId/telemetry',
-  DEVICE_STATUS: 'ems/+siteId/devices/+deviceId/status',
-  DEVICE_COMMAND: 'ems/+siteId/devices/+deviceId/commands',
-  DEVICE_COMMAND_RESPONSE: 'ems/+siteId/devices/+deviceId/commands/response',
-  SITE_ENERGY: 'ems/+siteId/energy',
-  SYSTEM_STATUS: 'ems/system/status',
-};
-
-// Store for pending commands
-interface PendingCommand {
-  id: string;
-  deviceId: number;
-  siteId: number;
-  command: string;
-  parameters: any;
-  timestamp: Date;
-  timeoutId: NodeJS.Timeout;
-  callback?: (success: boolean, response?: any) => void;
-}
-
-// Command timeout in milliseconds
-const COMMAND_TIMEOUT = 30000; // 30 seconds
-
-// Store for pending commands
-const pendingCommands: Map<string, PendingCommand> = new Map();
-
-let mqttClient: MqttClient | null = null;
-let isConnected = false;
-
-// Initialize MQTT client
-export async function initMqttClient(): Promise<boolean> {
-  if (mqttClient) {
-    console.log('MQTT client already initialized');
-    return isConnected;
-  }
-
-  const mqttOptions: IClientOptions = {
-    clientId: `ems-server-${uuidv4()}`,
-    clean: true,
-    connectTimeout: 4000,
-    reconnectPeriod: 1000,
-    // Add credentials if needed
-    // username: process.env.MQTT_USERNAME,
-    // password: process.env.MQTT_PASSWORD,
+export interface MqttConnectionOptions {
+  brokerUrl?: string;
+  clientId?: string;
+  username?: string;
+  password?: string;
+  keepalive?: number;
+  clean?: boolean;
+  reconnectPeriod?: number;
+  connectTimeout?: number;
+  queueQoSZero?: boolean;
+  rejectUnauthorized?: boolean;
+  will?: {
+    topic: string;
+    payload: string;
+    qos: 0 | 1 | 2;
+    retain: boolean;
   };
+}
 
-  try {
-    // Connect to MQTT broker
-    // For local development, we can use a local broker or a public one
-    // For production, this should be a secured, properly configured broker
-    const brokerUrl = process.env.MQTT_BROKER_URL;
+export interface PublishOptions {
+  qos?: 0 | 1 | 2;
+  retain?: boolean;
+  dup?: boolean;
+}
+
+export interface SubscribeOptions {
+  qos?: 0 | 1 | 2;
+}
+
+interface MessageHandler {
+  topicPattern: string;
+  handler: (topic: string, message: any, params: Record<string, any>) => void;
+}
+
+// Mock MQTT broker for development environment
+class MockMqttBroker {
+  private subscribers: Map<string, Array<(topic: string, message: Buffer) => void>> = new Map();
+  private mockClientId: string = `mock-client-${uuidv4().slice(0, 8)}`;
+  private connected: boolean = false;
+  private emitter: EventEmitter = new EventEmitter();
+
+  connect(): void {
+    this.connected = true;
+    setTimeout(() => {
+      this.emitter.emit('connect');
+    }, 100);
     
-    // If no broker URL is provided in development, use a fake URL that will gracefully fail
-    // but won't block the server from starting
-    if (!brokerUrl && process.env.NODE_ENV === 'development') {
-      console.log('Development mode: MQTT broker URL not provided, using mock broker.');
-      // Return true to allow the system to continue initialization
-      // The MQTT client won't be available, but this won't block the server
-      return true;
-    } else if (!brokerUrl) {
-      console.log('No MQTT broker URL provided, MQTT services disabled.');
+    console.log('Connected to mock MQTT broker');
+  }
+
+  subscribe(topic: string, _options: SubscribeOptions | undefined, callback?: (err: Error | null, granted: any) => void): void {
+    console.log(`Subscribed to topic: ${topic}`);
+    if (callback) {
+      callback(null, [{ topic, qos: 0 }]);
+    }
+  }
+
+  publish(topic: string, message: Buffer | string, _options: PublishOptions | undefined, callback?: (err?: Error) => void): void {
+    const messageBuffer = typeof message === 'string' ? Buffer.from(message) : message;
+    
+    // Get all matching topic subscribers
+    for (const [subscribedTopic, handlers] of this.subscribers.entries()) {
+      if (this.topicMatches(topic, subscribedTopic)) {
+        for (const handler of handlers) {
+          try {
+            handler(topic, messageBuffer);
+          } catch (error) {
+            console.error(`Error in mock MQTT handler for topic ${subscribedTopic}:`, error);
+          }
+        }
+      }
+    }
+    
+    if (callback) {
+      callback();
+    }
+  }
+
+  private topicMatches(actualTopic: string, patternTopic: string): boolean {
+    // Simple topic matching (supports wildcards like # and +)
+    const actualParts = actualTopic.split('/');
+    const patternParts = patternTopic.split('/');
+    
+    return this.partsMatch(actualParts, patternParts);
+  }
+
+  private partsMatch(actualParts: string[], patternParts: string[]): boolean {
+    // Handle # wildcard (matches multiple levels)
+    if (patternParts.length > 0 && patternParts[patternParts.length - 1] === '#') {
+      return actualParts.length >= patternParts.length - 1 && 
+             this.partsMatch(actualParts.slice(0, patternParts.length - 1), patternParts.slice(0, patternParts.length - 1));
+    }
+    
+    if (actualParts.length !== patternParts.length) {
       return false;
     }
     
-    console.log(`Connecting to MQTT broker at ${brokerUrl}`);
-    
-    // Create a new promise to handle connection
-    return new Promise((resolve) => {
-      try {
-        mqttClient = mqtt.connect(brokerUrl, mqttOptions);
-        
-        // Handle connection events
-        mqttClient.on('connect', () => {
-          console.log('Connected to MQTT broker');
-          isConnected = true;
-          
-          // Subscribe to relevant topics
-          subscribeToTopics();
-          resolve(true);
-        });
-
-        mqttClient.on('error', (error) => {
-          console.error('MQTT connection error:', error);
-          isConnected = false;
-        });
-
-        mqttClient.on('offline', () => {
-          console.log('MQTT client offline');
-          isConnected = false;
-        });
-
-        mqttClient.on('reconnect', () => {
-          console.log('MQTT client reconnecting');
-        });
-
-        mqttClient.on('close', () => {
-          console.log('MQTT connection closed');
-          isConnected = false;
-        });
-
-        // Set up message handler
-        mqttClient.on('message', handleMqttMessage);
-        
-        // Timeout after 5 seconds
-        setTimeout(() => {
-          resolve(isConnected);
-        }, 5000);
-      } catch (connectError) {
-        console.error('Error connecting to MQTT broker:', connectError);
-        resolve(false);
-      }
-    });
-  } catch (error) {
-    console.error('Failed to initialize MQTT client:', error);
-    return false;
-  }
-}
-
-// Subscribe to relevant topics
-function subscribeToTopics() {
-  if (!mqttClient || !isConnected) {
-    console.error('MQTT client not connected');
-    return;
-  }
-
-  // Subscribe to all device telemetry topics
-  mqttClient.subscribe('ems/+/devices/+/telemetry', (err) => {
-    if (err) {
-      console.error('Error subscribing to device telemetry:', err);
-    } else {
-      console.log('Subscribed to device telemetry topics');
-    }
-  });
-
-  // Subscribe to all device status topics
-  mqttClient.subscribe('ems/+/devices/+/status', (err) => {
-    if (err) {
-      console.error('Error subscribing to device status:', err);
-    } else {
-      console.log('Subscribed to device status topics');
-    }
-  });
-
-  // Subscribe to command responses
-  mqttClient.subscribe('ems/+/devices/+/commands/response', (err) => {
-    if (err) {
-      console.error('Error subscribing to command responses:', err);
-    } else {
-      console.log('Subscribed to command response topics');
-    }
-  });
-
-  // Subscribe to site energy topics
-  mqttClient.subscribe('ems/+/energy', (err) => {
-    if (err) {
-      console.error('Error subscribing to site energy:', err);
-    } else {
-      console.log('Subscribed to site energy topics');
-    }
-  });
-
-  // Subscribe to system status
-  mqttClient.subscribe('ems/system/status', (err) => {
-    if (err) {
-      console.error('Error subscribing to system status:', err);
-    } else {
-      console.log('Subscribed to system status topics');
-    }
-  });
-}
-
-interface MqttParams {
-  siteId?: string;
-  deviceId?: string;
-  [key: string]: string | undefined;
-}
-
-// Handle incoming MQTT messages
-async function handleMqttMessage(topic: string, message: Buffer) {
-  try {
-    console.log(`MQTT message received on topic: ${topic}`);
-    
-    let messageData: any;
-    try {
-      messageData = JSON.parse(message.toString());
-    } catch (error) {
-      console.error('Failed to parse MQTT message:', error);
-      return;
-    }
-
-    // Check if the topic matches device telemetry pattern
-    if (mqttPattern.matches(TOPIC_PATTERNS.DEVICE_TELEMETRY, topic)) {
-      const params = mqttPattern.extract(TOPIC_PATTERNS.DEVICE_TELEMETRY, topic) as MqttParams;
-      if (params.siteId && params.deviceId) {
-        await handleDeviceTelemetry(parseInt(params.siteId), parseInt(params.deviceId), messageData);
-      }
-    }
-    // Check if the topic matches device status pattern
-    else if (mqttPattern.matches(TOPIC_PATTERNS.DEVICE_STATUS, topic)) {
-      const params = mqttPattern.extract(TOPIC_PATTERNS.DEVICE_STATUS, topic) as MqttParams;
-      if (params.siteId && params.deviceId) {
-        await handleDeviceStatus(parseInt(params.siteId), parseInt(params.deviceId), messageData);
-      }
-    }
-    // Check if the topic matches command response pattern
-    else if (mqttPattern.matches(TOPIC_PATTERNS.DEVICE_COMMAND_RESPONSE, topic)) {
-      const params = mqttPattern.extract(TOPIC_PATTERNS.DEVICE_COMMAND_RESPONSE, topic) as MqttParams;
-      if (params.siteId && params.deviceId) {
-        handleCommandResponse(parseInt(params.siteId), parseInt(params.deviceId), messageData);
-      }
-    }
-    // Check if the topic matches site energy pattern
-    else if (mqttPattern.matches(TOPIC_PATTERNS.SITE_ENERGY, topic)) {
-      const params = mqttPattern.extract(TOPIC_PATTERNS.SITE_ENERGY, topic) as MqttParams;
-      if (params.siteId) {
-        await handleSiteEnergy(parseInt(params.siteId), messageData);
-      }
-    }
-    // Check if the topic matches system status
-    else if (topic === TOPIC_PATTERNS.SYSTEM_STATUS) {
-      handleSystemStatus(messageData);
-    }
-    else {
-      console.log(`Unhandled MQTT topic: ${topic}`);
-    }
-  } catch (error) {
-    console.error('Error handling MQTT message:', error);
-  }
-}
-
-// Handle device telemetry data
-async function handleDeviceTelemetry(siteId: number, deviceId: number, data: any) {
-  try {
-    console.log(`Processing telemetry for device ${deviceId} in site ${siteId}`);
-    
-    // Ensure device exists
-    const device = await storage.getDevice(deviceId);
-    if (!device) {
-      console.error(`Unknown device: ${deviceId}`);
-      return;
-    }
-    
-    // Format device reading
-    const deviceReading = {
-      deviceId,
-      timestamp: new Date(data.timestamp) || new Date(),
-      power: data.power !== undefined ? Number(data.power) : null,
-      energy: data.energy !== undefined ? Number(data.energy) : null,
-      stateOfCharge: data.stateOfCharge !== undefined ? Number(data.stateOfCharge) : null,
-      voltage: data.voltage !== undefined ? Number(data.voltage) : null,
-      current: data.current !== undefined ? Number(data.current) : null,
-      frequency: data.frequency !== undefined ? Number(data.frequency) : null,
-      temperature: data.temperature !== undefined ? Number(data.temperature) : null,
-      additionalData: data.additionalData || null
-    };
-    
-    // Save reading to database
-    const savedReading = await storage.createDeviceReading(deviceReading);
-    
-    // Broadcast to WebSocket clients
-    broadcastDeviceReading(deviceId, savedReading);
-    
-    // Update device status if provided
-    if (data.status) {
-      await storage.updateDevice(deviceId, { 
-        status: data.status,
-        updatedAt: new Date()
-      });
-    }
-    
-    console.log(`Processed telemetry for device ${deviceId}`);
-  } catch (error) {
-    console.error(`Error handling device telemetry for device ${deviceId}:`, error);
-  }
-}
-
-// Handle device status updates
-async function handleDeviceStatus(siteId: number, deviceId: number, data: any) {
-  try {
-    console.log(`Processing status update for device ${deviceId} in site ${siteId}`);
-    
-    // Ensure device exists
-    const device = await storage.getDevice(deviceId);
-    if (!device) {
-      console.error(`Unknown device: ${deviceId}`);
-      return;
-    }
-    
-    // Update device status
-    await storage.updateDevice(deviceId, { 
-      status: data.status,
-      updatedAt: new Date(),
-      // Include any additional status information
-      ...(data.firmwareVersion ? { firmwareVersion: data.firmwareVersion } : {}),
-      ...(data.ipAddress ? { ipAddress: data.ipAddress } : {})
-    });
-    
-    console.log(`Updated status for device ${deviceId} to ${data.status}`);
-  } catch (error) {
-    console.error(`Error handling device status for device ${deviceId}:`, error);
-  }
-}
-
-// Handle site energy data
-async function handleSiteEnergy(siteId: number, data: any) {
-  try {
-    console.log(`Processing energy data for site ${siteId}`);
-    
-    // Ensure site exists
-    const site = await storage.getSite(siteId);
-    if (!site) {
-      console.error(`Unknown site: ${siteId}`);
-      return;
-    }
-    
-    // Format energy reading
-    const energyReading = {
-      siteId,
-      timestamp: new Date(data.timestamp) || new Date(),
-      gridPower: data.gridPower !== undefined ? Number(data.gridPower) : null,
-      solarPower: data.solarPower !== undefined ? Number(data.solarPower) : null,
-      batteryPower: data.batteryPower !== undefined ? Number(data.batteryPower) : null,
-      evPower: data.evPower !== undefined ? Number(data.evPower) : null,
-      homePower: data.homePower !== undefined ? Number(data.homePower) : null,
-      gridEnergy: data.gridEnergy !== undefined ? Number(data.gridEnergy) : null,
-      solarEnergy: data.solarEnergy !== undefined ? Number(data.solarEnergy) : null,
-      batteryEnergy: data.batteryEnergy !== undefined ? Number(data.batteryEnergy) : null,
-      evEnergy: data.evEnergy !== undefined ? Number(data.evEnergy) : null,
-      homeEnergy: data.homeEnergy !== undefined ? Number(data.homeEnergy) : null,
-      selfSufficiency: data.selfSufficiency !== undefined ? Number(data.selfSufficiency) : null,
-      carbon: data.carbon !== undefined ? Number(data.carbon) : null
-    };
-    
-    // Save reading to database
-    const savedReading = await storage.createEnergyReading(energyReading);
-    
-    // Broadcast to WebSocket clients
-    broadcastEnergyReading(siteId, savedReading);
-    
-    console.log(`Processed energy data for site ${siteId}`);
-  } catch (error) {
-    console.error(`Error handling site energy for site ${siteId}:`, error);
-  }
-}
-
-// Handle system status updates
-function handleSystemStatus(data: any) {
-  console.log('System status update:', data);
-  // Process system-wide status updates
-  // This can include server health, broker health, etc.
-}
-
-// Handle command responses
-function handleCommandResponse(siteId: number, deviceId: number, response: any) {
-  if (!response.commandId) {
-    console.error('Command response missing commandId');
-    return;
-  }
-  
-  const pendingCommand = pendingCommands.get(response.commandId);
-  
-  if (!pendingCommand) {
-    console.log(`No pending command found with ID ${response.commandId}`);
-    return;
-  }
-  
-  // Clear the timeout
-  clearTimeout(pendingCommand.timeoutId);
-  
-  // Remove from pending commands
-  pendingCommands.delete(response.commandId);
-  
-  // Call the callback if provided
-  if (pendingCommand.callback) {
-    pendingCommand.callback(response.success, response);
-  }
-  
-  console.log(`Command ${response.commandId} completed with status: ${response.success ? 'success' : 'failure'}`);
-}
-
-// Send command to device
-export async function sendDeviceCommand(
-  siteId: number,
-  deviceId: number,
-  command: string,
-  parameters: any = {}
-): Promise<{ success: boolean; response?: any; error?: string }> {
-  // Return mock success in development mode if MQTT is not available
-  if (process.env.NODE_ENV === 'development' && (!mqttClient || !isConnected)) {
-    console.log(`Development mode: Simulating command ${command} for device ${deviceId}`);
-    return { 
-      success: true, 
-      response: {
-        message: 'Command simulated in development mode',
-        commandId: 'mock-command',
-        timestamp: new Date().toISOString(),
-        status: 'simulated'
-      }
-    };
-  }
-  
-  if (!mqttClient || !isConnected) {
-    return { 
-      success: false, 
-      error: 'MQTT client not connected' 
-    };
-  }
-  
-  try {
-    // Ensure device exists
-    const device = await storage.getDevice(deviceId);
-    if (!device) {
-      return { 
-        success: false, 
-        error: `Unknown device: ${deviceId}` 
-      };
-    }
-    
-    // Generate a unique command ID
-    const commandId = uuidv4();
-    
-    // Create command payload
-    const commandPayload = {
-      commandId,
-      command,
-      parameters,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Convert to string
-    const payloadString = JSON.stringify(commandPayload);
-    
-    // Create command topic
-    const commandTopic = `ems/${siteId}/devices/${deviceId}/commands`;
-    
-    return new Promise((resolve) => {
-      // Set up timeout for command
-      const timeoutId = setTimeout(() => {
-        // Remove from pending commands
-        pendingCommands.delete(commandId);
-        
-        resolve({ 
-          success: false, 
-          error: 'Command timed out' 
-        });
-      }, COMMAND_TIMEOUT);
-      
-      // Store pending command
-      pendingCommands.set(commandId, {
-        id: commandId,
-        deviceId,
-        siteId,
-        command,
-        parameters,
-        timestamp: new Date(),
-        timeoutId,
-        callback: (success, response) => {
-          resolve({ 
-            success, 
-            response 
-          });
-        }
-      });
-      
-      // Publish command
-      mqttClient!.publish(commandTopic, payloadString, { qos: 1 }, (err) => {
-        if (err) {
-          // Clear timeout
-          clearTimeout(timeoutId);
-          
-          // Remove from pending commands
-          pendingCommands.delete(commandId);
-          
-          resolve({ 
-            success: false, 
-            error: `Failed to publish command: ${err.message}` 
-          });
-        } else {
-          console.log(`Command ${commandId} sent to device ${deviceId}`);
-        }
-      });
-    });
-  } catch (error) {
-    console.error(`Error sending command to device ${deviceId}:`, error);
-    return { 
-      success: false, 
-      error: `Internal error: ${error instanceof Error ? error.message : String(error)}` 
-    };
-  }
-}
-
-// Simulate a device connection and telemetry for development/testing
-export async function simulateDeviceTelemetry(deviceId: number) {
-  try {
-    // Ensure device exists
-    const device = await storage.getDevice(deviceId);
-    if (!device) {
-      console.error(`Cannot simulate unknown device: ${deviceId}`);
-      return false;
-    }
-    
-    // Get site ID
-    const siteId = device.siteId;
-    
-    // Create telemetry topic
-    const telemetryTopic = `ems/${siteId}/devices/${deviceId}/telemetry`;
-    
-    // Generate simulated telemetry based on device type
-    let telemetryData: any = {
-      timestamp: new Date().toISOString()
-    };
-    
-    switch (device.type) {
-      case 'solar_pv':
-        telemetryData = {
-          ...telemetryData,
-          power: Math.random() * 5000, // 0-5kW
-          energy: Math.random() * 20, // 0-20kWh daily
-          voltage: 230 + (Math.random() * 10 - 5), // ~230V
-          current: Math.random() * 20, // 0-20A
-          temperature: 25 + (Math.random() * 20 - 10), // 15-35°C
-          additionalData: {
-            irradiance: Math.random() * 1000, // 0-1000 W/m²
-            panelEfficiency: 0.18 + (Math.random() * 0.04 - 0.02) // ~18%
-          }
-        };
-        break;
-        
-      case 'battery_storage':
-        telemetryData = {
-          ...telemetryData,
-          power: (Math.random() > 0.5 ? 1 : -1) * Math.random() * 3000, // -3kW to 3kW
-          energy: Math.random() * 10, // 0-10kWh
-          stateOfCharge: Math.random() * 100, // 0-100%
-          voltage: 48 + (Math.random() * 4 - 2), // ~48V
-          current: (Math.random() > 0.5 ? 1 : -1) * Math.random() * 60, // -60A to 60A
-          temperature: 20 + (Math.random() * 15), // 20-35°C
-          additionalData: {
-            cycleCount: Math.floor(Math.random() * 500),
-            healthStatus: "good"
-          }
-        };
-        break;
-        
-      case 'ev_charger':
-        const isCharging = Math.random() > 0.3;
-        telemetryData = {
-          ...telemetryData,
-          power: isCharging ? Math.random() * 11000 : 0, // 0-11kW when charging
-          energy: Math.random() * 30, // 0-30kWh session
-          voltage: 400 + (Math.random() * 20 - 10), // ~400V
-          current: isCharging ? Math.random() * 16 : 0, // 0-16A when charging
-          additionalData: {
-            isCharging,
-            chargingMode: isCharging ? "normal" : "idle",
-            connectedVehicle: isCharging ? "EV_ID_12345" : null
-          }
-        };
-        break;
-        
-      case 'smart_meter':
-        const importing = Math.random() > 0.5;
-        telemetryData = {
-          ...telemetryData,
-          power: (importing ? 1 : -1) * Math.random() * 5000, // -5kW to 5kW
-          energy: Math.random() * 50, // 0-50kWh daily
-          voltage: 230 + (Math.random() * 10 - 5), // ~230V
-          current: Math.random() * 25, // 0-25A
-          frequency: 50 + (Math.random() * 0.2 - 0.1), // ~50Hz
-          additionalData: {
-            importEnergy: Math.random() * 30,
-            exportEnergy: Math.random() * 20,
-            powerFactor: 0.95 + (Math.random() * 0.1 - 0.05)
-          }
-        };
-        break;
-        
-      case 'heat_pump':
-        telemetryData = {
-          ...telemetryData,
-          power: Math.random() * 3000, // 0-3kW
-          energy: Math.random() * 15, // 0-15kWh daily
-          temperature: 35 + (Math.random() * 10), // 35-45°C output temp
-          additionalData: {
-            mode: Math.random() > 0.7 ? "cooling" : "heating",
-            targetTemp: 21 + (Math.random() * 4 - 2), // 19-23°C
-            ambientTemp: 18 + (Math.random() * 10 - 5), // 13-23°C
-            cop: 3 + Math.random() * 2 // COP between 3-5
-          }
-        };
-        break;
-        
-      default:
-        console.log(`Unknown device type: ${device.type}`);
+    for (let i = 0; i < actualParts.length; i++) {
+      if (patternParts[i] !== '+' && patternParts[i] !== actualParts[i]) {
         return false;
+      }
     }
     
-    // Publish telemetry if MQTT client is connected
-    if (mqttClient && isConnected) {
-      mqttClient.publish(telemetryTopic, JSON.stringify(telemetryData), { qos: 1 }, (err) => {
-        if (err) {
-          console.error(`Failed to publish simulated telemetry: ${err.message}`);
-          return false;
-        } else {
-          console.log(`Simulated telemetry sent for device ${deviceId}`);
-          return true;
-        }
-      });
-    } else {
-      // If MQTT client not ready, simulate direct data handling
-      console.log(`MQTT not connected, directly handling simulated telemetry for device ${deviceId}`);
-      await handleDeviceTelemetry(siteId, deviceId, telemetryData);
-      return true;
+    return true;
+  }
+
+  on(event: string, callback: (...args: any[]) => void): void {
+    this.emitter.on(event, callback);
+  }
+
+  end(force?: boolean, callback?: () => void): void {
+    this.connected = false;
+    this.emitter.emit('close');
+    if (callback) {
+      callback();
     }
-  } catch (error) {
-    console.error(`Error simulating device telemetry:`, error);
-    return false;
+  }
+
+  addMessageHandler(topic: string, handler: (topic: string, message: Buffer) => void): void {
+    if (!this.subscribers.has(topic)) {
+      this.subscribers.set(topic, []);
+    }
+    this.subscribers.get(topic)?.push(handler);
+  }
+
+  isConnected(): boolean {
+    return this.connected;
   }
 }
 
-// Close MQTT connection
-export function closeMqttConnection() {
-  if (mqttClient) {
-    console.log('Closing MQTT connection');
-    mqttClient.end(true);
-    mqttClient = null;
-    isConnected = false;
+// MQTT service for handling message communication
+export class MqttService {
+  private client!: mqtt.MqttClient | MockMqttBroker;
+  private connected: boolean = false;
+  private reconnecting: boolean = false;
+  private messageHandlers: MessageHandler[] = [];
+  private clientId: string;
+  private options: MqttConnectionOptions;
+  private reconnectTimer: NodeJS.Timeout | null = null;
+  private subscriptions: Map<string, { options?: SubscribeOptions, callback?: (err: Error, granted: any) => void }> = new Map();
+  private eventEmitter: EventEmitter = new EventEmitter();
+  private useMockBroker: boolean = false;
+  private topicCache: Map<string, Record<string, any>> = new Map();
+  
+  constructor(options?: MqttConnectionOptions) {
+    this.options = {
+      brokerUrl: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
+      clientId: `ems-${uuidv4()}`,
+      keepalive: 60,
+      clean: true,
+      reconnectPeriod: 5000,
+      connectTimeout: 30000,
+      queueQoSZero: true,
+      rejectUnauthorized: false,
+      ...options
+    };
+    
+    this.clientId = this.options.clientId || `ems-${uuidv4()}`;
+    
+    // Use mock broker in development mode if MQTT_BROKER_URL is not set
+    this.useMockBroker = process.env.NODE_ENV === 'development' && !process.env.MQTT_BROKER_URL;
+    
+    if (this.useMockBroker) {
+      console.log('Development mode: Using mock MQTT broker');
+      this.client = new MockMqttBroker();
+    } else {
+      // Client will be initialized in connect()
+      this.client = mqtt.connect(this.options.brokerUrl!, {
+        clientId: this.clientId,
+        keepalive: this.options.keepalive,
+        clean: this.options.clean,
+        reconnectPeriod: this.options.reconnectPeriod,
+        connectTimeout: this.options.connectTimeout,
+        queueQoSZero: this.options.queueQoSZero,
+        rejectUnauthorized: this.options.rejectUnauthorized,
+        username: this.options.username,
+        password: this.options.password,
+        will: this.options.will
+      });
+    }
+  }
+  
+  // Connect to MQTT broker
+  async connect(): Promise<void> {
+    if (this.connected) return;
+    
+    return new Promise((resolve, reject) => {
+      // If mock broker, simply connect
+      if (this.useMockBroker) {
+        (this.client as MockMqttBroker).connect();
+        this.connected = true;
+        this.resubscribe();
+        resolve();
+        return;
+      }
+      
+      // Handle real broker connection
+      const client = this.client as mqtt.MqttClient;
+      
+      const connectHandler = () => {
+        console.log(`Connected to MQTT broker at ${this.options.brokerUrl}`);
+        this.connected = true;
+        this.reconnecting = false;
+        client.removeListener('connect', connectHandler);
+        client.removeListener('error', errorHandler);
+        
+        // Set up event handlers
+        client.on('message', (topic, message) => this.handleMessage(topic, message));
+        client.on('close', () => {
+          console.log('MQTT connection closed');
+          this.connected = false;
+          if (!this.reconnecting) {
+            this.scheduleReconnect();
+          }
+        });
+        client.on('error', (err) => {
+          console.error('MQTT client error:', err);
+          if (this.connected) {
+            this.connected = false;
+            this.scheduleReconnect();
+          }
+        });
+        
+        // Resubscribe to topics
+        this.resubscribe();
+        
+        resolve();
+      };
+      
+      const errorHandler = (err: Error) => {
+        console.error(`Error connecting to MQTT broker at ${this.options.brokerUrl}:`, err.message);
+        client.removeListener('connect', connectHandler);
+        client.removeListener('error', errorHandler);
+        if (!this.reconnecting) {
+          this.scheduleReconnect();
+        }
+        reject(err);
+      };
+      
+      client.once('connect', connectHandler);
+      client.once('error', errorHandler);
+    });
+  }
+  
+  // Disconnect from MQTT broker
+  async disconnect(): Promise<void> {
+    if (!this.connected) return;
+    
+    return new Promise((resolve) => {
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+      
+      this.client.end(false, () => {
+        this.connected = false;
+        console.log('Disconnected from MQTT broker');
+        resolve();
+      });
+    });
+  }
+  
+  // Subscribe to a topic
+  async subscribe(topic: string, options?: SubscribeOptions): Promise<void> {
+    // Store subscription for later resubscription if needed
+    this.subscriptions.set(topic, { options });
+    
+    if (!this.connected) {
+      console.log(`Will subscribe to ${topic} when connected`);
+      return;
+    }
+    
+    return new Promise((resolve, reject) => {
+      this.client.subscribe(topic, options || { qos: 0 }, (err, granted) => {
+        if (err) {
+          console.error(`Error subscribing to ${topic}:`, err);
+          reject(err);
+          return;
+        }
+        
+        console.log(`Subscribed to ${topic}`);
+        resolve();
+      });
+    });
+  }
+  
+  // Unsubscribe from a topic
+  async unsubscribe(topic: string): Promise<void> {
+    this.subscriptions.delete(topic);
+    
+    if (!this.connected) {
+      return;
+    }
+    
+    return new Promise((resolve, reject) => {
+      if ('unsubscribe' in this.client) {
+        this.client.unsubscribe(topic, (err) => {
+          if (err) {
+            console.error(`Error unsubscribing from ${topic}:`, err);
+            reject(err);
+            return;
+          }
+          
+          console.log(`Unsubscribed from ${topic}`);
+          resolve();
+        });
+      } else {
+        // Mock broker doesn't have unsubscribe
+        resolve();
+      }
+    });
+  }
+  
+  // Publish a message to a topic
+  async publish(topic: string, message: any, options?: PublishOptions): Promise<void> {
+    const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+    
+    if (!this.connected) {
+      console.warn(`Cannot publish to ${topic} - not connected`);
+      throw new Error('MQTT client not connected');
+    }
+    
+    return new Promise((resolve, reject) => {
+      this.client.publish(topic, messageStr, options || { qos: 0 }, (err) => {
+        if (err) {
+          console.error(`Error publishing to ${topic}:`, err);
+          reject(err);
+          return;
+        }
+        
+        // Update topic cache
+        if (options?.retain) {
+          try {
+            const messageObj = typeof message === 'string' ? JSON.parse(message) : message;
+            this.topicCache.set(topic, messageObj);
+          } catch (error) {
+            // Ignore parse errors for non-JSON messages
+          }
+        }
+        
+        resolve();
+      });
+    });
+  }
+  
+  // Add a message handler for a topic pattern
+  addMessageHandler(topicPattern: string, handler: (topic: string, message: any, params: Record<string, any>) => void): void {
+    this.messageHandlers.push({ topicPattern, handler });
+    
+    // Extract non-wildcard parts of the pattern to create a subscription
+    let subscriptionTopic = topicPattern;
+    if (subscriptionTopic.includes(':')) {
+      // Replace named parameters with MQTT wildcards for subscription
+      subscriptionTopic = subscriptionTopic.replace(/:[a-zA-Z0-9_]+/g, '+');
+    }
+    
+    // Subscribe to the topic
+    this.subscribe(subscriptionTopic).catch(err => {
+      console.error(`Error subscribing to ${subscriptionTopic}:`, err);
+    });
+  }
+  
+  // Remove a message handler
+  removeMessageHandler(handler: (topic: string, message: any, params: Record<string, any>) => void): void {
+    this.messageHandlers = this.messageHandlers.filter(h => h.handler !== handler);
+  }
+  
+  // Add event listener
+  on(event: string, listener: (...args: any[]) => void): void {
+    this.eventEmitter.on(event, listener);
+  }
+  
+  // Remove event listener
+  off(event: string, listener: (...args: any[]) => void): void {
+    this.eventEmitter.off(event, listener);
+  }
+  
+  // Check if connected
+  isConnected(): boolean {
+    return this.connected;
+  }
+  
+  // Handle incoming messages
+  private handleMessage(topic: string, messageBuffer: Buffer): void {
+    let messageObj: any = null;
+    
+    try {
+      const messageStr = messageBuffer.toString();
+      messageObj = JSON.parse(messageStr);
+    } catch (error) {
+      // Not a JSON message, use the raw message as a string
+      messageObj = messageBuffer.toString();
+    }
+    
+    // Update cache for retained messages
+    this.topicCache.set(topic, messageObj);
+    
+    // Process message with registered handlers
+    for (const { topicPattern, handler } of this.messageHandlers) {
+      const params = this.extractTopicParams(topic, topicPattern);
+      if (params) {
+        try {
+          handler(topic, messageObj, params);
+        } catch (error) {
+          console.error(`Error in MQTT message handler for ${topicPattern}:`, error);
+        }
+      }
+    }
+    
+    // Emit message event
+    this.eventEmitter.emit('message', topic, messageObj);
+  }
+  
+  // Extract named parameters from topic pattern
+  private extractTopicParams(topic: string, topicPattern: string): Record<string, any> | null {
+    const topicParts = topic.split('/');
+    const patternParts = topicPattern.split('/');
+    
+    if (topicParts.length !== patternParts.length && !patternParts.includes('#')) {
+      return null;
+    }
+    
+    const params: Record<string, any> = {};
+    
+    for (let i = 0; i < patternParts.length; i++) {
+      const patternPart = patternParts[i];
+      
+      // Handle wildcard
+      if (patternPart === '#') {
+        return params;
+      }
+      
+      if (patternPart === '+') {
+        continue;
+      }
+      
+      // Handle named parameter
+      if (patternPart.startsWith(':')) {
+        const paramName = patternPart.slice(1);
+        if (i < topicParts.length) {
+          params[paramName] = topicParts[i];
+        }
+        continue;
+      }
+      
+      // Check for exact match
+      if (i >= topicParts.length || patternPart !== topicParts[i]) {
+        return null;
+      }
+    }
+    
+    return params;
+  }
+  
+  // Resubscribe to all stored subscriptions
+  private resubscribe(): void {
+    for (const [topic, { options, callback }] of this.subscriptions.entries()) {
+      this.client.subscribe(topic, options || { qos: 0 }, callback || (() => {}));
+      console.log(`Resubscribed to ${topic}`);
+    }
+  }
+  
+  // Schedule reconnection attempt
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer || this.reconnecting) {
+      return;
+    }
+    
+    this.reconnecting = true;
+    const delay = this.options.reconnectPeriod || 5000;
+    
+    console.log(`Scheduling reconnect in ${delay}ms`);
+    
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      
+      if (!this.useMockBroker) {
+        // For real MQTT client, create a new instance
+        this.client = mqtt.connect(this.options.brokerUrl!, {
+          clientId: this.clientId,
+          keepalive: this.options.keepalive,
+          clean: this.options.clean,
+          reconnectPeriod: this.options.reconnectPeriod,
+          connectTimeout: this.options.connectTimeout,
+          queueQoSZero: this.options.queueQoSZero,
+          rejectUnauthorized: this.options.rejectUnauthorized,
+          username: this.options.username,
+          password: this.options.password,
+          will: this.options.will
+        });
+      }
+      
+      this.connect().catch(err => {
+        console.error('Reconnect failed:', err);
+        this.scheduleReconnect();
+      });
+    }, delay);
   }
 }
 
-// Check if MQTT client is connected
-export function isMqttConnected(): boolean {
-  return isConnected && mqttClient !== null;
+// Singleton instance
+let mqttServiceInstance: MqttService | null = null;
+
+// Initialize the MQTT service
+export function initMqttService(options?: MqttConnectionOptions): MqttService {
+  if (!mqttServiceInstance) {
+    mqttServiceInstance = new MqttService(options);
+    
+    // Connect immediately
+    mqttServiceInstance.connect().catch(err => {
+      console.error('Error initializing MQTT service:', err);
+    });
+  }
+  
+  return mqttServiceInstance;
+}
+
+// Get the existing MQTT service instance
+export function getMqttService(): MqttService {
+  if (!mqttServiceInstance) {
+    throw new Error('MQTT service not initialized. Call initMqttService first.');
+  }
+  
+  return mqttServiceInstance;
+}
+
+// Format a topic with dynamic parameters
+export function formatTopic(pattern: string, params: Record<string, any>): string {
+  let formattedTopic = pattern;
+  
+  for (const [key, value] of Object.entries(params)) {
+    formattedTopic = formattedTopic.replace(`:${key}`, value.toString());
+  }
+  
+  return formattedTopic;
+}
+
+// Format a device-specific topic
+export function formatDeviceTopic(pattern: string, deviceId: number, additionalParams: Record<string, any> = {}): string {
+  return formatTopic(pattern, { deviceId, ...additionalParams });
+}
+
+// Format a site-specific topic
+export function formatSiteTopic(pattern: string, siteId: number, additionalParams: Record<string, any> = {}): string {
+  return formatTopic(pattern, { siteId, ...additionalParams });
 }
