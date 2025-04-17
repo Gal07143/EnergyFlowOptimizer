@@ -8,6 +8,7 @@ import Optimization from "@/pages/Optimization";
 import Settings from "@/pages/Settings";
 import Weather from "@/pages/Weather";
 import DemandResponse from "@/pages/DemandResponse";
+import ProfilePage from "@/pages/ProfilePage";
 import AuthPage from "@/pages/auth-page";
 import EmailVerificationPage from "@/pages/email-verification-page";
 import { useEffect } from "react";
@@ -25,6 +26,7 @@ function Router() {
       <ProtectedRoute path="/weather" component={Weather} />
       <ProtectedRoute path="/demand-response" component={DemandResponse} />
       <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/profile" component={ProfilePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/verify-email" component={EmailVerificationPage} />
       <Route component={NotFound} />

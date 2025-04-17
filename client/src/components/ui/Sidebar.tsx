@@ -13,6 +13,7 @@ import {
   X,
   LogOut,
   Cloud,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -151,24 +152,39 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       <div className="flex-shrink-0 flex border-t border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-900">
         <div className="flex-shrink-0 w-full group block">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Avatar>
-                <AvatarFallback>{user?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-              </Avatar>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{user?.username || 'Guest'}</p>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-500">{user?.role || 'Not logged in'}</p>
+            <Link href="/profile" onClick={() => onClose?.()}>
+              <div className="flex items-center cursor-pointer hover:opacity-80">
+                <Avatar>
+                  <AvatarFallback>{user?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{user?.username || 'Guest'}</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-500">{user?.role || 'Not logged in'}</p>
+                </div>
               </div>
+            </Link>
+            <div className="flex">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  onClose?.();
+                  window.location.href = '/profile';
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 mr-1"
+              >
+                <UserCog className="h-5 w-5" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleLogout}
+                disabled={logoutMutation.isPending}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
           </div>
         </div>
       </div>
