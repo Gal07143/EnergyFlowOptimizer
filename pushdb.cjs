@@ -1,6 +1,7 @@
 // Push database schema for the project
 const { Client } = require('pg');
 require('dotenv').config();
+const enhancedTimeSeriesDataMigration = require('./migrations/enhancedTimeSeriesData.cjs');
 
 /**
  * Run all migrations
@@ -23,6 +24,9 @@ async function pushDb() {
     
     // Run device registry migration
     await runDeviceRegistryMigration(client);
+    
+    // Run enhanced time series data migration
+    await enhancedTimeSeriesDataMigration.runMigration(client);
     
     console.log('All migrations completed successfully');
   } catch (error) {

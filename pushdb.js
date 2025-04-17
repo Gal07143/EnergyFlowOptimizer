@@ -1,6 +1,7 @@
 // Push database schema for the project
 import { Client } from 'pg';
 import { runMigration as runDeviceRegistryMigration } from './migrations/deviceRegistry.ts';
+import { runMigration as runEnhancedTimeSeriesDataMigration } from './migrations/enhancedTimeSeriesData.ts';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -23,6 +24,7 @@ async function pushDb() {
     
     // Run migrations in sequence
     await runDeviceRegistryMigration(client);
+    await runEnhancedTimeSeriesDataMigration(client);
     
     console.log('All migrations completed successfully');
   } catch (error) {
