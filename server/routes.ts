@@ -34,6 +34,7 @@ import { initVPPService } from './services/vppService';
 import { ConsumptionPatternController } from './controllers/consumptionPatternController';
 import { initConsumptionPatternService } from './services/consumptionPatternService';
 import deviceRegistryRoutes from './routes/deviceRegistry';
+import { electricalDiagramRoutes } from './routes/electricalDiagram';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
