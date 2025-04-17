@@ -637,7 +637,7 @@ export default function DevicesPage() {
                           const selectedModel = availableModels.find(model => model.id === newDevice.deviceCatalogId);
                           const supportedProtocols = selectedModel?.supportedProtocols || [];
                           
-                          return supportedProtocols.map(protocol => (
+                          return supportedProtocols.map((protocol: string) => (
                             <SelectItem key={protocol} value={protocol}>
                               {protocol.charAt(0).toUpperCase() + protocol.slice(1).replace('_', ' ')}
                             </SelectItem>
