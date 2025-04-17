@@ -245,11 +245,11 @@ export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <div className="border rounded-md p-2">
                   <div className="text-xs text-muted-foreground">Import Rate</div>
-                  <div className="font-medium">{tariff.importRate?.toFixed(2) || '0.00'} {tariff.currency}/kWh</div>
+                  <div className="font-medium">{typeof tariff.importRate === 'number' ? tariff.importRate.toFixed(2) : '0.00'} {tariff.currency}/kWh</div>
                 </div>
                 <div className="border rounded-md p-2">
                   <div className="text-xs text-muted-foreground">Export Rate</div>
-                  <div className="font-medium">{tariff.exportRate?.toFixed(2) || '0.00'} {tariff.currency}/kWh</div>
+                  <div className="font-medium">{typeof tariff.exportRate === 'number' ? tariff.exportRate.toFixed(2) : '0.00'} {tariff.currency}/kWh</div>
                 </div>
               </div>
             )}
@@ -260,11 +260,11 @@ export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="border rounded-md p-3">
               <div className="text-sm text-muted-foreground">Import Rate</div>
-              <div className="text-xl font-medium mt-1">{tariff?.importRate?.toFixed(2) || '0.00'} {tariff?.currency}/kWh</div>
+              <div className="text-xl font-medium mt-1">{typeof tariff?.importRate === 'number' ? tariff.importRate.toFixed(2) : '0.00'} {tariff?.currency}/kWh</div>
             </div>
             <div className="border rounded-md p-3">
               <div className="text-sm text-muted-foreground">Export Rate</div>
-              <div className="text-xl font-medium mt-1">{tariff?.exportRate?.toFixed(2) || '0.00'} {tariff?.currency}/kWh</div>
+              <div className="text-xl font-medium mt-1">{typeof tariff?.exportRate === 'number' ? tariff.exportRate.toFixed(2) : '0.00'} {tariff?.currency}/kWh</div>
             </div>
           </div>
         )}

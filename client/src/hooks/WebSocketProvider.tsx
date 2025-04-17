@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { DeviceReading, CommandResult, WebSocketMessage } from './useDeviceWebSocket';
 import { useToast } from './use-toast';
+import { webSocketManager } from '@/lib/websocket';
 
 // WebSocket connection states
 type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -34,7 +35,6 @@ interface WebSocketProviderProps {
 }
 
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
-  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
@@ -42,130 +42,99 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [lastCommandResult, setLastCommandResult] = useState<CommandResult | null>(null);
   const { toast } = useToast();
 
-  // Connect to WebSocket
+  // Connect to WebSocket using the singleton manager
   const connect = () => {
-    if (socket && socket.readyState !== WebSocket.CLOSED) return;
-
-    try {
+    // Only try to connect if not already connected
+    if (!webSocketManager.isConnected()) {
       setConnectionState('connecting');
-      
-      // Determine the WebSocket URL (using secure protocol if site uses HTTPS)
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
-      console.log(`Connecting to WebSocket at ${wsUrl}`);
-      
-      const newSocket = new WebSocket(wsUrl);
-      setSocket(newSocket);
-      
-      // Set up event handlers
-      newSocket.onopen = () => {
-        console.log('WebSocket connected');
-        setConnectionState('connected');
-      };
-      
-      newSocket.onclose = (event) => {
-        console.log(`WebSocket closed: ${event.code} - ${event.reason}`);
-        setConnectionState('disconnected');
-        setConnectionId(null);
-        setSocket(null);
-      };
-      
-      newSocket.onerror = (event) => {
-        console.error('WebSocket error:', event);
-        setConnectionState('error');
-        toast({
-          title: 'Connection Error',
-          description: 'Failed to connect to the real-time data service',
-          variant: 'destructive',
-        });
-      };
-      
-      newSocket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data) as WebSocketMessage;
-          setLastMessage(message);
-          
-          // Handle different message types
-          switch (message.type) {
-            case 'connected':
-              if (message.connectionId) {
-                setConnectionId(message.connectionId);
-              }
-              break;
-              
-            case 'deviceReading':
-              const reading = message as DeviceReading;
-              setLastReading(reading);
-              break;
-              
-            case 'deviceCommand':
-              if (message.deviceId && message.command) {
-                const result: CommandResult = {
-                  deviceId: message.deviceId,
-                  command: message.command,
-                  status: message.result?.success ? 'success' : 'failure',
-                  message: message.result?.message,
-                  result: message.result,
-                  timestamp: message.timestamp
-                };
-                setLastCommandResult(result);
-              }
-              break;
-              
-            case 'error':
-              toast({
-                title: 'WebSocket Error',
-                description: message.message || 'Unknown error',
-                variant: 'destructive',
-              });
-              break;
-          }
-        } catch (err) {
-          console.error('Error processing WebSocket message:', err);
-        }
-      };
-    } catch (err) {
-      console.error('Error setting up WebSocket:', err);
-      setConnectionState('error');
-      toast({
-        title: 'Connection Error',
-        description: 'Failed to connect to the real-time data service',
-        variant: 'destructive',
-      });
+      webSocketManager.connect();
     }
   };
   
   // Disconnect from WebSocket
   const disconnect = () => {
-    if (socket) {
-      socket.close();
-      setSocket(null);
-      setConnectionState('disconnected');
-    }
+    webSocketManager.disconnect();
+    setConnectionState('disconnected');
+    setConnectionId(null);
   };
   
   // Send a message through the WebSocket
   const sendMessage = (message: Record<string, any>): boolean => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({
+    if (webSocketManager.isConnected()) {
+      webSocketManager.send({
         ...message,
         timestamp: Date.now()
-      }));
+      });
       return true;
+    } else {
+      console.warn('Cannot send message: WebSocket not initialized');
+      return false;
     }
-    return false;
   };
   
-  // Connect on initial render
+  // Set up event listeners and connect on initial render
   useEffect(() => {
+    // Event handlers
+    const handleConnected = (data: { connectionId: string }) => {
+      setConnectionState('connected');
+      setConnectionId(data.connectionId);
+    };
+    
+    const handleDisconnected = () => {
+      setConnectionState('disconnected');
+      setConnectionId(null);
+    };
+    
+    const handleError = (error: Error) => {
+      setConnectionState('error');
+      toast({
+        title: 'Connection Error',
+        description: error.message || 'Failed to connect to the real-time data service',
+        variant: 'destructive',
+      });
+    };
+    
+    const handleMessage = (message: WebSocketMessage) => {
+      setLastMessage(message);
+    };
+    
+    const handleDeviceReading = (reading: any) => {
+      setLastReading(reading as DeviceReading);
+    };
+    
+    const handleDeviceCommand = (command: { deviceId: number; command: string; result: any }) => {
+      const result: CommandResult = {
+        deviceId: command.deviceId,
+        command: command.command,
+        status: command.result?.success ? 'success' : 'failure',
+        message: command.result?.message,
+        result: command.result,
+        timestamp: Date.now()
+      };
+      setLastCommandResult(result);
+    };
+    
+    // Set up listeners
+    webSocketManager
+      .on('connected', handleConnected)
+      .on('disconnected', handleDisconnected)
+      .on('error', handleError)
+      .on('message', handleMessage)
+      .on('deviceReading', handleDeviceReading)
+      .on('deviceCommand', handleDeviceCommand);
+    
+    // Initialize connection - the manager will handle reconnection
     connect();
     
     // Clean up on unmount
     return () => {
-      if (socket) {
-        socket.close();
-      }
+      webSocketManager
+        .off('connected', handleConnected)
+        .off('disconnected', handleDisconnected)
+        .off('error', handleError)
+        .off('message', handleMessage)
+        .off('deviceReading', handleDeviceReading)
+        .off('deviceCommand', handleDeviceCommand);
     };
   }, []);
 
