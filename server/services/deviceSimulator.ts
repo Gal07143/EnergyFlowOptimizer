@@ -82,10 +82,23 @@ function generateAndBroadcastReading(deviceId: number, deviceType: DeviceType): 
     broadcastDeviceReading(deviceId, reading);
     
     // Store the reading in the database (optional)
+    // Extract the properties to match the InsertDeviceReading schema
+    const { 
+      power, energy, stateOfCharge, voltage, 
+      current, frequency, temperature 
+    } = reading.data;
+    
     storage.createDeviceReading({ 
       deviceId, 
-      timestamp: new Date(), 
-      readings: reading.data 
+      timestamp: new Date(),
+      power, 
+      energy, 
+      stateOfCharge, 
+      voltage, 
+      current, 
+      frequency, 
+      temperature,
+      additionalData: reading.data 
     }).catch(error => {
       console.error(`Error storing simulated reading for device ${deviceId}:`, error);
     });

@@ -11,6 +11,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { requireAdmin, requireManager, canManageSite } from './middleware/roleAuth';
 import { initDeviceManagementService } from './services/deviceManagementService';
+import { initMqttService } from './services/mqttService';
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
@@ -34,12 +35,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
   
-  // Initialize device management services
+  // Initialize MQTT service first, then device management service
   try {
+    // Initialize MQTT service with development mode options
+    const mqttService = initMqttService({
+      // For development, use a mock MQTT broker
+      // In production, this would be the actual broker URL
+      brokerUrl: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
+      clientId: `ems-server-${Math.floor(Math.random() * 10000)}`,
+      reconnectPeriod: 5000,
+      keepalive: 60,
+      clean: true
+    });
+    console.log('MQTT service successfully initialized');
+    
+    // Then initialize device management service
     const deviceService = initDeviceManagementService();
     console.log('Device management service successfully initialized');
   } catch (error) {
-    console.error('Error initializing device management service:', error);
+    console.error('Error initializing services:', error);
   }
   
   // API routes
