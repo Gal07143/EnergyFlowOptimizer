@@ -4,7 +4,7 @@ import { insertOptimizationSettingsSchema, optimizationModeEnum } from '@shared/
 import { ZodError } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 
-// Optimization presets for one-click wizard
+// Optimization presets for one-click wizard with enhanced configurations
 const OPTIMIZATION_PRESETS = {
   cost_saving: {
     mode: 'cost_saving',
@@ -241,11 +241,19 @@ export const updateTariff = async (req: Request, res: Response) => {
 /**
  * Apply an optimization preset to a site using the one-click wizard
  * This endpoint allows users to quickly apply predefined optimization settings
+ * with additional customization options for advanced users
  */
 export const applyOptimizationPreset = async (req: Request, res: Response) => {
   try {
     const siteId = parseInt(req.params.siteId);
-    const { presetMode, deviceConfiguration } = req.body;
+    const { 
+      presetMode, 
+      deviceConfiguration, 
+      customizationOptions,
+      scheduleAdjustments,
+      priorityDevices,
+      savingsGoal
+    } = req.body;
     
     if (isNaN(siteId)) {
       return res.status(400).json({ message: 'Invalid site ID' });
@@ -262,40 +270,118 @@ export const applyOptimizationPreset = async (req: Request, res: Response) => {
     // Get the preset configuration
     const presetConfig = OPTIMIZATION_PRESETS[presetMode as keyof typeof OPTIMIZATION_PRESETS];
     
+    // Get site devices for optimization customization
+    const siteDevices = await storage.getDevicesBySite(siteId);
+    const hasBattery = siteDevices.some(device => device.type === 'battery');
+    const hasEV = siteDevices.some(device => device.type === 'ev_charger');
+    const hasSolar = siteDevices.some(device => device.type === 'solar_inverter');
+    
+    // Apply device-specific adjustments
+    let adjustedConfig = { ...presetConfig };
+    
+    // Disable battery features if no battery
+    if (!hasBattery) {
+      adjustedConfig = {
+        ...adjustedConfig,
+        batteryArbitrageEnabled: false,
+        schedules: {
+          ...adjustedConfig.schedules,
+          batteryCharging: [],
+          batteryDischarging: []
+        }
+      };
+    }
+    
+    // Disable EV features if no EV charger
+    if (!hasEV) {
+      adjustedConfig = {
+        ...adjustedConfig,
+        v2gEnabled: false,
+        schedules: {
+          ...adjustedConfig.schedules,
+          evCharging: []
+        }
+      };
+    }
+    
+    // Apply custom schedule adjustments if provided
+    if (scheduleAdjustments) {
+      adjustedConfig = {
+        ...adjustedConfig,
+        schedules: {
+          ...adjustedConfig.schedules,
+          ...scheduleAdjustments
+        }
+      };
+    }
+    
+    // Apply user customization options
+    if (customizationOptions) {
+      adjustedConfig = {
+        ...adjustedConfig,
+        ...customizationOptions
+      };
+    }
+    
+    // Apply priority devices settings
+    if (priorityDevices && priorityDevices.length > 0) {
+      adjustedConfig.priorityDevices = priorityDevices;
+    }
+    
+    // Apply savings goal if provided
+    if (savingsGoal && !isNaN(Number(savingsGoal))) {
+      adjustedConfig.savingsGoal = Number(savingsGoal);
+    }
+    
     // Get existing settings or create new ones
     let existingSettings = await storage.getOptimizationSettings(siteId);
     
+    let resultSettings;
     if (existingSettings) {
-      // Update existing settings with preset values
-      const updatedSettings = await storage.updateOptimizationSettings(existingSettings.id, {
-        ...presetConfig,
+      // Update existing settings with adjusted preset values
+      resultSettings = await storage.updateOptimizationSettings(existingSettings.id, {
+        ...adjustedConfig,
         // Customize based on device configuration if provided
         ...(deviceConfiguration && { deviceConfiguration }),
       });
       
       res.json({
         success: true,
-        message: `Optimization settings updated to ${presetMode} mode`,
-        settings: updatedSettings
+        message: `Optimization settings updated to ${presetMode} mode with custom adjustments`,
+        settings: resultSettings,
+        deviceSummary: {
+          hasBattery,
+          hasEV,
+          hasSolar
+        }
       });
     } else {
       // Create new settings if they don't exist
-      const newSettings = await storage.createOptimizationSettings({
+      resultSettings = await storage.createOptimizationSettings({
         siteId,
-        ...presetConfig,
+        ...adjustedConfig,
         // Customize based on device configuration if provided
         ...(deviceConfiguration && { deviceConfiguration }),
       });
       
       res.status(201).json({
         success: true,
-        message: `Optimization settings created with ${presetMode} mode`,
-        settings: newSettings
+        message: `Optimization settings created with ${presetMode} mode and custom adjustments`,
+        settings: resultSettings,
+        deviceSummary: {
+          hasBattery,
+          hasEV,
+          hasSolar
+        }
       });
     }
     
-    // Log the optimization mode change
-    console.log(`Site ${siteId} optimization settings changed to ${presetMode} mode`);
+    // Log the optimization mode change with detailed information
+    console.log(`Site ${siteId} optimization settings changed to ${presetMode} mode with custom adjustments`);
+    console.log(`Devices available - Battery: ${hasBattery}, EV: ${hasEV}, Solar: ${hasSolar}`);
+    
+    // Return a detailed response with insights
+    return;
   } catch (error: any) {
     console.error('Error applying optimization preset:', error);
     res.status(500).json({ 
@@ -306,18 +392,94 @@ export const applyOptimizationPreset = async (req: Request, res: Response) => {
 };
 
 /**
- * Get available optimization presets for the wizard
+ * Get available optimization presets for the wizard with enhanced details
  */
-export const getOptimizationPresets = async (_req: Request, res: Response) => {
+export const getOptimizationPresets = async (req: Request, res: Response) => {
   try {
-    const presets = Object.entries(OPTIMIZATION_PRESETS).map(([key, preset]) => ({
-      id: key,
-      name: key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      description: getPresetDescription(key as keyof typeof OPTIMIZATION_PRESETS),
-      ...preset
-    }));
+    // Check if we should include device-specific information
+    const siteId = req.query.siteId ? parseInt(req.query.siteId as string) : null;
+    const includeDeviceDetails = req.query.includeDeviceDetails === 'true';
     
-    res.json(presets);
+    // Get device information if requested
+    let deviceSummary = null;
+    if (siteId && includeDeviceDetails) {
+      try {
+        const devices = await storage.getDevicesBySite(siteId);
+        deviceSummary = {
+          hasBattery: devices.some(device => device.type === 'battery'),
+          hasEV: devices.some(device => device.type === 'ev_charger'),
+          hasSolar: devices.some(device => device.type === 'solar_inverter'),
+          hasHeatPump: devices.some(device => device.type === 'heat_pump'),
+          deviceCount: devices.length,
+          deviceTypes: [...new Set(devices.map(device => device.type))]
+        };
+      } catch (err) {
+        console.warn('Could not fetch device information for site', siteId, err);
+      }
+    }
+    
+    // Get existing optimization settings if available
+    let existingSettings = null;
+    if (siteId) {
+      try {
+        existingSettings = await storage.getOptimizationSettings(siteId);
+      } catch (err) {
+        console.warn('Could not fetch existing optimization settings for site', siteId, err);
+      }
+    }
+    
+    // Enhanced preset information with benefits and requirements
+    const presetsWithEnhancedInfo = Object.entries(OPTIMIZATION_PRESETS).map(([key, preset]) => {
+      const presetKey = key as keyof typeof OPTIMIZATION_PRESETS;
+      
+      // Calculate compatibility score if device information is available
+      let compatibilityScore = 1; // Default: full compatibility
+      let compatibilityNotes = [];
+      
+      if (deviceSummary) {
+        // Check battery requirements
+        if ((preset.batteryArbitrageEnabled || preset.schedules?.batteryCharging?.length) && !deviceSummary.hasBattery) {
+          compatibilityScore = 0.5; // Partial compatibility
+          compatibilityNotes.push('Battery recommended for full benefits');
+        }
+        
+        // Check EV requirements
+        if (preset.v2gEnabled && !deviceSummary.hasEV) {
+          compatibilityScore = Math.min(compatibilityScore, 0.5);
+          compatibilityNotes.push('EV charger recommended for full benefits');
+        }
+        
+        // Check PV requirements for self-consumption
+        if (preset.selfConsumptionEnabled && !deviceSummary.hasSolar) {
+          compatibilityScore = Math.min(compatibilityScore, 0.6);
+          compatibilityNotes.push('Solar PV recommended for optimal performance');
+        }
+      }
+      
+      // Check if this preset is currently active
+      const isActive = existingSettings?.mode === presetKey;
+      
+      return {
+        id: presetKey,
+        name: presetKey.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+        description: getPresetDescription(presetKey),
+        benefits: getPresetBenefits(presetKey),
+        requirements: getPresetRequirements(presetKey),
+        estimatedSavings: getEstimatedSavings(presetKey),
+        compatibilityScore: deviceSummary ? compatibilityScore : null,
+        compatibilityNotes: compatibilityNotes.length > 0 ? compatibilityNotes : null,
+        isCurrentlyActive: isActive,
+        mainFeatures: getMainFeatures(presetKey),
+        iconType: getPresetIconType(presetKey),
+        ...preset
+      };
+    });
+    
+    res.json({
+      presets: presetsWithEnhancedInfo,
+      deviceSummary,
+      currentSettings: existingSettings
+    });
   } catch (error: any) {
     console.error('Error fetching optimization presets:', error);
     res.status(500).json({ 
@@ -340,4 +502,177 @@ function getPresetDescription(preset: keyof typeof OPTIMIZATION_PRESETS): string
   };
   
   return descriptions[preset] || "Optimize your energy usage";
+}
+
+/**
+ * Helper function to get preset benefits
+ */
+function getPresetBenefits(preset: keyof typeof OPTIMIZATION_PRESETS): string[] {
+  const benefitsMap = {
+    cost_saving: [
+      "Reduced electricity bills",
+      "Automatic charge/discharge at optimal times",
+      "Lower energy costs during peak price periods",
+      "Minimized grid import during expensive tariff periods",
+      "Returns on investment through energy arbitrage"
+    ],
+    self_sufficiency: [
+      "Maximized use of self-generated energy",
+      "Reduced reliance on utility grid",
+      "Higher energy independence",
+      "Minimized energy export during peak production",
+      "Protection against utility price increases"
+    ],
+    peak_shaving: [
+      "Significant demand charge reductions",
+      "Lower maximum peak power consumption",
+      "Smoother power consumption profile",
+      "Predictable energy costs",
+      "Prevention of power threshold violations"
+    ],
+    carbon_reduction: [
+      "Minimized carbon footprint of energy usage",
+      "Optimized consumption of green energy",
+      "Reduced fossil fuel reliance",
+      "Environmental impact tracking",
+      "Support for sustainability goals"
+    ],
+    grid_relief: [
+      "Support for local grid stability",
+      "Possible participation in grid services",
+      "Readiness for demand response programs",
+      "Protection against grid outages",
+      "Reduced load during grid stress periods"
+    ]
+  };
+  
+  return benefitsMap[preset] || ["Optimized energy management", "Improved efficiency", "Better control of energy assets"];
+}
+
+/**
+ * Helper function to get preset requirements
+ */
+function getPresetRequirements(preset: keyof typeof OPTIMIZATION_PRESETS): string[] {
+  const requirementsMap = {
+    cost_saving: [
+      "Time-of-use or dynamic electricity tariff",
+      "Battery storage (recommended)",
+      "Smart meter with consumption data",
+      "Internet connection for tariff data"
+    ],
+    self_sufficiency: [
+      "Solar PV or other generation",
+      "Battery storage (recommended)",
+      "Smart meter with generation/consumption data"
+    ],
+    peak_shaving: [
+      "Smart meter with power measurements",
+      "Battery storage or controllable loads",
+      "Historical consumption data",
+      "Tariff with demand charges"
+    ],
+    carbon_reduction: [
+      "Access to grid carbon intensity data",
+      "Smart meter with consumption data",
+      "Controllable loads or storage devices"
+    ],
+    grid_relief: [
+      "Smart meter with bidirectional capabilities",
+      "Battery storage system",
+      "Grid-connected inverter",
+      "Participation agreement with utility (optional)"
+    ]
+  };
+  
+  return requirementsMap[preset] || ["Smart meter", "Internet connection"];
+}
+
+/**
+ * Helper function to get estimated savings
+ */
+function getEstimatedSavings(preset: keyof typeof OPTIMIZATION_PRESETS): { percentage: number, note: string } {
+  const savingsMap = {
+    cost_saving: {
+      percentage: 30,
+      note: "Up to 30% reduction in electricity costs with time-of-use tariff"
+    },
+    self_sufficiency: {
+      percentage: 80,
+      note: "Up to 80% grid independence with adequate solar and battery capacity"
+    },
+    peak_shaving: {
+      percentage: 50,
+      note: "Up to 50% reduction in demand charges with sufficient battery capacity"
+    },
+    carbon_reduction: {
+      percentage: 60,
+      note: "Up to 60% reduction in carbon footprint with renewable energy sources"
+    },
+    grid_relief: {
+      percentage: 25,
+      note: "Up to 25% additional value through grid service participation"
+    }
+  };
+  
+  return savingsMap[preset] || { percentage: 20, note: "Estimated 20% improvement in energy efficiency" };
+}
+
+/**
+ * Helper function to get main features
+ */
+function getMainFeatures(preset: keyof typeof OPTIMIZATION_PRESETS): string[] {
+  const featuresMap = {
+    cost_saving: [
+      "Price-based battery charging/discharging",
+      "Smart EV charging during low-price periods",
+      "Load shifting to low-price periods",
+      "Tariff optimization",
+      "Energy arbitrage"
+    ],
+    self_sufficiency: [
+      "Maximum solar self-consumption",
+      "Battery charging from excess solar",
+      "Minimal grid import",
+      "Grid export only after battery is full",
+      "Prioritized local energy use"
+    ],
+    peak_shaving: [
+      "Power consumption capping",
+      "Automatic peak detection",
+      "Demand prediction",
+      "Grid import limiting",
+      "Battery discharge during peak periods"
+    ],
+    carbon_reduction: [
+      "Carbon intensity monitoring",
+      "Clean energy prioritization",
+      "Carbon-aware scheduling",
+      "Emission reduction tracking",
+      "Green energy maximization"
+    ],
+    grid_relief: [
+      "Grid frequency response",
+      "Load management during grid stress",
+      "Demand response readiness",
+      "Virtual power plant integration",
+      "Flexible power flows"
+    ]
+  };
+  
+  return featuresMap[preset] || ["Energy optimization", "Smart scheduling", "Control automation"];
+}
+
+/**
+ * Helper function to get preset icon type
+ */
+function getPresetIconType(preset: keyof typeof OPTIMIZATION_PRESETS): string {
+  const iconMap = {
+    cost_saving: "dollar",
+    self_sufficiency: "sun",
+    peak_shaving: "bar-chart",
+    carbon_reduction: "leaf",
+    grid_relief: "zap"
+  };
+  
+  return iconMap[preset] || "settings";
 }
