@@ -594,6 +594,7 @@ Format your response as JSON with the following structure:
       siteId: state.siteId,
       actions: {
         batteryChargePower: batteryChargePower,
+        batteryDischargePower: batteryDischargePower,
         evChargePower: evChargePower,
         heatPumpPower: 0, // Not controlled in rule-based approach
         deferredLoads: [] // Not controlled in rule-based approach
