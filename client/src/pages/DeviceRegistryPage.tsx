@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, QrCode, Plus, Check, X, RefreshCw, Tag, Clock, Settings, History, Key } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import MainLayout from '@/components/layout/MainLayout';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/lib/protected-route';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import {
