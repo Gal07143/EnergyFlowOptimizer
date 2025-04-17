@@ -141,6 +141,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Device manufacturers route
+  app.get('/api/device-manufacturers', async (req, res) => {
+    try {
+      const manufacturers = await db.select().from(deviceManufacturers);
+      res.json(manufacturers);
+    } catch (error) {
+      console.error('Error fetching device manufacturers:', error);
+      res.status(500).json({ message: 'Failed to fetch device manufacturers' });
+    }
+  });
+  
   // Protocol-specific device endpoints
   app.post('/api/devices/:id/ocpp/start', async (req, res) => {
     try {

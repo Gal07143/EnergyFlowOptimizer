@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -132,6 +132,15 @@ export default function DevicesPage() {
   
   // State for available device models
   const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, modelNumber: string, capacity: number}>>([]);
+  const [manufacturers, setManufacturers] = useState<Array<{id: number, name: string}>>([]);
+
+  // Fetch manufacturers on mount
+  useEffect(() => {
+    fetch('/api/device-manufacturers')
+      .then(response => response.json())
+      .then(data => setManufacturers(data))
+      .catch(error => console.error('Error fetching manufacturers:', error));
+  }, []);
   
   // Fetch device models when manufacturer changes
   const fetchDeviceModels = async (manufacturerId: string) => {
