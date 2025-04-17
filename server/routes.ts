@@ -5,7 +5,7 @@ import { WebSocketServer } from 'ws';
 import { initWebSocketServer } from './services/websocketService';
 import { initWebSocketPublisher } from './services/websocketPublisher';
 import { setupAuth, hashPassword } from './auth';
-import { users, deviceCatalog } from "@shared/schema";
+import { users, deviceCatalog, deviceManufacturers } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";

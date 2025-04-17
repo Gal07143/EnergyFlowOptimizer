@@ -527,16 +527,11 @@ export default function DevicesPage() {
                     <SelectValue placeholder="Select manufacturer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">SolarEdge</SelectItem>
-                    <SelectItem value="2">Tesla</SelectItem>
-                    <SelectItem value="3">LG Energy Solution</SelectItem>
-                    <SelectItem value="4">Fronius</SelectItem>
-                    <SelectItem value="5">ABB</SelectItem>
-                    <SelectItem value="6">Schneider Electric</SelectItem>
-                    <SelectItem value="7">BYD</SelectItem>
-                    <SelectItem value="8">ChargePoint</SelectItem>
-                    <SelectItem value="9">Daikin</SelectItem>
-                    <SelectItem value="10">Mitsubishi Electric</SelectItem>
+                    {manufacturers.map(manufacturer => (
+                      <SelectItem key={manufacturer.id} value={manufacturer.id.toString()}>
+                        {manufacturer.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
