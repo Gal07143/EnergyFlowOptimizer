@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Devices from "@/pages/Devices";
+import DeviceDetail from "@/pages/DeviceDetail";
 import Analytics from "@/pages/Analytics";
 import Optimization from "@/pages/Optimization";
 import OptimizationWizard from "@/pages/OptimizationWizard";
@@ -31,6 +32,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/devices" component={Devices} />
+      <ProtectedRoute path="/devices/:id" component={DeviceDetail} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/optimization" component={Optimization} />
       <ProtectedRoute path="/optimization/wizard" component={OptimizationWizard} />
