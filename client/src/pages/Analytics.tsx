@@ -35,11 +35,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, DownloadIcon } from 'lucide-react';
 import { generateForecastData } from '@/lib/utils/energy-utils';
+import ConsumptionPatterns from '@/components/analytics/ConsumptionPatterns';
 
 export default function AnalyticsPage() {
   const { currentSiteId } = useSiteSelector();
   const [timeRange, setTimeRange] = useState('week');
   const [chartType, setChartType] = useState('consumption');
+  const [view, setView] = useState<'energy' | 'patterns'>('energy');
   const [dateRange, setDateRange] = useState<{
     from: Date;
     to: Date;
@@ -65,10 +67,27 @@ export default function AnalyticsPage() {
   // Calculate self-sufficiency
   const selfSufficiency = Math.min(100, Math.round((totalSolarProduction / totalConsumption) * 100));
   
+  // Define interfaces for chart data
+  interface DailyData {
+    date: string;
+    solar: number;
+    consumption: number;
+    grid: number;
+    battery: number;
+  }
+
+  interface HourlyData {
+    time: string;
+    solar: number;
+    consumption: number;
+    grid: number;
+    battery: number;
+  }
+
   // Format data for different chart views
-  const getDailyData = () => {
-    const dailyData = [];
-    const dayMap = new Map();
+  const getDailyData = (): DailyData[] => {
+    const dailyData: DailyData[] = [];
+    const dayMap = new Map<string, DailyData>();
     
     forecastData.forEach(item => {
       const day = format(item.timestamp, 'yyyy-MM-dd');
@@ -261,126 +280,145 @@ export default function AnalyticsPage() {
     <div className="py-6 px-4 sm:px-6 lg:px-8">
       <PageHeader title="Analytics" subtitle="Visualize and analyze your energy data">
         <div className="flex space-x-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4" />
-                <span>
-                  {format(dateRange.from, 'MMM dd')} - {format(dateRange.to, 'MMM dd')}
-                </span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={(range) => handleDateRangeChange(range || { from: dateRange.from, to: dateRange.to })}
-                disabled={(date) => date > new Date()}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <Tabs value={view} onValueChange={(v) => setView(v as 'energy' | 'patterns')} className="mr-4">
+            <TabsList>
+              <TabsTrigger value="energy">Energy Data</TabsTrigger>
+              <TabsTrigger value="patterns">Consumption Patterns</TabsTrigger>
+            </TabsList>
+          </Tabs>
           
-          <Button variant="outline">
-            <DownloadIcon className="mr-2 h-4 w-4" />
-            Export
-          </Button>
+          {view === 'energy' && (
+            <>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    <span>
+                      {format(dateRange.from, 'MMM dd')} - {format(dateRange.to, 'MMM dd')}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(range) => handleDateRangeChange(range || { from: dateRange.from, to: dateRange.to })}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <Button variant="outline">
+                <DownloadIcon className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </>
+          )}
         </div>
       </PageHeader>
 
-      {/* Key Metrics */}
-      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Total Consumption
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalConsumption.toFixed(1)} kWh</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              For selected period
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Solar Production
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalSolarProduction.toFixed(1)} kWh</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              For selected period
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Self-Sufficiency
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{selfSufficiency}%</div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Energy independence
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Grid Exchange
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex justify-between">
-              <div>
-                <div className="text-sm font-medium">Import</div>
-                <div className="text-lg font-bold">{totalGridImport.toFixed(1)} kWh</div>
-              </div>
-              <div>
-                <div className="text-sm font-medium">Export</div>
-                <div className="text-lg font-bold">{totalGridExport.toFixed(1)} kWh</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Chart Controls */}
-      <div className="mt-6 flex flex-col sm:flex-row justify-between gap-4">
-        <Tabs value={chartType} onValueChange={setChartType}>
-          <TabsList>
-            <TabsTrigger value="consumption">Consumption</TabsTrigger>
-            <TabsTrigger value="production">Production</TabsTrigger>
-            <TabsTrigger value="grid">Grid Exchange</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="day">Day</SelectItem>
-            <SelectItem value="week">Week</SelectItem>
-            <SelectItem value="month">Month</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      {/* Chart */}
-      <Card className="mt-4">
-        <CardContent className="pt-6">
-          {renderChart()}
-        </CardContent>
-      </Card>
+      {view === 'energy' ? (
+        <>
+          {/* Key Metrics */}
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Total Consumption
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalConsumption.toFixed(1)} kWh</div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  For selected period
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Solar Production
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalSolarProduction.toFixed(1)} kWh</div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  For selected period
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Self-Sufficiency
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{selfSufficiency}%</div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Energy independence
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Grid Exchange
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Import</div>
+                    <div className="text-lg font-bold">{totalGridImport.toFixed(1)} kWh</div>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">Export</div>
+                    <div className="text-lg font-bold">{totalGridExport.toFixed(1)} kWh</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Chart Controls */}
+          <div className="mt-6 flex flex-col sm:flex-row justify-between gap-4">
+            <Tabs value={chartType} onValueChange={setChartType}>
+              <TabsList>
+                <TabsTrigger value="consumption">Consumption</TabsTrigger>
+                <TabsTrigger value="production">Production</TabsTrigger>
+                <TabsTrigger value="grid">Grid Exchange</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">Day</SelectItem>
+                <SelectItem value="week">Week</SelectItem>
+                <SelectItem value="month">Month</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Chart */}
+          <Card className="mt-4">
+            <CardContent className="pt-6">
+              {renderChart()}
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <div className="mt-6">
+          <ConsumptionPatterns />
+        </div>
+      )}
     </div>
   );
 }
