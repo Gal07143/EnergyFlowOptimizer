@@ -7,6 +7,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CalendarDays, DollarSign, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface TariffWidgetProps {
   siteId: number;
@@ -15,6 +25,8 @@ interface TariffWidgetProps {
 
 export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
   const [showTouDetails, setShowTouDetails] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const { toast } = useToast();
   
   const { 
     data: tariff, 
@@ -28,14 +40,42 @@ export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
     error: rateError 
   } = useCurrentTariffRate(siteId);
 
-  const { 
-    data: israeliTariff, 
-    isLoading: isCreatingIsraeli,
-    refetch: createIsraeliTariff
-  } = useCreateIsraeliTariff(siteId);
+  const createIsraeliTariffMutation = useCreateIsraeliTariff(siteId);
+  const deleteTariffMutation = useDeleteTariff();
   
-  const handleCreateIsraeliTariff = () => {
-    createIsraeliTariff();
+  const handleCreateIsraeliTariff = async () => {
+    try {
+      await createIsraeliTariffMutation.mutateAsync();
+      toast({
+        title: "Success",
+        description: "Israeli tariff created successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create Israeli tariff",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleDeleteTariff = async () => {
+    if (!tariff || !tariff.id) return;
+    
+    try {
+      await deleteTariffMutation.mutateAsync({ tariffId: tariff.id, siteId });
+      toast({
+        title: "Success",
+        description: "Tariff deleted successfully",
+      });
+      setIsDeleteConfirmOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete tariff",
+        variant: "destructive"
+      });
+    }
   };
 
   // If no tariff data exists yet, show creation button
@@ -51,9 +91,9 @@ export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
           </p>
           <Button 
             onClick={handleCreateIsraeliTariff}
-            disabled={isCreatingIsraeli}
+            disabled={createIsraeliTariffMutation.isPending}
           >
-            {isCreatingIsraeli ? 'Creating...' : 'Create Israeli Tariff'}
+            {createIsraeliTariffMutation.isPending ? 'Creating...' : 'Create Israeli Tariff'}
           </Button>
         </CardContent>
       </Card>
@@ -103,10 +143,44 @@ export default function TariffWidget({ siteId, className }: TariffWidgetProps) {
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle>{tariff?.name || 'Electricity Tariff'}</CardTitle>
-          <Badge className={rateColor}>{rateType}</Badge>
+          <div className="flex items-center space-x-2">
+            <Badge className={rateColor}>{rateType}</Badge>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+              onClick={() => setIsDeleteConfirmOpen(true)}
+              disabled={deleteTariffMutation.isPending}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground">{tariff?.provider}</p>
       </CardHeader>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tariff</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this tariff? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteTariff}
+              disabled={deleteTariffMutation.isPending}
+            >
+              {deleteTariffMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       <CardContent>
         {currentRate && (
           <div className="mb-4">
