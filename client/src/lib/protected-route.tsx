@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
-import Layout from "@/components/Layout";
+import { MainLayout } from "@/components/layout/MainLayout";
 
 export function ProtectedRoute({
   path,
@@ -44,9 +44,7 @@ export function ProtectedRoute({
   // If all conditions pass, show the protected component
   return (
     <Route path={path}>
-      <Layout>
-        <Component />
-      </Layout>
+      <Component />
     </Route>
   );
 }
