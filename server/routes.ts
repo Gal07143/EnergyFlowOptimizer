@@ -97,10 +97,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/sites/:siteId/optimization-settings', optimizationController.updateOptimizationSettings);
   
   // Tariff routes
+  app.get('/api/sites/:siteId/tariffs', tariffController.getTariffs);
   app.get('/api/sites/:siteId/tariff', tariffController.getTariffBySite);
   app.get('/api/sites/:siteId/tariff/rate', tariffController.getCurrentTariffRate);
   app.post('/api/sites/:siteId/tariff', tariffController.createTariff);
   app.put('/api/tariffs/:id', tariffController.updateTariff);
+  app.delete('/api/tariffs/:id', tariffController.deleteTariff);
   app.post('/api/sites/:siteId/tariff/israeli', tariffController.createIsraeliTariff);
   
   // Setup routes

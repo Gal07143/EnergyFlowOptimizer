@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useSiteTariff, useCurrentTariffRate, useCreateIsraeliTariff } from '@/hooks/useTariff';
+import { useSiteTariff, useCurrentTariffRate, useCreateIsraeliTariff, useDeleteTariff } from '@/hooks/useTariff';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, DollarSign, Clock } from 'lucide-react';
+import { CalendarDays, DollarSign, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 interface TariffWidgetProps {
   siteId: number;

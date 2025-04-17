@@ -4,6 +4,23 @@ import { db } from '../db';
 import { tariffs } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
+// Get all tariffs for a site
+export const getTariffs = async (req: Request, res: Response) => {
+  try {
+    const siteId = parseInt(req.params.siteId);
+    
+    if (isNaN(siteId)) {
+      return res.status(400).json({ message: 'Invalid site ID' });
+    }
+    
+    const tariffs = await storage.getTariffs(siteId);
+    res.json(tariffs);
+  } catch (error: any) {
+    console.error('Error fetching tariffs:', error);
+    res.status(500).json({ message: 'Failed to fetch tariffs', error: error?.message || 'Unknown error' });
+  }
+};
+
 // Get tariff details for a specific site
 export const getTariffBySite = async (req: Request, res: Response) => {
   try {
