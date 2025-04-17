@@ -49,10 +49,18 @@ const deviceFormSchema = z.object({
   model: z.string().optional(),
   manufacturer: z.string().optional(),
   capacity: z.string().optional().transform(val => val ? parseFloat(val) : undefined),
-  siteId: z.number(),
+  siteId: z.union([z.string(), z.number()]).transform(val => typeof val === 'string' ? parseInt(val) : val),
 });
 
-type DeviceFormValues = z.infer<typeof deviceFormSchema>;
+// Define our own type for the form to allow string in siteId before transformation
+type DeviceFormValues = {
+  name: string;
+  type: 'solar_pv' | 'battery_storage' | 'ev_charger' | 'smart_meter' | 'heat_pump';
+  model?: string;
+  manufacturer?: string;
+  capacity?: string;
+  siteId: string | number;
+};
 
 export default function DevicesPage() {
   const { currentSiteId } = useSiteSelector();
@@ -61,6 +69,9 @@ export default function DevicesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { mutate: createDevice, isPending: isCreating } = useCreateDevice();
 
+  // Get the current site ID as a string for form initialization
+  const currentSiteIdString = currentSiteId?.toString() || '1';
+  
   const form = useForm<DeviceFormValues>({
     resolver: zodResolver(deviceFormSchema),
     defaultValues: {
@@ -69,15 +80,7 @@ export default function DevicesPage() {
       model: '',
       manufacturer: '',
       capacity: '',
-      siteId: currentSiteId,
-    },
-    values: {
-      name: '',
-      type: 'solar_pv',
-      model: '',
-      manufacturer: '',
-      capacity: '',
-      siteId: currentSiteId,
+      siteId: currentSiteIdString,
     }
   });
 
