@@ -32,25 +32,25 @@ export default function DemandResponse() {
     data: programs = [], 
     isLoading: programsLoading,
     refetch: refetchPrograms
-  } = useDemandResponsePrograms(currentSiteId);
+  } = useDemandResponsePrograms(currentSiteId || undefined);
 
   const { 
     data: events = [], 
     isLoading: eventsLoading,
     refetch: refetchEvents
-  } = useDemandResponseEvents(currentSiteId);
+  } = useDemandResponseEvents(currentSiteId || undefined);
 
   const { 
     data: settings, 
     isLoading: settingsLoading,
     refetch: refetchSettings
-  } = useDemandResponseSettings(currentSiteId);
+  } = useDemandResponseSettings(currentSiteId || undefined);
 
   const { 
     data: participations = [], 
     isLoading: participationsLoading,
     refetch: refetchParticipations
-  } = useSiteEventParticipations(currentSiteId);
+  } = useSiteEventParticipations(currentSiteId || undefined);
 
   const isLoading = programsLoading || eventsLoading || settingsLoading || participationsLoading;
 

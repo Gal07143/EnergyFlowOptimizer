@@ -1,193 +1,247 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { queryClient, apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
-// Define device types
+// Device type definition matching server schema
 export interface Device {
   id: number;
   siteId: number;
   name: string;
   type: string;
-  model: string;
-  manufacturer: string;
-  serialNumber: string;
-  firmwareVersion: string;
-  protocol: string;
-  ipAddress: string;
-  port: number;
-  path: string;
-  connectionStatus: string;
-  lastConnectionTime: string;
-  capabilities: Record<string, unknown>;
-  configuration: Record<string, unknown>;
+  model?: string;
+  manufacturer?: string;
+  serialNumber?: string;
+  firmwareVersion?: string;
+  protocol?: string;
+  connectionParams?: Record<string, any>;
+  capacity?: number;
+  status?: string;
+  lastSeen?: string;
   createdAt: string;
   updatedAt: string;
+  metadata?: Record<string, any>;
 }
 
-type DeviceType = 'solar_pv' | 'battery_storage' | 'ev_charger' | 'smart_meter' | 'heat_pump' | 'gateway' | 'generic';
+export interface DeviceReading {
+  id: number;
+  deviceId: number;
+  timestamp: string;
+  readingType: string;
+  value: number;
+  unit: string;
+  quality?: string;
+  createdAt: string;
+}
 
-export type InsertDevice = Omit<Device, 'id' | 'createdAt' | 'updatedAt'>;
+export type DeviceCreateInput = Omit<Device, 'id' | 'createdAt' | 'updatedAt'>;
+export type DeviceUpdateInput = Partial<Omit<Device, 'id' | 'createdAt' | 'updatedAt'>>;
 
-// Get all devices
+/**
+ * Hook to fetch all devices
+ */
 export function useDevices() {
+  const { toast } = useToast();
+
   return useQuery<Device[]>({
     queryKey: ['/api/devices'],
+    staleTime: 60000,
+    onSuccess: (data) => {
+      console.log('Devices loaded:', data.length);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error loading devices',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
   });
 }
 
-// Get device by ID
-export function useDevice(deviceId: number | undefined) {
+/**
+ * Hook to fetch a single device by ID
+ */
+export function useDevice(id: number | undefined) {
+  const { toast } = useToast();
+
   return useQuery<Device>({
-    queryKey: ['/api/devices', deviceId],
-    enabled: !!deviceId,
+    queryKey: ['/api/devices', id],
+    enabled: !!id,
+    onError: (error: Error) => {
+      toast({
+        title: 'Error loading device',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
   });
 }
 
-// Get devices by site
+/**
+ * Hook to fetch devices by site ID
+ */
 export function useDevicesBySite(siteId: number | undefined) {
+  const { toast } = useToast();
+
   return useQuery<Device[]>({
     queryKey: ['/api/sites', siteId, 'devices'],
     enabled: !!siteId,
+    onError: (error: Error) => {
+      toast({
+        title: 'Error loading site devices',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
   });
 }
 
-// Get devices by type
-export function useDevicesByType(type: DeviceType | undefined) {
+/**
+ * Hook to fetch devices by type for a specific site
+ */
+export function useDevicesByType(siteId: number | undefined, type: string) {
+  const { toast } = useToast();
+
   return useQuery<Device[]>({
-    queryKey: ['/api/devices/type', type],
-    enabled: !!type,
+    queryKey: ['/api/sites', siteId, 'devices', 'type', type],
+    enabled: !!siteId && !!type,
+    onError: (error: Error) => {
+      toast({
+        title: 'Error loading devices by type',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
   });
 }
 
-// Add a new device
-export function useAddDevice() {
+/**
+ * Hook to fetch device readings
+ */
+export function useDeviceReadings(deviceId: number | undefined, limit?: number) {
+  const { toast } = useToast();
+
+  return useQuery<DeviceReading[]>({
+    queryKey: ['/api/devices', deviceId, 'readings', { limit }],
+    enabled: !!deviceId,
+    onError: (error: Error) => {
+      toast({
+        title: 'Error loading device readings',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+/**
+ * Hook to create a new device
+ */
+export function useCreateDevice() {
+  const { toast } = useToast();
+
   return useMutation({
-    mutationFn: async (device: InsertDevice) => {
+    mutationFn: async (device: DeviceCreateInput) => {
       const response = await apiRequest('POST', '/api/devices', device);
-      return await response.json();
+      return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
+      toast({
+        title: 'Device created',
+        description: 'The device has been created successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/devices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'devices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/devices/type', data.type] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error creating device',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 }
 
-// Update a device
+/**
+ * Hook to update an existing device
+ */
 export function useUpdateDevice() {
+  const { toast } = useToast();
+
   return useMutation({
-    mutationFn: async ({ 
-      deviceId, 
-      deviceData 
-    }: { 
-      deviceId: number; 
-      deviceData: Partial<InsertDevice>
-    }) => {
-      const response = await apiRequest('PUT', `/api/devices/${deviceId}`, deviceData);
-      return await response.json();
+    mutationFn: async ({ id, device }: { id: number; device: DeviceUpdateInput }) => {
+      const response = await apiRequest('PATCH', `/api/devices/${id}`, device);
+      return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (_, variables) => {
+      toast({
+        title: 'Device updated',
+        description: 'The device has been updated successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/devices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/devices', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', data.siteId, 'devices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/devices/type', data.type] });
+      queryClient.invalidateQueries({ queryKey: ['/api/devices', variables.id] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error updating device',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 }
 
-// Delete a device
+/**
+ * Hook to delete a device
+ */
 export function useDeleteDevice() {
+  const { toast } = useToast();
+
   return useMutation({
-    mutationFn: async ({ 
-      deviceId,
-      siteId,
-      deviceType
-    }: { 
-      deviceId: number;
-      siteId: number;
-      deviceType: string;
-    }) => {
-      const response = await apiRequest('DELETE', `/api/devices/${deviceId}`);
-      return await response.json();
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/devices/${id}`);
+      return response.ok;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
+      toast({
+        title: 'Device deleted',
+        description: 'The device has been deleted successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/devices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/devices', variables.deviceId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/sites', variables.siteId, 'devices'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/devices/type', variables.deviceType] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error deleting device',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 }
 
-// OCPP-specific functions for EV chargers
-export function useStartCharging() {
-  return useMutation({
-    mutationFn: async ({ 
-      deviceId, 
-      connectorId,
-      tagId 
-    }: { 
-      deviceId: number; 
-      connectorId: number;
-      tagId?: string;
-    }) => {
-      const response = await apiRequest('POST', `/api/devices/${deviceId}/ocpp/start`, {
-        connectorId,
-        tagId
-      });
-      return await response.json();
-    },
-  });
-}
+/**
+ * Hook to send a command to a device
+ */
+export function useSendDeviceCommand() {
+  const { toast } = useToast();
 
-export function useStopCharging() {
   return useMutation({
-    mutationFn: async ({ 
-      deviceId, 
-      connectorId 
-    }: { 
-      deviceId: number; 
-      connectorId: number;
-    }) => {
-      const response = await apiRequest('POST', `/api/devices/${deviceId}/ocpp/stop`, {
-        connectorId
-      });
-      return await response.json();
+    mutationFn: async ({ deviceId, command, params }: { deviceId: number; command: string; params?: Record<string, any> }) => {
+      const response = await apiRequest('POST', `/api/devices/${deviceId}/commands`, { command, params });
+      return response.json();
     },
-  });
-}
-
-// EEBus-specific functions for heat pumps
-export function useSetHeatPumpMode() {
-  return useMutation({
-    mutationFn: async ({ 
-      deviceId, 
-      mode 
-    }: { 
-      deviceId: number; 
-      mode: 'heating' | 'cooling' | 'auto' | 'off';
-    }) => {
-      const response = await apiRequest('POST', `/api/devices/${deviceId}/eebus/mode`, {
-        mode
+    onSuccess: () => {
+      toast({
+        title: 'Command sent',
+        description: 'The command has been sent to the device',
       });
-      return await response.json();
     },
-  });
-}
-
-export function useSetTargetTemperature() {
-  return useMutation({
-    mutationFn: async ({ 
-      deviceId, 
-      temperature 
-    }: { 
-      deviceId: number; 
-      temperature: number;
-    }) => {
-      const response = await apiRequest('POST', `/api/devices/${deviceId}/eebus/temperature`, {
-        temperature
+    onError: (error: Error) => {
+      toast({
+        title: 'Error sending command',
+        description: error.message,
+        variant: 'destructive',
       });
-      return await response.json();
     },
   });
 }

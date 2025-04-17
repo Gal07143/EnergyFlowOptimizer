@@ -21,7 +21,7 @@ import { z } from 'zod';
 import { Settings, Bell, Clock, Zap, DollarSign, Smartphone, Mail, MessageSquare } from 'lucide-react';
 import { SiteDemandResponseSettings, useUpdateDemandResponseSettings } from '@/hooks/useDemandResponse';
 import { useToast } from '@/hooks/use-toast';
-import { useDevicesBySite } from '@/hooks/useDevice';
+import { useDevicesBySite } from '@/hooks/useDevice.ts';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 // Define schema for form validation
