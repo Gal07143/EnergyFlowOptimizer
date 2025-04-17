@@ -5,6 +5,7 @@ import Dashboard from "@/pages/Dashboard";
 import Devices from "@/pages/Devices";
 import Analytics from "@/pages/Analytics";
 import Optimization from "@/pages/Optimization";
+import OptimizationWizard from "@/pages/OptimizationWizard";
 import Settings from "@/pages/Settings";
 import Weather from "@/pages/Weather";
 import DemandResponse from "@/pages/DemandResponse";
@@ -23,6 +24,7 @@ function Router() {
       <ProtectedRoute path="/devices" component={Devices} />
       <ProtectedRoute path="/analytics" component={Analytics} />
       <ProtectedRoute path="/optimization" component={Optimization} />
+      <ProtectedRoute path="/optimization/wizard" component={OptimizationWizard} />
       <ProtectedRoute path="/weather" component={Weather} />
       <ProtectedRoute path="/demand-response" component={DemandResponse} />
       <ProtectedRoute path="/settings" component={Settings} />
