@@ -2,7 +2,7 @@ import { db } from '../db';
 import { getMqttService } from './mqttService';
 import { OpenAI } from 'openai';
 import { eq } from 'drizzle-orm';
-import { sites, devices, deviceReadings, energyReadings, optimizationSettings } from '@shared/schema';
+import { sites, devices, deviceReadings, energyReadings, optimizationSettings, tariffs } from '@shared/schema';
 
 // Define the optimization modes
 type OptimizationMode = 'cost_saving' | 'self_sufficiency' | 'peak_shaving' | 'carbon_reduction' | 'battery_life';
@@ -124,9 +124,9 @@ export class AIOptimizationService {
         const latestBatteryReading = latestBatteryReadings.length > 0 ? latestBatteryReadings[latestBatteryReadings.length - 1] : null;
         
         if (latestBatteryReading) {
-          batteryStateOfCharge = latestBatteryReading.stateOfCharge || 0;
+          batteryStateOfCharge = Number(latestBatteryReading.stateOfCharge) || 0;
           // Determine charge/discharge based on power value (positive = charge, negative = discharge)
-          const power = latestBatteryReading.power || 0;
+          const power = Number(latestBatteryReading.power) || 0;
           if (power > 0) {
             batteryChargePower = power;
             batteryDischargePower = 0;
@@ -148,7 +148,7 @@ export class AIOptimizationService {
         const latestSolarReading = solarReadings.length > 0 ? solarReadings[solarReadings.length - 1] : null;
         
         if (latestSolarReading) {
-          solarProduction = latestSolarReading.power || 0;
+          solarProduction = Number(latestSolarReading.power) || 0;
         }
       }
       
@@ -163,7 +163,7 @@ export class AIOptimizationService {
         const latestEVReading = evReadings.length > 0 ? evReadings[evReadings.length - 1] : null;
         
         if (latestEVReading) {
-          evChargingPower = latestEVReading.power || 0;
+          evChargingPower = Number(latestEVReading.power) || 0;
         }
       }
       
