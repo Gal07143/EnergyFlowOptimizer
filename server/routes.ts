@@ -106,6 +106,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/optimization-settings', requireManager, optimizationController.createOptimizationSettings);
   app.put('/api/sites/:siteId/optimization-settings', requireManager, optimizationController.updateOptimizationSettings);
   
+  // Optimization wizard routes
+  app.get('/api/optimization/presets', optimizationController.getOptimizationPresets);
+  app.post('/api/sites/:siteId/optimization/apply-preset', requireManager, optimizationController.applyOptimizationPreset);
+  
   // Tariff routes
   app.get('/api/sites/:siteId/tariffs', tariffController.getTariffs);
   app.get('/api/sites/:siteId/tariff', tariffController.getTariffBySite);
