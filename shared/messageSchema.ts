@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+// Quality of Service levels
+export enum QoSLevel {
+  AT_MOST_ONCE = 0,  // Fire and forget
+  AT_LEAST_ONCE = 1, // Guaranteed delivery but with possible duplicates
+  EXACTLY_ONCE = 2   // Guaranteed delivery with exactly once semantics
+}
+
 // Base message schema with common fields
 export const baseMessageSchema = z.object({
   messageId: z.string().optional(),
@@ -10,10 +17,14 @@ export const baseMessageSchema = z.object({
     'command_response',
     'config_update',
     'config_ack',
-    'event'
+    'event',
+    'discovery_request',
+    'discovery_response'
   ]),
   timestamp: z.string().datetime(),
-  deviceId: z.number().int().positive()
+  deviceId: z.number().int().positive(),
+  qos: z.nativeEnum(QoSLevel).optional().default(QoSLevel.AT_MOST_ONCE),
+  persistent: z.boolean().optional().default(false)
 });
 
 // Telemetry message containing device readings
