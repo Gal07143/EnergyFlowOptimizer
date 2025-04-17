@@ -134,7 +134,7 @@ export async function updateOptimizationSettings(req: Request, res: Response) {
       .where(eq(optimizationSettings.siteId, settings.siteId));
     
     if (existingSettings.length > 0) {
-      // Update existing settings
+      // Update existing settings - Drizzle maps camelCase to snake_case automatically
       await db.update(optimizationSettings)
         .set({
           mode: settings.mode,
@@ -145,16 +145,16 @@ export async function updateOptimizationSettings(req: Request, res: Response) {
         })
         .where(eq(optimizationSettings.siteId, settings.siteId));
     } else {
-      // Create new settings
+      // Create new settings - Drizzle maps camelCase to snake_case automatically
       await db.insert(optimizationSettings)
         .values({
-          site_id: settings.siteId, // Use snake_case for column names
+          siteId: settings.siteId,
           mode: settings.mode,
           priority: settings.priority,
           constraints: settings.constraints || {},
-          ai_optimization_enabled: settings.active, // Use snake_case for column names
-          created_at: new Date(),
-          updated_at: new Date()
+          aiOptimizationEnabled: settings.active,
+          createdAt: new Date(),
+          updatedAt: new Date()
         });
     }
     
