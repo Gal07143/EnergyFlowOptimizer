@@ -12,6 +12,8 @@ import { promisify } from "util";
 import { requireAdmin, requireManager, canManageSite } from './middleware/roleAuth';
 import { initDeviceManagementService } from './services/deviceManagementService';
 import { initMqttService } from './services/mqttService';
+import { getOCPPManager } from './adapters/ocppAdapter';
+import { getEEBusManager } from './adapters/eebusAdapter';
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
@@ -97,21 +99,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Device routes
-  app.get('/api/sites/:siteId/devices', deviceController.getDevices);
-  app.get('/api/sites/:siteId/devices/type/:type', deviceController.getDevicesByType);
-  app.get('/api/devices/:id', deviceController.getDevice);
-  app.post('/api/devices', requireManager, deviceController.createDevice);
+  app.get('/api/devices', deviceController.getAllDevices);
+  app.get('/api/sites/:siteId/devices', deviceController.getDevicesBySite);
+  app.get('/api/devices/type/:type', deviceController.getDevicesByType);
+  app.get('/api/devices/:id', deviceController.getDeviceById);
+  app.post('/api/devices', requireManager, deviceController.addDevice);
   app.put('/api/devices/:id', requireManager, deviceController.updateDevice);
   app.delete('/api/devices/:id', requireAdmin, deviceController.deleteDevice);
   
-  // Device readings routes
-  app.get('/api/devices/:id/readings', deviceController.getDeviceReadings);
-  app.get('/api/devices/:id/readings/timerange', deviceController.getDeviceReadingsByTimeRange);
-  app.post('/api/devices/readings', deviceController.createDeviceReading);
+  // Protocol-specific device endpoints
+  app.post('/api/devices/:id/ocpp/start', async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.id);
+      const { connectorId, tagId } = req.body;
+      
+      if (isNaN(deviceId) || !connectorId) {
+        return res.status(400).json({ error: 'Invalid parameters' });
+      }
+      
+      const ocppManager = getOCPPManager();
+      const adapter = ocppManager.getAdapter(deviceId);
+      
+      if (!adapter) {
+        return res.status(404).json({ error: 'OCPP device not found' });
+      }
+      
+      const result = await adapter.startTransaction(connectorId, tagId);
+      if (!result) {
+        return res.status(400).json({ error: 'Failed to start transaction' });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error starting OCPP transaction:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
   
-  // Device control routes
-  app.post('/api/devices/:id/control', deviceController.controlDevice);
-  app.get('/api/devices/:id/status', deviceController.checkDeviceStatus);
+  app.post('/api/devices/:id/ocpp/stop', async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.id);
+      const { connectorId } = req.body;
+      
+      if (isNaN(deviceId) || !connectorId) {
+        return res.status(400).json({ error: 'Invalid parameters' });
+      }
+      
+      const ocppManager = getOCPPManager();
+      const adapter = ocppManager.getAdapter(deviceId);
+      
+      if (!adapter) {
+        return res.status(404).json({ error: 'OCPP device not found' });
+      }
+      
+      const result = await adapter.stopTransaction(connectorId);
+      if (!result) {
+        return res.status(400).json({ error: 'Failed to stop transaction' });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error stopping OCPP transaction:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  app.post('/api/devices/:id/eebus/mode', async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.id);
+      const { mode } = req.body;
+      
+      if (isNaN(deviceId) || !mode) {
+        return res.status(400).json({ error: 'Invalid parameters' });
+      }
+      
+      const eebusManager = getEEBusManager();
+      const adapter = eebusManager.getAdapter(deviceId);
+      
+      if (!adapter) {
+        return res.status(404).json({ error: 'EEBus device not found' });
+      }
+      
+      const result = await adapter.setOperationMode(mode);
+      if (!result) {
+        return res.status(400).json({ error: 'Failed to set operation mode' });
+      }
+      
+      res.json({ success: true, mode });
+    } catch (error) {
+      console.error('Error setting EEBus operation mode:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  app.post('/api/devices/:id/eebus/temperature', async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.id);
+      const { temperature } = req.body;
+      
+      if (isNaN(deviceId) || typeof temperature !== 'number') {
+        return res.status(400).json({ error: 'Invalid parameters' });
+      }
+      
+      const eebusManager = getEEBusManager();
+      const adapter = eebusManager.getAdapter(deviceId);
+      
+      if (!adapter) {
+        return res.status(404).json({ error: 'EEBus device not found' });
+      }
+      
+      const result = await adapter.setTargetTemperature(temperature);
+      if (!result) {
+        return res.status(400).json({ error: 'Failed to set target temperature' });
+      }
+      
+      res.json({ success: true, temperature });
+    } catch (error) {
+      console.error('Error setting EEBus target temperature:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
   
   // Energy readings routes
   app.get('/api/sites/:siteId/energy-readings', energyController.getEnergyReadings);

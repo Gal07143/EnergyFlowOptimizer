@@ -130,6 +130,8 @@ export class ModbusAdapter {
   private connected: boolean = false;
   private scanIntervalId: NodeJS.Timeout | null = null;
   private retryCount: number = 0;
+  private lastReadings: Record<string, any> = {};
+  private lastError: Error | null = null;
   private mqttService = getMqttService();
   private inDevelopment: boolean = process.env.NODE_ENV === 'development';
 
@@ -420,6 +422,11 @@ export class ModbusAdapter {
     }
   }
 
+  // Get last readings
+  getLastReadings(): Record<string, any> {
+    return this.lastReadings;
+  }
+  
   // Publish device status via MQTT
   private async publishDeviceStatus(status: 'online' | 'offline' | 'error', details?: string): Promise<void> {
     const statusMessage = {
@@ -474,6 +481,11 @@ export class ModbusManager {
     await adapter.disconnect();
     this.adapters.delete(deviceId);
     console.log(`Removed Modbus device ${deviceId}`);
+  }
+  
+  // Get a Modbus adapter by device ID
+  getAdapter(deviceId: number): ModbusAdapter | undefined {
+    return this.adapters.get(deviceId);
   }
   
   // Stop and disconnect all devices
