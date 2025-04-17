@@ -571,6 +571,62 @@ export const deviceCatalogPresets = pgTable('device_catalog_presets', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// Device Technical Specifications table for detailed parameters
+export const deviceTechnicalSpecs = pgTable('device_technical_specs', {
+  id: serial('id').primaryKey(),
+  deviceCatalogId: integer('device_catalog_id').notNull().references(() => deviceCatalog.id, { onDelete: 'cascade' }),
+  // General specifications
+  errorMargin: numeric('error_margin'), // Measurement error margin in percentage
+  selfConsumption: numeric('self_consumption'), // Power consumed by the device itself in watts
+  temperatureRange: text('temperature_range'), // Operating temperature range
+  ipRating: text('ip_rating'), // Ingress Protection rating
+  
+  // Battery specific
+  depthOfDischargeMax: numeric('depth_of_discharge_max'), // Maximum depth of discharge percentage
+  cycleLifeAt80Percent: integer('cycle_life_at_80_percent'), // Cycle life at 80% depth of discharge
+  roundTripEfficiency: numeric('round_trip_efficiency'), // Round-trip efficiency percentage
+  selfDischargeRate: numeric('self_discharge_rate'), // Self-discharge rate percentage per month
+  
+  // Solar specific
+  temperatureCoefficientPmax: numeric('temperature_coefficient_pmax'), // Temperature coefficient for maximum power
+  degradationRate: numeric('degradation_rate'), // Annual degradation rate percentage
+  shadingTolerance: numeric('shading_tolerance'), // Shading tolerance rating
+  
+  // EV Charger specific
+  standbyPower: numeric('standby_power'), // Power consumption in standby mode
+  chargingEfficiency: numeric('charging_efficiency'), // Charging efficiency percentage
+  
+  // Heat Pump specific
+  cop: numeric('cop'), // Coefficient of Performance
+  copAt7C: numeric('cop_at_7c'), // COP at 7°C outdoor temperature
+  copAtMinus7C: numeric('cop_at_minus_7c'), // COP at -7°C outdoor temperature
+  refrigerantType: text('refrigerant_type'), // Type of refrigerant used
+  
+  // Inverter specific
+  mpptEfficiency: numeric('mppt_efficiency'), // Maximum Power Point Tracking efficiency
+  euroEfficiency: numeric('euro_efficiency'), // Euro efficiency rating
+  standbyConsumption: numeric('standby_consumption'), // Standby consumption in watts
+  
+  // Smart Meter specific
+  accuracyClass: text('accuracy_class'), // Accuracy classification
+  measurementPrecision: numeric('measurement_precision'), // Measurement precision percentage
+  
+  // JSON fields for additional specifications by type
+  additionalSpecs: json('additional_specs'),
+  
+  // Certification and compliance
+  certifications: json('certifications'), // Array of certification standards met
+  complianceStandards: json('compliance_standards'), // Compliance standards met
+  
+  // Firmware/software
+  firmwareVersion: text('firmware_version'),
+  softwareVersion: text('software_version'),
+  
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 export const weatherData = pgTable('weather_data', {
   id: serial('id').primaryKey(),
   siteId: integer('site_id').references(() => sites.id, { onDelete: 'cascade' }).notNull(),
@@ -609,6 +665,7 @@ export const deviceCatalogRelations = relations(deviceCatalog, ({ one, many }) =
   documents: many(deviceCatalogDocuments),
   registers: many(deviceCatalogRegisters),
   presets: many(deviceCatalogPresets),
+  technicalSpecs: many(deviceTechnicalSpecs),
 }));
 
 export const deviceCatalogDocumentsRelations = relations(deviceCatalogDocuments, ({ one }) => ({
