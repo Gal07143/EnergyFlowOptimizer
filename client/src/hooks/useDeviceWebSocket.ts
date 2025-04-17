@@ -291,6 +291,7 @@ export function useDeviceWebSocket({
   
   // Subscribe to a device or site
   const subscribe = useCallback((target: { deviceId?: number; siteId?: number }) => {
+    console.log('Subscribing to:', target);
     return sendMessage({
       type: 'subscribe',
       ...target
