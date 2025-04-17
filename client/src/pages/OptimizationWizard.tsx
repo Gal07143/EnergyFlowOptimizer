@@ -13,8 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Progress } from '@/components/ui/progress';
 import {
+  AlertCircleIcon,
   AlertTriangleIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -32,6 +32,7 @@ import {
   SaveIcon,
   ShieldIcon,
   SparklesIcon,
+  StarIcon,
   SunIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -273,15 +274,16 @@ export default function OptimizationWizard() {
                            preset.compatibilityScore >= 40 ? 'Moderate' : 'Limited'}
                         </span>
                       </div>
-                      <Progress 
-                        value={preset.compatibilityScore} 
-                        className="h-1.5" 
-                        indicatorClassName={
-                          preset.compatibilityScore >= 80 ? 'bg-green-500' : 
-                          preset.compatibilityScore >= 60 ? 'bg-blue-500' : 
-                          preset.compatibilityScore >= 40 ? 'bg-amber-500' : 'bg-red-500'
-                        }
-                      />
+                      <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                        <div 
+                          className={`h-full ${
+                            preset.compatibilityScore >= 80 ? 'bg-green-500' : 
+                            preset.compatibilityScore >= 60 ? 'bg-blue-500' : 
+                            preset.compatibilityScore >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${preset.compatibilityScore}%` }}
+                        />
+                      </div>
                     </div>
                   )}
                 
@@ -404,15 +406,16 @@ export default function OptimizationWizard() {
                        activePreset.compatibilityScore >= 40 ? 'Moderate' : 'Limited'}
                     </span>
                   </div>
-                  <Progress 
-                    value={activePreset.compatibilityScore} 
-                    className="h-2" 
-                    indicatorClassName={
-                      activePreset.compatibilityScore >= 80 ? 'bg-green-500' : 
-                      activePreset.compatibilityScore >= 60 ? 'bg-blue-500' : 
-                      activePreset.compatibilityScore >= 40 ? 'bg-amber-500' : 'bg-red-500'
-                    }
-                  />
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className={`h-full ${
+                        activePreset.compatibilityScore >= 80 ? 'bg-green-500' : 
+                        activePreset.compatibilityScore >= 60 ? 'bg-blue-500' : 
+                        activePreset.compatibilityScore >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${activePreset.compatibilityScore}%` }}
+                    />
+                  </div>
                   {activePreset.compatibilityNotes && activePreset.compatibilityNotes.length > 0 && (
                     <div className="mt-2 text-xs text-gray-500">
                       {activePreset.compatibilityNotes.map((note, index) => (
@@ -431,6 +434,7 @@ export default function OptimizationWizard() {
                 <TabsList className="mb-4">
                   <TabsTrigger value="features">Features</TabsTrigger>
                   <TabsTrigger value="schedules">Schedules</TabsTrigger>
+                  <TabsTrigger value="details">Details</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="features" className="space-y-4">
@@ -536,6 +540,81 @@ export default function OptimizationWizard() {
                      !activePreset.schedules?.evCharging && (
                       <div className="text-center py-8 text-gray-500">
                         No schedules configured for this optimization strategy.
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="details">
+                  <div className="space-y-6">
+                    {activePreset.benefits && activePreset.benefits.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                          Benefits
+                        </h3>
+                        <div className="space-y-2 pl-1">
+                          {activePreset.benefits.map((benefit, index) => (
+                            <div key={index} className="flex items-start gap-2">
+                              <div className="h-5 w-5 flex-shrink-0 text-green-500 mt-0.5">
+                                <CheckCircleIcon className="h-5 w-5" />
+                              </div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                {benefit}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {activePreset.requirements && activePreset.requirements.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                          <AlertTriangleIcon className="h-5 w-5 text-amber-500" />
+                          Requirements
+                        </h3>
+                        <div className="space-y-2 pl-1">
+                          {activePreset.requirements.map((requirement, index) => (
+                            <div key={index} className="flex items-start gap-2">
+                              <div className="h-5 w-5 flex-shrink-0 text-amber-500 mt-0.5">
+                                <AlertCircleIcon className="h-5 w-5" />
+                              </div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                {requirement}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {activePreset.mainFeatures && activePreset.mainFeatures.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                          <SparklesIcon className="h-5 w-5 text-blue-500" />
+                          Main Features
+                        </h3>
+                        <div className="space-y-2 pl-1">
+                          {activePreset.mainFeatures.map((feature, index) => (
+                            <div key={index} className="flex items-start gap-2">
+                              <div className="h-5 w-5 flex-shrink-0 text-blue-500 mt-0.5">
+                                <StarIcon className="h-5 w-5" />
+                              </div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">
+                                {feature}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {(!activePreset.benefits || activePreset.benefits.length === 0) &&
+                     (!activePreset.requirements || activePreset.requirements.length === 0) &&
+                     (!activePreset.mainFeatures || activePreset.mainFeatures.length === 0) && (
+                      <div className="text-center py-8 text-gray-500">
+                        No additional details available for this optimization strategy.
                       </div>
                     )}
                   </div>
