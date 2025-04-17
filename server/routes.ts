@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { WebSocketServer } from 'ws';
 import { initWebSocketServer } from './services/websocketService';
+import { initWebSocketPublisher } from './services/websocketPublisher';
 import { setupAuth, hashPassword } from './auth';
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -55,6 +56,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Then initialize device management service
     const deviceService = initDeviceManagementService();
     console.log('Device management service successfully initialized');
+    
+    // Initialize WebSocket publisher to connect MQTT to WebSockets
+    const wsPublisher = initWebSocketPublisher();
+    console.log('WebSocket publisher service initialized');
   } catch (error) {
     console.error('Error initializing services:', error);
   }

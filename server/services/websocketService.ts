@@ -412,6 +412,56 @@ export function broadcastDeviceReading(deviceId: number, reading: any) {
   }
 }
 
+// Broadcast device status to all clients subscribed to a device
+export function broadcastDeviceStatus(deviceId: number, status: any) {
+  const message = JSON.stringify({
+    type: 'deviceStatus',
+    data: status,
+    timestamp: Date.now()
+  });
+  
+  let sentCount = 0;
+  
+  // Send to clients subscribed to this specific device
+  for (const connection of activeConnections) {
+    if (connection.deviceId === deviceId && connection.ws.readyState === WebSocket.OPEN) {
+      try {
+        connection.ws.send(message);
+        sentCount++;
+      } catch (error) {
+        console.error('Error broadcasting device status:', error);
+      }
+    }
+  }
+  
+  // Also send to clients subscribed to the site this device belongs to
+  (async () => {
+    try {
+      const device = await storage.getDevice(deviceId);
+      if (device && device.siteId) {
+        for (const connection of activeConnections) {
+          if (connection.siteId === device.siteId && 
+              connection.deviceId !== deviceId && // Skip if already sent to this client
+              connection.ws.readyState === WebSocket.OPEN) {
+            try {
+              connection.ws.send(message);
+              sentCount++;
+            } catch (error) {
+              console.error('Error broadcasting device status to site subscriber:', error);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error getting device for site status broadcast:', error);
+    }
+  })();
+  
+  if (sentCount > 0) {
+    console.log(`Broadcast device status to ${sentCount} clients for device ${deviceId}`);
+  }
+}
+
 // Broadcast optimization recommendation to all clients subscribed to a site
 export function broadcastOptimizationRecommendation(siteId: number, recommendation: any) {
   const message = JSON.stringify({
