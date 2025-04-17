@@ -127,7 +127,27 @@ export default function DevicesPage() {
     ipAddress: '',
     capacity: '',
     protocol: 'modbus',
+    deviceCatalogId: null as number | null
   });
+  
+  // State for available device models
+  const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, modelNumber: string, capacity: number}>>([]);
+  
+  // Fetch device models when manufacturer changes
+  const fetchDeviceModels = async (manufacturerId: string) => {
+    try {
+      const response = await fetch(`/api/device-catalog?manufacturer=${manufacturerId}&type=${newDevice.type}`);
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableModels(data);
+      } else {
+        setAvailableModels([]);
+      }
+    } catch (error) {
+      console.error('Error fetching device models:', error);
+      setAvailableModels([]);
+    }
+  };
   
   // Handle new device form input change
   const handleNewDeviceChange = (field: string, value: string) => {
@@ -135,6 +155,31 @@ export default function DevicesPage() {
       ...newDevice,
       [field]: value,
     });
+    
+    // If manufacturer changes, fetch available models
+    if (field === 'manufacturer') {
+      fetchDeviceModels(value);
+    }
+    
+    // If type changes and manufacturer is selected, fetch filtered models
+    if (field === 'type' && newDevice.manufacturer) {
+      fetchDeviceModels(newDevice.manufacturer);
+    }
+  };
+  
+  // Handle model selection
+  const handleModelSelect = (modelId: string) => {
+    // Find the selected model from available models
+    const selectedModel = availableModels.find(model => model.id === parseInt(modelId));
+    
+    if (selectedModel) {
+      setNewDevice({
+        ...newDevice,
+        deviceCatalogId: selectedModel.id,
+        model: selectedModel.modelNumber,
+        capacity: selectedModel.capacity.toString(),
+      });
+    }
   };
   
   // Handle add new device

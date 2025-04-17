@@ -99,6 +99,34 @@ const navItems = [
   }
 ];
 
+// Device Management
+const deviceItems = [
+  {
+    title: 'Battery Storage',
+    icon: <Battery className="h-5 w-5" />,
+    href: '/devices?type=battery',
+    badge: null
+  },
+  {
+    title: 'EV Chargers',
+    icon: <PlugZap className="h-5 w-5" />,
+    href: '/devices?type=ev',
+    badge: null
+  },
+  {
+    title: 'Solar PV',
+    icon: <Sun className="h-5 w-5" />,
+    href: '/devices?type=solar',
+    badge: null
+  },
+  {
+    title: 'Smart Meters',
+    icon: <Activity className="h-5 w-5" />,
+    href: '/devices?type=meter',
+    badge: null
+  }
+];
+
 // Site data comes from the SiteContext
 
 interface MainLayoutProps {
