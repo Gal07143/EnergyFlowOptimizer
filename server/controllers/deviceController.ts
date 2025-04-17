@@ -177,6 +177,8 @@ export const createDeviceReading = async (req: Request, res: Response) => {
   }
 };
 
+import { executeDeviceCommand, updateDeviceStatus, pingDevice } from '../services/deviceManagementService';
+
 export const controlDevice = async (req: Request, res: Response) => {
   try {
     const deviceId = parseInt(req.params.id);
@@ -196,159 +198,55 @@ export const controlDevice = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Device not found' });
     }
     
+    // Execute device command using our device management service
+    const result = await executeDeviceCommand(deviceId, action, parameters);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        message: result.message || 'Command execution failed',
+        action,
+        deviceId,
+        deviceType: device.type
+      });
+    }
+    
     // Create a response object with status
     const response: any = {
       status: 'success',
       deviceId,
       action,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      result: result.data,
+      message: result.message
     };
     
-    // Handle device-specific actions
-    switch (device.type) {
-      case 'heat_pump':
-        if (action === 'setTemperature' && parameters?.temperature) {
-          // Create a new device reading with the updated target temperature
-          const newReading = {
-            deviceId,
-            timestamp: new Date(),
-            power: parameters.power ? Number(parameters.power) : 1.2,
-            energy: null,
-            stateOfCharge: null,
-            voltage: null,
-            current: null,
-            frequency: null,
-            temperature: null,
-            additionalData: {
-              targetTemp: Number(parameters.temperature),
-              // Preserve other data if any
-              ...(parameters.additionalData || {})
-            }
-          };
-          
-          const reading = await storage.createDeviceReading(newReading);
-          response.reading = reading;
-        } 
-        else if (action === 'setMode' && parameters?.mode) {
-          // Create a new device reading with the updated mode
-          const newReading = {
-            deviceId,
-            timestamp: new Date(),
-            power: parameters.power ? Number(parameters.power) : 1.2,
-            energy: null,
-            stateOfCharge: null,
-            voltage: null,
-            current: null,
-            frequency: null,
-            temperature: null,
-            additionalData: {
-              mode: parameters.mode,
-              // Preserve other data if any
-              ...(parameters.additionalData || {})
-            }
-          };
-          
-          const reading = await storage.createDeviceReading(newReading);
-          response.reading = reading;
-        }
-        else {
-          return res.status(400).json({ 
-            message: 'Invalid action for heat pump device',
-            supportedActions: ['setTemperature', 'setMode']
-          });
-        }
-        break;
-        
-      case 'battery_storage':
-        if (action === 'setChargingMode' && parameters?.mode) {
-          // Handle battery charging mode
-          const newReading = {
-            deviceId,
-            timestamp: new Date(),
-            power: parameters.power ? Number(parameters.power) : 0,
-            energy: null,
-            stateOfCharge: parameters.stateOfCharge ? Number(parameters.stateOfCharge) : null,
-            voltage: null,
-            current: null,
-            frequency: null,
-            temperature: null,
-            additionalData: {
-              mode: parameters.mode,
-              ...(parameters.additionalData || {})
-            }
-          };
-          
-          const reading = await storage.createDeviceReading(newReading);
-          response.reading = reading;
-        } 
-        else {
-          return res.status(400).json({ 
-            message: 'Invalid action for battery device',
-            supportedActions: ['setChargingMode']
-          });
-        }
-        break;
-        
-      case 'ev_charger':
-        if (action === 'startCharging') {
-          // Handle EV charger start
-          const newReading = {
-            deviceId,
-            timestamp: new Date(),
-            power: parameters?.power ? Number(parameters.power) : 7.4,
-            energy: null,
-            stateOfCharge: null,
-            voltage: null,
-            current: null,
-            frequency: null,
-            temperature: null,
-            additionalData: {
-              isCharging: true,
-              ...(parameters?.additionalData || {})
-            }
-          };
-          
-          const reading = await storage.createDeviceReading(newReading);
-          response.reading = reading;
-        } 
-        else if (action === 'stopCharging') {
-          // Handle EV charger stop
-          const newReading = {
-            deviceId,
-            timestamp: new Date(),
-            power: 0,
-            energy: null,
-            stateOfCharge: null,
-            voltage: null,
-            current: null,
-            frequency: null,
-            temperature: null,
-            additionalData: {
-              isCharging: false,
-              ...(parameters?.additionalData || {})
-            }
-          };
-          
-          const reading = await storage.createDeviceReading(newReading);
-          response.reading = reading;
-        }
-        else {
-          return res.status(400).json({ 
-            message: 'Invalid action for EV charger device',
-            supportedActions: ['startCharging', 'stopCharging']
-          });
-        }
-        break;
-        
-      default:
-        return res.status(400).json({ 
-          message: `Control actions not supported for device type: ${device.type}` 
-        });
-    }
-    
+    // Return response
     res.json(response);
   } catch (error) {
     console.error('Error controlling device:', error);
     res.status(500).json({ message: 'Failed to control device' });
+  }
+};
+
+export const checkDeviceStatus = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.id);
+    
+    if (isNaN(deviceId)) {
+      return res.status(400).json({ message: 'Invalid device ID' });
+    }
+    
+    // Check device connectivity
+    const result = await pingDevice(deviceId);
+    
+    res.json({
+      deviceId,
+      online: result.success,
+      status: result.status || 'unknown',
+      message: result.message
+    });
+  } catch (error) {
+    console.error('Error checking device status:', error);
+    res.status(500).json({ message: 'Failed to check device status' });
   }
 };

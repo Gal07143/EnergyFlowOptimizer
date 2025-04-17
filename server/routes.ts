@@ -10,6 +10,7 @@ import { db } from "./db";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { requireAdmin, requireManager, canManageSite } from './middleware/roleAuth';
+import { initDeviceServices } from './services/deviceManagementService';
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
@@ -32,6 +33,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup authentication
   setupAuth(app);
+  
+  // Initialize device management services
+  try {
+    const initialized = await initDeviceServices();
+    console.log(`Device management services ${initialized ? 'successfully initialized' : 'failed to initialize'}`);
+  } catch (error) {
+    console.error('Error initializing device management services:', error);
+  }
   
   // API routes
   
@@ -85,8 +94,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/devices/:id/readings/timerange', deviceController.getDeviceReadingsByTimeRange);
   app.post('/api/devices/readings', deviceController.createDeviceReading);
   
-  // Device control route
+  // Device control routes
   app.post('/api/devices/:id/control', deviceController.controlDevice);
+  app.get('/api/devices/:id/status', deviceController.checkDeviceStatus);
   
   // Energy readings routes
   app.get('/api/sites/:siteId/energy-readings', energyController.getEnergyReadings);
