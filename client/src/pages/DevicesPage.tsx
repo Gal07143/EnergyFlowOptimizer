@@ -131,7 +131,13 @@ export default function DevicesPage() {
   });
   
   // State for available device models
-  const [availableModels, setAvailableModels] = useState<Array<{id: number, name: string, modelNumber: string, capacity: number}>>([]);
+  const [availableModels, setAvailableModels] = useState<Array<{
+    id: number, 
+    name: string, 
+    modelNumber: string, 
+    capacity: number,
+    supportedProtocols?: string[]
+  }>>([]);
   const [manufacturers, setManufacturers] = useState<Array<{id: number, name: string}>>([]);
 
   // Fetch manufacturers on mount
@@ -182,11 +188,26 @@ export default function DevicesPage() {
     const selectedModel = availableModels.find(model => model.id === parseInt(modelId));
     
     if (selectedModel) {
+      // Get default protocol - prefer modbus_tcp, modbus, or first available protocol
+      const supportedProtocols = selectedModel.supportedProtocols || [];
+      let defaultProtocol = newDevice.protocol;
+      
+      if (supportedProtocols.length > 0) {
+        if (supportedProtocols.includes('modbus_tcp')) {
+          defaultProtocol = 'modbus_tcp';
+        } else if (supportedProtocols.includes('modbus')) {
+          defaultProtocol = 'modbus';
+        } else {
+          defaultProtocol = supportedProtocols[0];
+        }
+      }
+      
       setNewDevice({
         ...newDevice,
         deviceCatalogId: selectedModel.id,
         model: selectedModel.modelNumber,
         capacity: selectedModel.capacity.toString(),
+        protocol: defaultProtocol,
       });
     }
   };
@@ -582,7 +603,9 @@ export default function DevicesPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="device-capacity">Capacity (kW)</Label>
+                  <Label htmlFor="device-capacity">
+                    Capacity ({newDevice.type?.includes('battery') ? 'kWh' : 'kW'})
+                  </Label>
                   <Input 
                     id="device-capacity" 
                     type="number" 
@@ -590,7 +613,13 @@ export default function DevicesPage() {
                     step="0.1" 
                     value={newDevice.capacity} 
                     onChange={(e) => handleNewDeviceChange('capacity', e.target.value)}
+                    disabled={newDevice.deviceCatalogId !== null}
                   />
+                  {newDevice.deviceCatalogId !== null && (
+                    <div className="text-xs text-muted-foreground">
+                      Capacity set automatically from model
+                    </div>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="device-protocol">Protocol</Label>
@@ -602,10 +631,30 @@ export default function DevicesPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mqtt">MQTT</SelectItem>
-                      <SelectItem value="modbus">Modbus</SelectItem>
-                      <SelectItem value="http">HTTP/REST</SelectItem>
-                      <SelectItem value="ocpp">OCPP</SelectItem>
+                      {newDevice.deviceCatalogId !== null && availableModels.length > 0 ? (
+                        // Show protocols from the selected device catalog model
+                        (() => {
+                          const selectedModel = availableModels.find(model => model.id === newDevice.deviceCatalogId);
+                          const supportedProtocols = selectedModel?.supportedProtocols || [];
+                          
+                          return supportedProtocols.map(protocol => (
+                            <SelectItem key={protocol} value={protocol}>
+                              {protocol.charAt(0).toUpperCase() + protocol.slice(1).replace('_', ' ')}
+                            </SelectItem>
+                          ));
+                        })()
+                      ) : (
+                        // Default protocol options
+                        <>
+                          <SelectItem value="mqtt">MQTT</SelectItem>
+                          <SelectItem value="modbus">Modbus</SelectItem>
+                          <SelectItem value="modbus_tcp">Modbus TCP</SelectItem>
+                          <SelectItem value="rest">HTTP/REST</SelectItem>
+                          <SelectItem value="ocpp">OCPP</SelectItem>
+                          <SelectItem value="sunspec">SunSpec</SelectItem>
+                          <SelectItem value="eebus">EEBus</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
