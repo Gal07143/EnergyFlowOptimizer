@@ -296,7 +296,7 @@ const DeviceRegistryPage: React.FC = () => {
     
     // Apply template mutation
     const applyTemplateMutation = useMutation({
-      mutationFn: async ({ deviceId, templateId }: { deviceId: number, templateId: number }) => {
+      mutationFn: async ({ deviceId, templateId }: { deviceId: number, templateId: string }) => {
         const response = await apiRequest('POST', `/api/device-registry/registry/${deviceId}/apply-template`, { templateId });
         return await response.json();
       },
@@ -347,7 +347,7 @@ const DeviceRegistryPage: React.FC = () => {
       
       applyTemplateMutation.mutate({
         deviceId: selectedDevice.id,
-        templateId: parseInt(data.templateId, 10)
+        templateId: data.templateId
       });
     };
     
