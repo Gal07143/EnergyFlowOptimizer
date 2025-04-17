@@ -1,19 +1,26 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, QrCode, Plus, Check, X, RefreshCw, Tag, Clock, Settings, History, Key } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { ProtectedRoute } from '@/lib/protected-route';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from '@/components/ui/tabs';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -24,15 +31,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Form,
   FormControl,
   FormDescription,
@@ -41,27 +39,86 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { 
+  Check, 
+  CirclePlus, 
+  CircleX, 
+  FileCode, 
+  QrCode, 
+  RefreshCw, 
+  ScanLine,
+  Activity,
+  Settings,
+  DownloadCloud,
+  HardDrive,
+  Eye,
+  Edit,
+  Trash,
+  Zap,
+  AlertTriangle,
+} from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import * as z from 'zod';
+import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
-// Types for device registry data
-type DeviceRegistryEntry = {
+// Zod schema for device registration
+const deviceRegistrationSchema = z.object({
+  deviceUid: z.string().min(3, { message: 'Device ID must be at least 3 characters' }),
+  deviceType: z.enum(['solar_pv', 'battery_storage', 'ev_charger', 'smart_meter', 'heat_pump', 'inverter', 'load_controller', 'energy_gateway']),
+  location: z.string().optional(),
+  locationCoordinates: z.string().optional(),
+  zoneId: z.string().optional(),
+  authMethod: z.enum(['none', 'api_key', 'certificate', 'username_password', 'oauth', 'token']).default('api_key'),
+  firmwareVersion: z.string().optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+});
+
+// Zod schema for template creation
+const templateCreationSchema = z.object({
+  name: z.string().min(3, { message: 'Template name must be at least 3 characters' }),
+  description: z.string().optional(),
+  deviceType: z.enum(['solar_pv', 'battery_storage', 'ev_charger', 'smart_meter', 'heat_pump', 'inverter', 'load_controller', 'energy_gateway']),
+  configTemplate: z.record(z.string(), z.any()),
+  firmwareVersion: z.string().optional(),
+  authMethod: z.enum(['none', 'api_key', 'certificate', 'username_password', 'oauth', 'token']).default('api_key'),
+  defaultSettings: z.record(z.string(), z.any()).optional(),
+  requiredCapabilities: z.array(z.string()).optional(),
+});
+
+// Zod schema for registration code generation
+const registrationCodeSchema = z.object({
+  deviceType: z.enum(['solar_pv', 'battery_storage', 'ev_charger', 'smart_meter', 'heat_pump', 'inverter', 'load_controller', 'energy_gateway']).optional(),
+  templateId: z.number().optional(),
+  expiryHours: z.number().min(1).default(24),
+  isOneTime: z.boolean().default(true),
+  maxUses: z.number().min(1).default(1),
+});
+
+// Types for our data
+type DeviceRegistry = {
   id: number;
-  deviceId?: number;
-  registrationId: string;
   deviceUid: string;
-  registrationStatus: 'pending' | 'registered' | 'provisioning' | 'active' | 'decommissioned' | 'rejected';
   deviceType: string;
-  firmwareVersion?: string;
-  lastConnected?: string;
-  lastSeen?: string;
-  metadata?: Record<string, any>;
+  registrationStatus: string;
   location?: string;
   isOnline: boolean;
-  authMethod: 'none' | 'api_key' | 'certificate' | 'username_password' | 'oauth' | 'token';
-  createdAt: string;
-  updatedAt: string;
+  lastSeen?: string;
+  firmwareVersion?: string;
+  authMethod: string;
 };
 
 type ProvisioningTemplate = {
@@ -71,12 +128,9 @@ type ProvisioningTemplate = {
   deviceType: string;
   configTemplate: Record<string, any>;
   firmwareVersion?: string;
-  authMethod: 'none' | 'api_key' | 'certificate' | 'username_password' | 'oauth' | 'token';
-  defaultSettings?: Record<string, any>;
-  requiredCapabilities?: string[];
+  authMethod: string;
   isActive: boolean;
   createdAt: string;
-  updatedAt: string;
 };
 
 type RegistrationCode = {
@@ -84,7 +138,6 @@ type RegistrationCode = {
   code: string;
   qrCodeData?: string;
   registrationUrl?: string;
-  provisioningTemplateId?: number;
   deviceType?: string;
   expiresAt?: string;
   isOneTime: boolean;
@@ -92,709 +145,490 @@ type RegistrationCode = {
   maxUses: number;
   isActive: boolean;
   createdAt: string;
-  updatedAt: string;
 };
 
-// Form schemas
-const deviceRegistrationSchema = z.object({
-  deviceUid: z.string().min(1, "Device UID is required"),
-  deviceType: z.string().min(1, "Device type is required"),
-  firmwareVersion: z.string().optional(),
-  location: z.string().optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
+type DeviceCredentials = {
+  id: number;
+  deviceRegistryId: number;
+  authMethod: string;
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  apiSecret?: string;
+  certificatePem?: string;
+  privateKeyPem?: string;
+  tokenValue?: string;
+  validUntil?: string;
+  isActive: boolean;
+  createdAt: string;
+};
 
-const templateSchema = z.object({
-  name: z.string().min(1, "Template name is required"),
-  description: z.string().optional(),
-  deviceType: z.string().min(1, "Device type is required"),
-  configTemplate: z.record(z.string(), z.any()),
-  firmwareVersion: z.string().optional(),
-  authMethod: z.enum(['none', 'api_key', 'certificate', 'username_password', 'oauth', 'token']),
-  isActive: z.boolean().default(true),
-});
+// Helper function to format date
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleString();
+};
 
-const registrationCodeSchema = z.object({
-  deviceType: z.string().min(1, "Device type is required"),
-  templateId: z.number().optional(),
-  expiryHours: z.number().int().min(1).max(8760).default(24),
-  isOneTime: z.boolean().default(true),
-});
+// Get status badge styling based on registration status
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'active':
+      return <Badge variant="success">{status}</Badge>;
+    case 'pending':
+      return <Badge variant="secondary">{status}</Badge>;
+    case 'provisioning':
+      return <Badge variant="warning">{status}</Badge>;
+    case 'decommissioned':
+      return <Badge variant="destructive">{status}</Badge>;
+    case 'rejected':
+      return <Badge variant="destructive">{status}</Badge>;
+    default:
+      return <Badge>{status}</Badge>;
+  }
+};
 
-const DeviceRegistryPage = () => {
-  const { toast } = useToast();
+// Get device type icon
+const getDeviceTypeIcon = (type: string) => {
+  switch (type) {
+    case 'solar_pv':
+      return <Zap className="h-4 w-4 mr-1" />;
+    case 'battery_storage':
+      return <HardDrive className="h-4 w-4 mr-1" />;
+    case 'ev_charger':
+      return <Zap className="h-4 w-4 mr-1" />;
+    case 'smart_meter':
+      return <Activity className="h-4 w-4 mr-1" />;
+    case 'heat_pump':
+      return <Settings className="h-4 w-4 mr-1" />;
+    case 'inverter':
+      return <Zap className="h-4 w-4 mr-1" />;
+    case 'load_controller':
+      return <Settings className="h-4 w-4 mr-1" />;
+    case 'energy_gateway':
+      return <Settings className="h-4 w-4 mr-1" />;
+    default:
+      return <Settings className="h-4 w-4 mr-1" />;
+  }
+};
+
+// Get online status badge
+const getOnlineStatusBadge = (isOnline: boolean) => {
+  return isOnline ? 
+    <Badge variant="success" className="inline-flex items-center"><Check className="h-3 w-3 mr-1" />Online</Badge> : 
+    <Badge variant="destructive" className="inline-flex items-center"><CircleX className="h-3 w-3 mr-1" />Offline</Badge>;
+};
+
+// Main component
+const DeviceRegistryPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('devices');
-  const [selectedDevice, setSelectedDevice] = useState<DeviceRegistryEntry | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'register' | 'template' | 'code'>('register');
-
-  // Queries
-  const { data: devices, isLoading: isLoadingDevices } = useQuery<DeviceRegistryEntry[]>({
-    queryKey: ['/api/device-registry/registry'],
-    retry: 1,
-  });
-
-  const { data: templates, isLoading: isLoadingTemplates } = useQuery<ProvisioningTemplate[]>({
-    queryKey: ['/api/device-registry/templates'],
-    retry: 1,
-  });
-
-  const { data: registrationCodes, isLoading: isLoadingCodes } = useQuery<RegistrationCode[]>({
-    queryKey: ['/api/device-registry/registration-codes'],
-    retry: 1,
-  });
-
-  // Device type options (from your existing schema)
-  const deviceTypeOptions = [
-    'solar_pv',
-    'battery_storage',
-    'ev_charger',
-    'smart_meter',
-    'heat_pump',
-    'inverter',
-    'load_controller',
-    'energy_gateway'
-  ];
-
-  // Auth method options
-  const authMethodOptions = [
-    'none',
-    'api_key',
-    'certificate',
-    'username_password',
-    'oauth',
-    'token'
-  ];
-
-  // Mutations
-  const registerDeviceMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof deviceRegistrationSchema>) => {
-      const res = await apiRequest('POST', '/api/device-registry/registry', data);
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Device Registered",
-        description: "Device has been registered successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/device-registry/registry'] });
-      setIsDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Registration Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const createTemplateMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof templateSchema>) => {
-      const res = await apiRequest('POST', '/api/device-registry/templates', data);
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Template Created",
-        description: "Provisioning template has been created successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/device-registry/templates'] });
-      setIsDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Template Creation Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const generateCodeMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof registrationCodeSchema>) => {
-      const res = await apiRequest('POST', '/api/device-registry/registration-codes', data);
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Registration Code Generated",
-        description: "A new registration code has been generated.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/device-registry/registration-codes'] });
-      setIsDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Code Generation Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const applyTemplateMutation = useMutation({
-    mutationFn: async ({ deviceId, templateId }: { deviceId: number, templateId: number }) => {
-      const res = await apiRequest('POST', `/api/device-registry/registry/${deviceId}/apply-template`, { templateId });
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Template Applied",
-        description: "Provisioning template has been applied to the device.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/device-registry/registry'] });
-      setSelectedDevice(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Template Application Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const createCredentialsMutation = useMutation({
-    mutationFn: async ({ deviceId, authMethod }: { deviceId: number, authMethod: string }) => {
-      const res = await apiRequest('POST', `/api/device-registry/registry/${deviceId}/credentials`, { authMethod });
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Credentials Created",
-        description: "Device credentials have been created successfully.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/device-registry/registry'] });
-      setSelectedDevice(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Credential Creation Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Get QR code image
-  const fetchQrCode = async (codeId: number) => {
-    try {
-      const res = await fetch(`/api/device-registry/registration-codes/${codeId}/qr`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch QR code');
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Device Registry Tab
+  const DeviceRegistryTab = () => {
+    const [selectedDevice, setSelectedDevice] = useState<DeviceRegistry | null>(null);
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
+    const [credentials, setCredentials] = useState<DeviceCredentials | null>(null);
+    
+    // Fetch devices
+    const { 
+      data: devices = [], 
+      isLoading: isLoadingDevices,
+      error: devicesError,
+      refetch: refetchDevices
+    } = useQuery<DeviceRegistry[]>({
+      queryKey: ['/api/device-registry/registry'],
+    });
+    
+    // Fetch templates for dropdown
+    const { 
+      data: templates = [],
+      isLoading: isLoadingTemplates 
+    } = useQuery<ProvisioningTemplate[]>({
+      queryKey: ['/api/device-registry/templates'],
+    });
+    
+    // Create device mutation
+    const createDeviceMutation = useMutation({
+      mutationFn: async (formData: z.infer<typeof deviceRegistrationSchema>) => {
+        const response = await apiRequest('POST', '/api/device-registry/registry', formData);
+        return await response.json();
+      },
+      onSuccess: () => {
+        toast({
+          title: "Device added",
+          description: "The device has been added to the registry."
+        });
+        setShowCreateDialog(false);
+        queryClient.invalidateQueries({ queryKey: ['/api/device-registry/registry'] });
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Failed to add device",
+          description: error.message,
+          variant: "destructive"
+        });
       }
-      const qrDataUrl = await res.text();
-      setQrCodeUrl(qrDataUrl);
-    } catch (error) {
-      toast({
-        title: "QR Code Error",
-        description: "Failed to load QR code image.",
-        variant: "destructive",
+    });
+    
+    // Generate credentials mutation
+    const generateCredentialsMutation = useMutation({
+      mutationFn: async ({ deviceId, authMethod }: { deviceId: number, authMethod: string }) => {
+        const response = await apiRequest('POST', `/api/device-registry/registry/${deviceId}/credentials`, { authMethod });
+        return await response.json();
+      },
+      onSuccess: (data) => {
+        setCredentials(data);
+        toast({
+          title: "Credentials generated",
+          description: "New credentials have been generated for the device."
+        });
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Failed to generate credentials",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    });
+    
+    // Apply template mutation
+    const applyTemplateMutation = useMutation({
+      mutationFn: async ({ deviceId, templateId }: { deviceId: number, templateId: number }) => {
+        const response = await apiRequest('POST', `/api/device-registry/registry/${deviceId}/apply-template`, { templateId });
+        return await response.json();
+      },
+      onSuccess: () => {
+        toast({
+          title: "Template applied",
+          description: "The template has been applied to the device."
+        });
+        queryClient.invalidateQueries({ queryKey: ['/api/device-registry/registry'] });
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Failed to apply template",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    });
+    
+    // Form for device registration
+    const deviceForm = useForm<z.infer<typeof deviceRegistrationSchema>>({
+      resolver: zodResolver(deviceRegistrationSchema),
+      defaultValues: {
+        deviceUid: '',
+        deviceType: 'solar_pv',
+        authMethod: 'api_key',
+      },
+    });
+    
+    // Form for applying template
+    const templateForm = useForm({
+      resolver: zodResolver(z.object({
+        templateId: z.string().min(1, "Template is required"),
+      })),
+      defaultValues: {
+        templateId: '',
+      },
+    });
+    
+    // Handle device registration
+    const onSubmitDeviceRegistration = (data: z.infer<typeof deviceRegistrationSchema>) => {
+      createDeviceMutation.mutate(data);
+    };
+    
+    // Handle applying template
+    const onSubmitApplyTemplate = (data: any) => {
+      if (!selectedDevice) return;
+      
+      applyTemplateMutation.mutate({
+        deviceId: selectedDevice.id,
+        templateId: parseInt(data.templateId, 10)
       });
+    };
+    
+    // Handle generating credentials
+    const generateCredentials = (deviceId: number, authMethod: string) => {
+      generateCredentialsMutation.mutate({ deviceId, authMethod });
+      setShowCredentialsDialog(true);
+    };
+    
+    if (isLoadingDevices) {
+      return <div className="grid gap-4 grid-cols-1">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-4 w-3/4 mt-2" />
+              <Skeleton className="h-4 w-1/2 mt-2" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>;
     }
-  };
-
-  // Form handling
-  const deviceForm = useForm<z.infer<typeof deviceRegistrationSchema>>({
-    resolver: zodResolver(deviceRegistrationSchema),
-    defaultValues: {
-      deviceUid: '',
-      deviceType: 'solar_pv',
-      firmwareVersion: '',
-      location: '',
-    },
-  });
-
-  const templateForm = useForm<z.infer<typeof templateSchema>>({
-    resolver: zodResolver(templateSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      deviceType: 'solar_pv',
-      configTemplate: {},
-      authMethod: 'api_key',
-      isActive: true,
-    },
-  });
-
-  const codeForm = useForm<z.infer<typeof registrationCodeSchema>>({
-    resolver: zodResolver(registrationCodeSchema),
-    defaultValues: {
-      deviceType: 'solar_pv',
-      expiryHours: 24,
-      isOneTime: true,
-    },
-  });
-
-  // UI helpers
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-500';
-      case 'pending': return 'bg-yellow-500';
-      case 'registered': return 'bg-blue-500';
-      case 'provisioning': return 'bg-purple-500';
-      case 'decommissioned': return 'bg-gray-500';
-      case 'rejected': return 'bg-red-500';
-      default: return 'bg-gray-400';
+    
+    if (devicesError) {
+      return <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {devicesError instanceof Error ? devicesError.message : 'Failed to load devices'}
+        </AlertDescription>
+      </Alert>;
     }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString();
-  };
-
-  const openDialog = (type: 'register' | 'template' | 'code') => {
-    setDialogType(type);
-    setIsDialogOpen(true);
-  };
-
-  return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Device Registry & Provisioning</h1>
-        <div className="flex gap-2">
-          <Button onClick={() => openDialog('register')}>
-            <Plus className="mr-2 h-4 w-4" /> Register Device
-          </Button>
-          <Button onClick={() => openDialog('template')} variant="outline">
-            <Settings className="mr-2 h-4 w-4" /> Create Template
-          </Button>
-          <Button onClick={() => openDialog('code')} variant="outline">
-            <QrCode className="mr-2 h-4 w-4" /> Generate Code
-          </Button>
+    
+    return (
+      <>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Device Registry</h2>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => refetchDevices()}>
+              <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+            </Button>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <CirclePlus className="h-4 w-4 mr-2" /> Add Device
+            </Button>
+          </div>
         </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="devices">Registered Devices</TabsTrigger>
-          <TabsTrigger value="templates">Provisioning Templates</TabsTrigger>
-          <TabsTrigger value="codes">Registration Codes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="devices">
+        
+        {devices.length === 0 ? (
           <Card>
-            <CardHeader>
-              <CardTitle>Device Registry</CardTitle>
-              <CardDescription>View and manage registered devices</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingDevices ? (
-                <div className="flex justify-center p-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : !devices || devices.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No devices registered yet. Use the "Register Device" button to add your first device.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Status</TableHead>
-                      <TableHead>UID</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Firmware</TableHead>
-                      <TableHead>Last Seen</TableHead>
-                      <TableHead>Auth Method</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {devices.map((device) => (
-                      <TableRow key={device.id}>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <div className={`h-3 w-3 rounded-full ${device.isOnline ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></div>
-                            <Badge className={getStatusColor(device.registrationStatus)}>
-                              {device.registrationStatus}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>{device.deviceUid}</TableCell>
-                        <TableCell>{device.deviceType}</TableCell>
-                        <TableCell>{device.firmwareVersion || 'N/A'}</TableCell>
-                        <TableCell>{formatDate(device.lastSeen)}</TableCell>
-                        <TableCell>{device.authMethod}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setSelectedDevice(device)}
-                            >
-                              Details
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+            <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+              <AlertTriangle className="h-10 w-10 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No devices registered yet</h3>
+              <p className="text-muted-foreground mt-2 mb-4">
+                Add your first device to start monitoring and controlling your energy assets.
+              </p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <CirclePlus className="h-4 w-4 mr-2" /> Register New Device
+              </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="templates">
+        ) : (
           <Card>
-            <CardHeader>
-              <CardTitle>Provisioning Templates</CardTitle>
-              <CardDescription>Manage device provisioning templates</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingTemplates ? (
-                <div className="flex justify-center p-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : !templates || templates.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No templates created yet. Use the "Create Template" button to add your first template.
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {templates.map((template) => (
-                    <Card key={template.id}>
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          {template.name}
-                          {template.isActive ? (
-                            <Badge variant="outline" className="bg-green-100 text-green-800">Active</Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-gray-100 text-gray-800">Inactive</Badge>
-                          )}
-                        </CardTitle>
-                        <CardDescription>{template.description || 'No description'}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Device Type:</span>
-                            <span className="font-medium">{template.deviceType}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Auth Method:</span>
-                            <span className="font-medium">{template.authMethod}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Created:</span>
-                            <span className="font-medium">{new Date(template.createdAt).toLocaleDateString()}</span>
-                          </div>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Device ID</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last Seen</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Auth Method</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {devices.map((device) => (
+                    <TableRow key={device.id}>
+                      <TableCell className="font-medium">{device.deviceUid}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {getDeviceTypeIcon(device.deviceType)}
+                          <span className="capitalize">{device.deviceType.replace('_', ' ')}</span>
                         </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button variant="outline" size="sm" className="w-full">
-                          View Details
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="codes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Registration Codes</CardTitle>
-              <CardDescription>Manage device registration codes and QR codes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingCodes ? (
-                <div className="flex justify-center p-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : !registrationCodes || registrationCodes.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No registration codes generated yet. Use the "Generate Code" button to create a new registration code.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Device Type</TableHead>
-                      <TableHead>Expires</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Usage</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {registrationCodes.map((code) => (
-                      <TableRow key={code.id}>
-                        <TableCell>
-                          <code className="bg-gray-100 p-1 rounded">{code.code}</code>
-                        </TableCell>
-                        <TableCell>{code.deviceType || 'Any'}</TableCell>
-                        <TableCell>{code.expiresAt ? formatDate(code.expiresAt) : 'Never'}</TableCell>
-                        <TableCell>
-                          {code.isActive ? (
-                            <Badge variant="outline" className="bg-green-100 text-green-800">Active</Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-gray-100 text-gray-800">Inactive</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {code.useCount} / {code.isOneTime ? 1 : code.maxUses}
-                        </TableCell>
-                        <TableCell>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col space-y-1">
+                          {getStatusBadge(device.registrationStatus)}
+                          {getOnlineStatusBadge(device.isOnline)}
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDate(device.lastSeen)}</TableCell>
+                      <TableCell>{device.location || 'Not specified'}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {device.authMethod.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" size="icon" onClick={() => setSelectedDevice(device)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[500px]">
+                              <DialogHeader>
+                                <DialogTitle>Device Details</DialogTitle>
+                                <DialogDescription>
+                                  Detailed information about the device.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <span className="font-medium text-right">Device ID:</span>
+                                  <span className="col-span-3">{device.deviceUid}</span>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <span className="font-medium text-right">Type:</span>
+                                  <span className="col-span-3 capitalize">{device.deviceType.replace('_', ' ')}</span>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <span className="font-medium text-right">Status:</span>
+                                  <span className="col-span-3">{getStatusBadge(device.registrationStatus)}</span>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <span className="font-medium text-right">Online:</span>
+                                  <span className="col-span-3">{getOnlineStatusBadge(device.isOnline)}</span>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <span className="font-medium text-right">Firmware:</span>
+                                  <span className="col-span-3">{device.firmwareVersion || 'Not specified'}</span>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <span className="font-medium text-right">Location:</span>
+                                  <span className="col-span-3">{device.location || 'Not specified'}</span>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <span className="font-medium text-right">Last Seen:</span>
+                                  <span className="col-span-3">{formatDate(device.lastSeen)}</span>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <span className="font-medium text-right">Auth Method:</span>
+                                  <span className="col-span-3 capitalize">{device.authMethod.replace('_', ' ')}</span>
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button variant="secondary" onClick={() => setSelectedDevice(device)}>Close</Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                          
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="secondary" size="icon">
+                                <FileCode className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Apply Template</DialogTitle>
+                                <DialogDescription>
+                                  Select a template to apply to this device.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <Form {...templateForm}>
+                                <form onSubmit={templateForm.handleSubmit(onSubmitApplyTemplate)} className="space-y-6">
+                                  <FormField
+                                    control={templateForm.control}
+                                    name="templateId"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Template</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Select a template" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            {templates.map((template) => (
+                                              <SelectItem key={template.id} value={template.id.toString()}>
+                                                {template.name} ({template.deviceType})
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <FormDescription>
+                                          The template will configure the device with predefined settings.
+                                        </FormDescription>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                  <DialogFooter>
+                                    <Button type="submit" disabled={applyTemplateMutation.isPending}>
+                                      {applyTemplateMutation.isPending ? 'Applying...' : 'Apply Template'}
+                                    </Button>
+                                  </DialogFooter>
+                                </form>
+                              </Form>
+                            </DialogContent>
+                          </Dialog>
+                          
                           <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => fetchQrCode(code.id)}
+                            variant="secondary" 
+                            size="icon" 
+                            onClick={() => generateCredentials(device.id, device.authMethod)}
                           >
-                            <QrCode className="h-4 w-4" />
+                            <ScanLine className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Device Details Dialog */}
-      {selectedDevice && (
-        <Dialog open={!!selectedDevice} onOpenChange={() => setSelectedDevice(null)}>
-          <DialogContent className="max-w-3xl">
+        )}
+        
+        {/* Create Device Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Device Details</DialogTitle>
+              <DialogTitle>Register New Device</DialogTitle>
               <DialogDescription>
-                Registration ID: {selectedDevice.registrationId}
+                Add a new device to the registry to start monitoring and control.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-lg font-medium">Device Information</h3>
-                <div className="space-y-3 mt-2">
-                  <div>
-                    <Label>Status</Label>
-                    <div className="flex items-center mt-1">
-                      <div className={`h-3 w-3 rounded-full ${selectedDevice.isOnline ? 'bg-green-500' : 'bg-gray-400'} mr-2`}></div>
-                      <Badge className={getStatusColor(selectedDevice.registrationStatus)}>
-                        {selectedDevice.registrationStatus}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Device UID</Label>
-                    <div className="text-sm mt-1">{selectedDevice.deviceUid}</div>
-                  </div>
-                  <div>
-                    <Label>Device Type</Label>
-                    <div className="text-sm mt-1">{selectedDevice.deviceType}</div>
-                  </div>
-                  <div>
-                    <Label>Firmware Version</Label>
-                    <div className="text-sm mt-1">{selectedDevice.firmwareVersion || 'N/A'}</div>
-                  </div>
-                  <div>
-                    <Label>Location</Label>
-                    <div className="text-sm mt-1">{selectedDevice.location || 'N/A'}</div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium">Connectivity</h3>
-                <div className="space-y-3 mt-2">
-                  <div>
-                    <Label>Authentication Method</Label>
-                    <div className="text-sm mt-1">{selectedDevice.authMethod}</div>
-                  </div>
-                  <div>
-                    <Label>Last Connected</Label>
-                    <div className="text-sm mt-1">{formatDate(selectedDevice.lastConnected)}</div>
-                  </div>
-                  <div>
-                    <Label>Last Seen</Label>
-                    <div className="text-sm mt-1">{formatDate(selectedDevice.lastSeen)}</div>
-                  </div>
-                  <div>
-                    <Label>Created At</Label>
-                    <div className="text-sm mt-1">{formatDate(selectedDevice.createdAt)}</div>
-                  </div>
-                  <div>
-                    <Label>Updated At</Label>
-                    <div className="text-sm mt-1">{formatDate(selectedDevice.updatedAt)}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <Separator />
-            <div className="space-y-3">
-              <h3 className="text-lg font-medium">Actions</h3>
-              <div className="flex space-x-2">
-                {selectedDevice.authMethod === 'none' && (
-                  <div>
-                    <Label className="mb-2 block">Create Credentials</Label>
-                    <div className="flex space-x-2">
-                      <Select onValueChange={(value) => {
-                        createCredentialsMutation.mutate({ 
-                          deviceId: selectedDevice.id, 
-                          authMethod: value 
-                        });
-                      }}>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Select method" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {authMethodOptions.filter(m => m !== 'none').map(method => (
-                            <SelectItem key={method} value={method}>{method}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          createCredentialsMutation.mutate({ 
-                            deviceId: selectedDevice.id, 
-                            authMethod: 'api_key' 
-                          });
-                        }}
-                        disabled={createCredentialsMutation.isPending}
-                      >
-                        {createCredentialsMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        <Key className="mr-2 h-4 w-4" />
-                        Create API Key
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                {selectedDevice.registrationStatus !== 'active' && templates && templates.length > 0 && (
-                  <div>
-                    <Label className="mb-2 block">Apply Template</Label>
-                    <div className="flex space-x-2">
-                      <Select onValueChange={(value) => {
-                        applyTemplateMutation.mutate({ 
-                          deviceId: selectedDevice.id, 
-                          templateId: parseInt(value) 
-                        });
-                      }}>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Select template" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {templates.map(template => (
-                            <SelectItem key={template.id} value={template.id.toString()}>
-                              {template.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        variant="outline" 
-                        disabled={applyTemplateMutation.isPending}
-                        onClick={() => {
-                          if (templates.length > 0) {
-                            applyTemplateMutation.mutate({ 
-                              deviceId: selectedDevice.id, 
-                              templateId: templates[0].id 
-                            });
-                          }
-                        }}
-                      >
-                        {applyTemplateMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        <Settings className="mr-2 h-4 w-4" />
-                        Provision
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedDevice(null)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Forms Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {dialogType === 'register' ? 'Register Device' : 
-               dialogType === 'template' ? 'Create Provisioning Template' : 
-               'Generate Registration Code'}
-            </DialogTitle>
-            <DialogDescription>
-              {dialogType === 'register' ? 'Register a new device in the system' : 
-               dialogType === 'template' ? 'Create a template for zero-touch provisioning' : 
-               'Generate a code for device self-registration'}
-            </DialogDescription>
-          </DialogHeader>
-
-          {dialogType === 'register' && (
             <Form {...deviceForm}>
-              <form onSubmit={deviceForm.handleSubmit((data) => registerDeviceMutation.mutate(data))} className="space-y-4">
+              <form onSubmit={deviceForm.handleSubmit(onSubmitDeviceRegistration)} className="space-y-6">
                 <FormField
                   control={deviceForm.control}
                   name="deviceUid"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Device UID</FormLabel>
+                      <FormLabel>Device ID</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter device unique identifier" {...field} />
+                        <Input placeholder="Enter device ID" {...field} />
                       </FormControl>
                       <FormDescription>
-                        This is usually the serial number or MAC address of the device
+                        Unique identifier for this device.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={deviceForm.control}
                   name="deviceType"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Device Type</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select device type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {deviceTypeOptions.map(type => (
-                            <SelectItem key={type} value={type}>{type.replace('_', ' ')}</SelectItem>
-                          ))}
+                          <SelectItem value="solar_pv">Solar PV</SelectItem>
+                          <SelectItem value="battery_storage">Battery Storage</SelectItem>
+                          <SelectItem value="ev_charger">EV Charger</SelectItem>
+                          <SelectItem value="smart_meter">Smart Meter</SelectItem>
+                          <SelectItem value="heat_pump">Heat Pump</SelectItem>
+                          <SelectItem value="inverter">Inverter</SelectItem>
+                          <SelectItem value="load_controller">Load Controller</SelectItem>
+                          <SelectItem value="energy_gateway">Energy Gateway</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        The type of energy asset being registered.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={deviceForm.control}
-                  name="firmwareVersion"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Firmware Version</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter firmware version" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                
                 <FormField
                   control={deviceForm.control}
                   name="location"
@@ -802,27 +636,335 @@ const DeviceRegistryPage = () => {
                     <FormItem>
                       <FormLabel>Location</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter device location" {...field} />
+                        <Input placeholder="Device location (optional)" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Physical location of the device.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={deviceForm.control}
+                  name="authMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Authentication Method</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select auth method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="api_key">API Key</SelectItem>
+                          <SelectItem value="certificate">Certificate</SelectItem>
+                          <SelectItem value="username_password">Username/Password</SelectItem>
+                          <SelectItem value="oauth">OAuth</SelectItem>
+                          <SelectItem value="token">Token</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Method used for device authentication.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={deviceForm.control}
+                  name="firmwareVersion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Firmware Version</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Device firmware version (optional)" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Current firmware version of the device.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <DialogFooter>
-                  <Button type="submit" disabled={registerDeviceMutation.isPending}>
-                    {registerDeviceMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Register Device
+                  <Button type="submit" disabled={createDeviceMutation.isPending}>
+                    {createDeviceMutation.isPending ? 'Registering...' : 'Register Device'}
                   </Button>
                 </DialogFooter>
               </form>
             </Form>
-          )}
-
-          {dialogType === 'template' && (
+          </DialogContent>
+        </Dialog>
+        
+        {/* Credentials Dialog */}
+        <Dialog open={showCredentialsDialog} onOpenChange={setShowCredentialsDialog}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Device Credentials</DialogTitle>
+              <DialogDescription>
+                {credentials ? 'Credentials have been generated for this device.' : 'Generating credentials...'}
+              </DialogDescription>
+            </DialogHeader>
+            
+            {generateCredentialsMutation.isPending ? (
+              <div className="py-6">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-4 w-3/4 mt-2" />
+                <Skeleton className="h-4 w-1/2 mt-2" />
+              </div>
+            ) : credentials ? (
+              <div className="grid gap-4 py-4">
+                {credentials.authMethod === 'api_key' && (
+                  <>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <span className="font-medium text-right">API Key:</span>
+                      <Input className="col-span-3" readOnly value={credentials.apiKey} />
+                    </div>
+                    {credentials.apiSecret && (
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <span className="font-medium text-right">API Secret:</span>
+                        <Input className="col-span-3" readOnly value={credentials.apiSecret} />
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {credentials.authMethod === 'username_password' && (
+                  <>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <span className="font-medium text-right">Username:</span>
+                      <Input className="col-span-3" readOnly value={credentials.username} />
+                    </div>
+                    {credentials.password && (
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <span className="font-medium text-right">Password:</span>
+                        <Input className="col-span-3" readOnly value={credentials.password} />
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {credentials.authMethod === 'token' && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <span className="font-medium text-right">Token:</span>
+                    <Input className="col-span-3" readOnly value={credentials.tokenValue} />
+                  </div>
+                )}
+                
+                {credentials.authMethod === 'certificate' && (
+                  <>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <span className="font-medium text-right">Certificate:</span>
+                      <textarea 
+                        className="col-span-3 min-h-[100px] rounded-md border border-input bg-background p-2" 
+                        readOnly 
+                        value={credentials.certificatePem}
+                      />
+                    </div>
+                    {credentials.privateKeyPem && (
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <span className="font-medium text-right">Private Key:</span>
+                        <textarea 
+                          className="col-span-3 min-h-[100px] rounded-md border border-input bg-background p-2" 
+                          readOnly 
+                          value={credentials.privateKeyPem}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Important!</AlertTitle>
+                  <AlertDescription>
+                    Copy these credentials now. For security reasons, the full credentials will not be displayed again.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            ) : (
+              <div className="py-6">
+                <p>No credentials available. Please try again.</p>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setShowCredentialsDialog(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  };
+  
+  // Templates Tab
+  const TemplatesTab = () => {
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    
+    // Fetch templates
+    const { 
+      data: templates = [], 
+      isLoading,
+      error,
+      refetch
+    } = useQuery<ProvisioningTemplate[]>({
+      queryKey: ['/api/device-registry/templates'],
+    });
+    
+    // Create template mutation
+    const createTemplateMutation = useMutation({
+      mutationFn: async (formData: z.infer<typeof templateCreationSchema>) => {
+        const response = await apiRequest('POST', '/api/device-registry/templates', formData);
+        return await response.json();
+      },
+      onSuccess: () => {
+        toast({
+          title: "Template created",
+          description: "The provisioning template has been created successfully."
+        });
+        setShowCreateDialog(false);
+        queryClient.invalidateQueries({ queryKey: ['/api/device-registry/templates'] });
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Failed to create template",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    });
+    
+    // Form for template creation
+    const templateForm = useForm<z.infer<typeof templateCreationSchema>>({
+      resolver: zodResolver(templateCreationSchema),
+      defaultValues: {
+        name: '',
+        deviceType: 'solar_pv',
+        configTemplate: {},
+        authMethod: 'api_key',
+      },
+    });
+    
+    const onSubmitCreateTemplate = (data: z.infer<typeof templateCreationSchema>) => {
+      createTemplateMutation.mutate(data);
+    };
+    
+    if (isLoading) {
+      return <div className="grid gap-4 grid-cols-1">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-4 w-3/4 mt-2" />
+              <Skeleton className="h-4 w-1/2 mt-2" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>;
+    }
+    
+    if (error) {
+      return <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {error instanceof Error ? error.message : 'Failed to load templates'}
+        </AlertDescription>
+      </Alert>;
+    }
+    
+    return (
+      <>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Provisioning Templates</h2>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+            </Button>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <CirclePlus className="h-4 w-4 mr-2" /> Create Template
+            </Button>
+          </div>
+        </div>
+        
+        {templates.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+              <FileCode className="h-10 w-10 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No templates available</h3>
+              <p className="text-muted-foreground mt-2 mb-4">
+                Create a provisioning template to automate device configuration.
+              </p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <CirclePlus className="h-4 w-4 mr-2" /> Create New Template
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {templates.map((template) => (
+              <Card key={template.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{template.name}</CardTitle>
+                      <CardDescription className="mt-1">{template.description || 'No description'}</CardDescription>
+                    </div>
+                    <Badge className="capitalize">{template.deviceType.replace('_', ' ')}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Auth Method:</span>
+                      <span className="font-medium capitalize">{template.authMethod.replace('_', ' ')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Firmware Version:</span>
+                      <span className="font-medium">{template.firmwareVersion || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Created:</span>
+                      <span className="font-medium">{formatDate(template.createdAt)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      <span>
+                        {template.isActive ? (
+                          <Badge variant="success" className="inline-flex items-center">
+                            <Check className="h-3 w-3 mr-1" />Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="inline-flex items-center">
+                            <CircleX className="h-3 w-3 mr-1" />Inactive
+                          </Badge>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+        
+        {/* Create Template Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Create Provisioning Template</DialogTitle>
+              <DialogDescription>
+                Define a template for automating device configuration.
+              </DialogDescription>
+            </DialogHeader>
             <Form {...templateForm}>
-              <form onSubmit={templateForm.handleSubmit((data) => createTemplateMutation.mutate(data))} className="space-y-4">
+              <form onSubmit={templateForm.handleSubmit(onSubmitCreateTemplate)} className="space-y-6">
                 <FormField
                   control={templateForm.control}
                   name="name"
@@ -836,6 +978,7 @@ const DeviceRegistryPage = () => {
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={templateForm.control}
                   name="description"
@@ -843,250 +986,712 @@ const DeviceRegistryPage = () => {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter template description" {...field} />
+                        <Input placeholder="Template description (optional)" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={templateForm.control}
                   name="deviceType"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Device Type</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select device type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {deviceTypeOptions.map(type => (
-                            <SelectItem key={type} value={type}>{type.replace('_', ' ')}</SelectItem>
-                          ))}
+                          <SelectItem value="solar_pv">Solar PV</SelectItem>
+                          <SelectItem value="battery_storage">Battery Storage</SelectItem>
+                          <SelectItem value="ev_charger">EV Charger</SelectItem>
+                          <SelectItem value="smart_meter">Smart Meter</SelectItem>
+                          <SelectItem value="heat_pump">Heat Pump</SelectItem>
+                          <SelectItem value="inverter">Inverter</SelectItem>
+                          <SelectItem value="load_controller">Load Controller</SelectItem>
+                          <SelectItem value="energy_gateway">Energy Gateway</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={templateForm.control}
+                  name="configTemplate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Configuration Template (JSON)</FormLabel>
+                      <FormControl>
+                        <textarea
+                          className="min-h-[120px] w-full rounded-md border border-input bg-background p-2"
+                          placeholder='{"setting1": "value1", "setting2": true}'
+                          onChange={(e) => {
+                            try {
+                              const parsed = JSON.parse(e.target.value);
+                              field.onChange(parsed);
+                            } catch (error) {
+                              // Allow invalid JSON during editing
+                              field.onChange(e.target.value);
+                            }
+                          }}
+                          defaultValue="{}"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter the configuration template as a JSON object.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={templateForm.control}
+                  name="firmwareVersion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Firmware Version</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Target firmware version (optional)" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <FormField
                   control={templateForm.control}
                   name="authMethod"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Authentication Method</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select auth method" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {authMethodOptions.map(method => (
-                            <SelectItem key={method} value={method}>{method}</SelectItem>
-                          ))}
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="api_key">API Key</SelectItem>
+                          <SelectItem value="certificate">Certificate</SelectItem>
+                          <SelectItem value="username_password">Username/Password</SelectItem>
+                          <SelectItem value="oauth">OAuth</SelectItem>
+                          <SelectItem value="token">Token</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={templateForm.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Active</FormLabel>
-                        <FormDescription>
-                          Mark this template as active and available for use
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                
                 <DialogFooter>
                   <Button type="submit" disabled={createTemplateMutation.isPending}>
-                    {createTemplateMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Create Template
+                    {createTemplateMutation.isPending ? 'Creating...' : 'Create Template'}
                   </Button>
                 </DialogFooter>
               </form>
             </Form>
-          )}
-
-          {dialogType === 'code' && (
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  };
+  
+  // Registration Codes Tab
+  const RegistrationCodesTab = () => {
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+    const [selectedCodeId, setSelectedCodeId] = useState<number | null>(null);
+    
+    // Fetch codes
+    const { 
+      data: codes = [], 
+      isLoading, 
+      error,
+      refetch
+    } = useQuery<RegistrationCode[]>({
+      queryKey: ['/api/device-registry/registration-codes'],
+    });
+    
+    // Fetch templates for dropdown
+    const { 
+      data: templates = [] 
+    } = useQuery<ProvisioningTemplate[]>({
+      queryKey: ['/api/device-registry/templates'],
+    });
+    
+    // Create registration code mutation
+    const createCodeMutation = useMutation({
+      mutationFn: async (formData: z.infer<typeof registrationCodeSchema>) => {
+        const response = await apiRequest('POST', '/api/device-registry/registration-codes', formData);
+        return await response.json();
+      },
+      onSuccess: () => {
+        toast({
+          title: "Registration code created",
+          description: "The registration code has been created successfully."
+        });
+        setShowCreateDialog(false);
+        queryClient.invalidateQueries({ queryKey: ['/api/device-registry/registration-codes'] });
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Failed to create registration code",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    });
+    
+    // Get QR code
+    const getQrCodeMutation = useMutation({
+      mutationFn: async (codeId: number) => {
+        const response = await apiRequest('GET', `/api/device-registry/registration-codes/${codeId}/qr`);
+        return await response.text();
+      },
+      onSuccess: (data) => {
+        setQrCodeUrl(data);
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Failed to get QR code",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    });
+    
+    // Form for code generation
+    const codeForm = useForm<z.infer<typeof registrationCodeSchema>>({
+      resolver: zodResolver(registrationCodeSchema),
+      defaultValues: {
+        deviceType: undefined,
+        templateId: undefined,
+        expiryHours: 24,
+        isOneTime: true,
+        maxUses: 1,
+      },
+    });
+    
+    const onSubmitCreateCode = (data: z.infer<typeof registrationCodeSchema>) => {
+      // Convert templateId to number if present
+      if (data.templateId) {
+        data.templateId = Number(data.templateId);
+      }
+      
+      createCodeMutation.mutate(data);
+    };
+    
+    const viewQrCode = (codeId: number) => {
+      setSelectedCodeId(codeId);
+      getQrCodeMutation.mutate(codeId);
+    };
+    
+    if (isLoading) {
+      return <div className="grid gap-4 grid-cols-1">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-4 w-3/4 mt-2" />
+              <Skeleton className="h-4 w-1/2 mt-2" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>;
+    }
+    
+    if (error) {
+      return <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {error instanceof Error ? error.message : 'Failed to load registration codes'}
+        </AlertDescription>
+      </Alert>;
+    }
+    
+    return (
+      <>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Registration Codes</h2>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+            </Button>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <CirclePlus className="h-4 w-4 mr-2" /> Generate Code
+            </Button>
+          </div>
+        </div>
+        
+        {codes.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+              <QrCode className="h-10 w-10 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No registration codes</h3>
+              <p className="text-muted-foreground mt-2 mb-4">
+                Generate a registration code to simplify device onboarding.
+              </p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <CirclePlus className="h-4 w-4 mr-2" /> Generate Registration Code
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Device Type</TableHead>
+                    <TableHead>Expires</TableHead>
+                    <TableHead>Uses</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {codes.map((code) => (
+                    <TableRow key={code.id}>
+                      <TableCell className="font-medium">{code.code}</TableCell>
+                      <TableCell>
+                        {code.deviceType ? (
+                          <div className="flex items-center">
+                            {getDeviceTypeIcon(code.deviceType)}
+                            <span className="capitalize">{code.deviceType.replace('_', ' ')}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Any</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {code.expiresAt ? formatDate(code.expiresAt) : 'Never'}
+                      </TableCell>
+                      <TableCell>
+                        {code.useCount} / {code.isOneTime ? '1' : code.maxUses || '∞'}
+                      </TableCell>
+                      <TableCell>
+                        {code.isActive ? (
+                          <Badge variant="success" className="inline-flex items-center">
+                            <Check className="h-3 w-3 mr-1" />Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive" className="inline-flex items-center">
+                            <CircleX className="h-3 w-3 mr-1" />Inactive
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{formatDate(code.createdAt)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => viewQrCode(code.id)}>
+                          <QrCode className="h-4 w-4 mr-2" /> QR Code
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Create Registration Code Dialog */}
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Generate Registration Code</DialogTitle>
+              <DialogDescription>
+                Create a code that can be used to register new devices.
+              </DialogDescription>
+            </DialogHeader>
             <Form {...codeForm}>
-              <form onSubmit={codeForm.handleSubmit((data) => generateCodeMutation.mutate(data))} className="space-y-4">
+              <form onSubmit={codeForm.handleSubmit(onSubmitCreateCode)} className="space-y-6">
                 <FormField
                   control={codeForm.control}
                   name="deviceType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Device Type</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
+                      <FormLabel>Device Type (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select device type" />
+                            <SelectValue placeholder="Any device type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {deviceTypeOptions.map(type => (
-                            <SelectItem key={type} value={type}>{type.replace('_', ' ')}</SelectItem>
-                          ))}
+                          <SelectItem value="solar_pv">Solar PV</SelectItem>
+                          <SelectItem value="battery_storage">Battery Storage</SelectItem>
+                          <SelectItem value="ev_charger">EV Charger</SelectItem>
+                          <SelectItem value="smart_meter">Smart Meter</SelectItem>
+                          <SelectItem value="heat_pump">Heat Pump</SelectItem>
+                          <SelectItem value="inverter">Inverter</SelectItem>
+                          <SelectItem value="load_controller">Load Controller</SelectItem>
+                          <SelectItem value="energy_gateway">Energy Gateway</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        The type of device this code can register
+                        Restrict this code to a specific device type.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {templates && templates.length > 0 && (
-                  <FormField
-                    control={codeForm.control}
-                    name="templateId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Provisioning Template</FormLabel>
-                        <Select 
-                          onValueChange={(v) => field.onChange(parseInt(v))}
-                          value={field.value?.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select template (optional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {templates.map(template => (
-                              <SelectItem key={template.id} value={template.id.toString()}>
-                                {template.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Optional template to apply during registration
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                
+                <FormField
+                  control={codeForm.control}
+                  name="templateId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Template (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="No template" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {templates.map((template) => (
+                            <SelectItem key={template.id} value={template.id.toString()}>
+                              {template.name} ({template.deviceType})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Automatically apply this template when a device registers with this code.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <FormField
                   control={codeForm.control}
                   name="expiryHours"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Expiry Time (hours)</FormLabel>
+                      <FormLabel>Expiry (Hours)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={1} 
-                          max={8760} 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        />
+                        <Input type="number" min="1" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} />
                       </FormControl>
                       <FormDescription>
-                        Code will expire after this many hours (max 1 year)
+                        Number of hours until the code expires.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={codeForm.control}
                   name="isOneTime"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                       <FormControl>
-                        <Checkbox
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                           checked={field.value}
-                          onCheckedChange={field.onChange}
+                          onChange={e => field.onChange(e.target.checked)}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel>One-time use</FormLabel>
                         <FormDescription>
-                          Code can only be used once for device registration
+                          The code can only be used once.
                         </FormDescription>
                       </div>
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={codeForm.control}
+                  name="maxUses"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Maximum Uses</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          disabled={codeForm.watch('isOneTime')} 
+                          {...field} 
+                          onChange={e => field.onChange(parseInt(e.target.value, 10))} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Maximum number of times this code can be used.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <DialogFooter>
-                  <Button type="submit" disabled={generateCodeMutation.isPending}>
-                    {generateCodeMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Generate Code
+                  <Button type="submit" disabled={createCodeMutation.isPending}>
+                    {createCodeMutation.isPending ? 'Generating...' : 'Generate Code'}
                   </Button>
                 </DialogFooter>
               </form>
             </Form>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* QR Code Dialog */}
-      <Dialog open={!!qrCodeUrl} onOpenChange={() => setQrCodeUrl(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Registration QR Code</DialogTitle>
-            <DialogDescription>
-              Scan this QR code with the device to register it
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center">
-            {qrCodeUrl && (
-              <img 
-                src={qrCodeUrl} 
-                alt="Registration QR Code" 
-                className="w-64 h-64 object-contain"
-              />
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQrCodeUrl(null)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+        
+        {/* QR Code Dialog */}
+        <Dialog open={!!qrCodeUrl} onOpenChange={() => setQrCodeUrl(null)}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Registration QR Code</DialogTitle>
+              <DialogDescription>
+                Scan this QR code to register a new device.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="flex flex-col items-center justify-center p-4">
+              {getQrCodeMutation.isPending ? (
+                <Skeleton className="h-48 w-48" />
+              ) : qrCodeUrl ? (
+                <>
+                  <img src={qrCodeUrl} alt="Registration QR Code" className="w-48 h-48" />
+                  <p className="mt-4 text-sm text-center text-muted-foreground">
+                    Let devices scan this code to automatically register with the system.
+                  </p>
+                </>
+              ) : (
+                <p>Could not generate QR code.</p>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setQrCodeUrl(null)}>Close</Button>
+              {qrCodeUrl && (
+                <Button variant="outline" onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = qrCodeUrl;
+                  link.download = 'registration-qr-code.png';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}>
+                  <DownloadCloud className="h-4 w-4 mr-2" /> Download
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  };
+  
+  // Health & Diagnostics Tab
+  const HealthDiagnosticsTab = () => {
+    // Fetch devices
+    const { 
+      data: devices = [], 
+      isLoading,
+    } = useQuery<DeviceRegistry[]>({
+      queryKey: ['/api/device-registry/registry'],
+    });
+    
+    if (isLoading) {
+      return <div className="grid gap-4 grid-cols-1">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-4 w-3/4 mt-2" />
+              <Skeleton className="h-4 w-1/2 mt-2" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>;
+    }
+    
+    // Group devices by status
+    const activeDevices = devices.filter(d => d.registrationStatus === 'active');
+    const pendingDevices = devices.filter(d => d.registrationStatus === 'pending');
+    const offlineDevices = devices.filter(d => d.isOnline === false);
+    
+    return (
+      <>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Health & Diagnostics</h2>
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-3 mb-8">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-center text-2xl">{activeDevices.length}</CardTitle>
+              <CardDescription className="text-center">Active Devices</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-center">
+                <Badge variant="success" className="text-center">
+                  <Check className="h-4 w-4 mr-1" /> Online Devices
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-center text-2xl">{pendingDevices.length}</CardTitle>
+              <CardDescription className="text-center">Pending Devices</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-center">
+                <Badge variant="secondary" className="text-center">
+                  Awaiting Provisioning
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-center text-2xl">{offlineDevices.length}</CardTitle>
+              <CardDescription className="text-center">Offline Devices</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-center">
+                <Badge variant="destructive" className="text-center">
+                  <AlertTriangle className="h-4 w-4 mr-1" /> Require Attention
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Device Health Dashboard</CardTitle>
+            <CardDescription>
+              Real-time monitoring of device status and diagnostics
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Device ID</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Seen</TableHead>
+                  <TableHead>Firmware</TableHead>
+                  <TableHead>Health</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {devices.map((device) => {
+                  // Calculate health status based on online status and last seen
+                  let healthStatus: 'good' | 'warning' | 'critical' = 'good';
+                  if (!device.isOnline) {
+                    healthStatus = 'critical';
+                  } else if (device.lastSeen) {
+                    const lastSeen = new Date(device.lastSeen);
+                    const now = new Date();
+                    const hoursSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60 * 60);
+                    if (hoursSinceLastSeen > 24) {
+                      healthStatus = 'warning';
+                    }
+                  }
+                  
+                  return (
+                    <TableRow key={device.id}>
+                      <TableCell className="font-medium">{device.deviceUid}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          {getDeviceTypeIcon(device.deviceType)}
+                          <span className="capitalize">{device.deviceType.replace('_', ' ')}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getOnlineStatusBadge(device.isOnline)}</TableCell>
+                      <TableCell>{formatDate(device.lastSeen)}</TableCell>
+                      <TableCell>{device.firmwareVersion || 'N/A'}</TableCell>
+                      <TableCell>
+                        {healthStatus === 'good' && (
+                          <Badge variant="success" className="inline-flex items-center">
+                            <Check className="h-3 w-3 mr-1" />Good
+                          </Badge>
+                        )}
+                        {healthStatus === 'warning' && (
+                          <Badge variant="warning" className="inline-flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />Warning
+                          </Badge>
+                        )}
+                        {healthStatus === 'critical' && (
+                          <Badge variant="destructive" className="inline-flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />Critical
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {devices.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6">
+                      <div className="flex flex-col items-center">
+                        <AlertTriangle className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">No devices found</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </>
+    );
+  };
+  
+  return (
+    <div className="container mx-auto py-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Device Management</h1>
+        <p className="text-muted-foreground mt-1">
+          Register, monitor, and control your energy assets
+        </p>
+      </div>
+      
+      <Tabs defaultValue="devices" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="devices">Device Registry</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="codes">Registration Codes</TabsTrigger>
+          <TabsTrigger value="health">Health & Diagnostics</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="devices">
+          <DeviceRegistryTab />
+        </TabsContent>
+        
+        <TabsContent value="templates">
+          <TemplatesTab />
+        </TabsContent>
+        
+        <TabsContent value="codes">
+          <RegistrationCodesTab />
+        </TabsContent>
+        
+        <TabsContent value="health">
+          <HealthDiagnosticsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
 
-export function DeviceRegistryPageWrapper() {
-  return (
-    <MainLayout>
-      <DeviceRegistryPage />
-    </MainLayout>
-  );
-}
-
-export default function DeviceRegistryProtectedRoute() {
-  return (
-    <ProtectedRoute path="/device-registry" component={DeviceRegistryPageWrapper} />
-  );
-}
+export default DeviceRegistryPage;
