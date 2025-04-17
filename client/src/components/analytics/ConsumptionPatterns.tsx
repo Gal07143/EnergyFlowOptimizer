@@ -617,52 +617,7 @@ export default function ConsumptionPatterns() {
                 </div>
                 
                 <div className="mb-6">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <ScatterChart
-                      margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="timestamp" 
-                        name="Time" 
-                        allowDuplicatedCategory={false} 
-                        type="category" 
-                      />
-                      <YAxis 
-                        dataKey="actual" 
-                        name="Energy" 
-                        unit=" kWh" 
-                        domain={['auto', 'auto']}
-                      />
-                      <ZAxis 
-                        dataKey="severity" 
-                        range={[50, 200]} 
-                        name="Severity" 
-                      />
-                      <Tooltip 
-                        cursor={{ strokeDasharray: '3 3' }}
-                        formatter={(value, name) => {
-                          if (name === 'Actual') return [`${value} kWh`, name];
-                          if (name === 'Expected') return [`${value} kWh`, name];
-                          return [value, name];
-                        }}
-                      />
-                      <Legend />
-                      <Scatter 
-                        name="Actual" 
-                        data={getAnomalyChartData()} 
-                        fill="#FF5252"
-                        shape="triangle"
-                      />
-                      <Scatter 
-                        name="Expected" 
-                        data={getAnomalyChartData()}
-                        dataKey="expected"
-                        fill="#4CAF50"
-                        shape="circle"
-                      />
-                    </ScatterChart>
-                  </ResponsiveContainer>
+                  <AnomalyChart data={getAnomalyChartData()} />
                 </div>
                 
                 <div className="space-y-4">
