@@ -42,6 +42,7 @@ import {
 import { useDevicesBySite } from '@/hooks/useDevice';
 import { useSiteContext } from '@/hooks/use-site-context';
 import { useToast } from '@/hooks/use-toast';
+import { useTechnicalSpecs, useSaveTechnicalSpecs } from '@/hooks/useTechnicalSpecs';
 import DeviceDetailPanel from '@/components/devices/DeviceDetailPanel';
 
 export default function DevicesPage() {
@@ -202,6 +203,12 @@ export default function DevicesPage() {
     }
   };
   
+  // Fetch technical specifications for the selected device model
+  const { data: deviceTechSpecs } = useTechnicalSpecs(newDevice.deviceCatalogId);
+  
+  // Save technical specs mutation
+  const saveTechSpecsMutation = useSaveTechnicalSpecs();
+  
   // Handle model selection
   const handleModelSelect = (modelId: string) => {
     // Find the selected model from available models
@@ -222,6 +229,7 @@ export default function DevicesPage() {
         }
       }
       
+      // Update device form with selected model information
       setNewDevice({
         ...newDevice,
         deviceCatalogId: selectedModel.id,
@@ -230,6 +238,133 @@ export default function DevicesPage() {
         protocol: defaultProtocol,
       });
     }
+  };
+  
+  // State for technical specifications
+  const [techSpecs, setTechSpecs] = useState({
+    // General specifications
+    errorMargin: '',
+    selfConsumption: '',
+    
+    // Battery specifications
+    roundTripEfficiency: '',
+    selfDischargeRate: '',
+    
+    // Solar specifications
+    temperatureCoefficient: '',
+    degradationRate: '',
+    
+    // EV Charger specifications
+    chargingEfficiency: '',
+    standbyPower: '',
+    
+    // Heat Pump specifications
+    copAt7C: '',
+    copAtMinus7C: '',
+    refrigerantType: '',
+    
+    // Certifications
+    certifications: '',
+    complianceStandards: '',
+  });
+  
+  // Update tech specs when deviceTechSpecs data changes
+  useEffect(() => {
+    if (deviceTechSpecs) {
+      setTechSpecs({
+        errorMargin: deviceTechSpecs.errorMargin?.toString() || '',
+        selfConsumption: deviceTechSpecs.selfConsumption?.toString() || '',
+        roundTripEfficiency: deviceTechSpecs.roundTripEfficiency?.toString() || '',
+        selfDischargeRate: deviceTechSpecs.selfDischargeRate?.toString() || '',
+        temperatureCoefficient: deviceTechSpecs.temperatureCoefficient?.toString() || '',
+        degradationRate: deviceTechSpecs.degradationRate?.toString() || '',
+        chargingEfficiency: deviceTechSpecs.chargingEfficiency?.toString() || '',
+        standbyPower: deviceTechSpecs.standbyPower?.toString() || '',
+        copAt7C: deviceTechSpecs.copAt7C?.toString() || '',
+        copAtMinus7C: deviceTechSpecs.copAtMinus7C?.toString() || '',
+        refrigerantType: deviceTechSpecs.refrigerantType || '',
+        certifications: deviceTechSpecs.certifications || '',
+        complianceStandards: deviceTechSpecs.complianceStandards || '',
+      });
+    } else {
+      // Reset tech specs if no data is available
+      setTechSpecs({
+        errorMargin: '',
+        selfConsumption: '',
+        roundTripEfficiency: '',
+        selfDischargeRate: '',
+        temperatureCoefficient: '',
+        degradationRate: '',
+        chargingEfficiency: '',
+        standbyPower: '',
+        copAt7C: '',
+        copAtMinus7C: '',
+        refrigerantType: '',
+        certifications: '',
+        complianceStandards: '',
+      });
+    }
+  }, [deviceTechSpecs]);
+  
+  // Handle tech specs change
+  const handleTechSpecsChange = (field: string, value: string) => {
+    setTechSpecs({
+      ...techSpecs,
+      [field]: value,
+    });
+  };
+  
+  // Save technical specifications
+  const handleSaveTechSpecs = () => {
+    if (!newDevice.deviceCatalogId) {
+      toast({
+        title: 'No Device Model Selected',
+        description: 'Please select a device model before saving technical specifications.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Keep values as strings for the API
+    const specsToSave = {
+      deviceCatalogId: newDevice.deviceCatalogId,
+      errorMargin: techSpecs.errorMargin || null,
+      selfConsumption: techSpecs.selfConsumption || null,
+      roundTripEfficiency: techSpecs.roundTripEfficiency || null,
+      selfDischargeRate: techSpecs.selfDischargeRate || null,
+      temperatureCoefficient: techSpecs.temperatureCoefficient || null,
+      degradationRate: techSpecs.degradationRate || null,
+      chargingEfficiency: techSpecs.chargingEfficiency || null,
+      standbyPower: techSpecs.standbyPower || null,
+      copAt7C: techSpecs.copAt7C || null,
+      copAtMinus7C: techSpecs.copAtMinus7C || null,
+      refrigerantType: techSpecs.refrigerantType || null,
+      certifications: techSpecs.certifications || null,
+      complianceStandards: techSpecs.complianceStandards || null,
+    };
+    
+    saveTechSpecsMutation.mutate(
+      { 
+        deviceCatalogId: newDevice.deviceCatalogId,
+        specs: specsToSave
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: 'Technical Specifications Saved',
+            description: 'The technical specifications have been successfully saved.',
+            variant: 'default',
+          });
+        },
+        onError: (error) => {
+          toast({
+            title: 'Failed to Save',
+            description: `Error: ${error.message}`,
+            variant: 'destructive',
+          });
+        },
+      }
+    );
   };
   
   // Handle add new device
@@ -828,145 +963,197 @@ export default function DevicesPage() {
                   These values are automatically populated when selecting a manufacturer and model.
                 </div>
                 
-                {/* General specifications for all device types */}
-                <div className="border rounded-lg p-4 mb-4">
-                  <h3 className="font-medium mb-2">General Specifications</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="error-margin">Error Margin (%)</Label>
-                      <Input 
-                        id="error-margin" 
-                        placeholder="e.g. 2.5" 
-                      />
-                      <p className="text-xs text-muted-foreground">Measurement error margin in percentage</p>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="self-consumption">Self Consumption (W)</Label>
-                      <Input 
-                        id="self-consumption" 
-                        placeholder="e.g. 5" 
-                      />
-                      <p className="text-xs text-muted-foreground">Power consumed by the device itself</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Conditional technical specs based on device type */}
-                {newDevice.type === 'battery_storage' && (
-                  <div className="border rounded-lg p-4 mb-4">
-                    <h3 className="font-medium mb-2">Battery Specifications</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="round-trip-efficiency">Round Trip Efficiency (%)</Label>
-                        <Input 
-                          id="round-trip-efficiency" 
-                          placeholder="e.g. 95" 
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="self-discharge-rate">Self-Discharge Rate (%/month)</Label>
-                        <Input 
-                          id="self-discharge-rate" 
-                          placeholder="e.g. 2" 
-                        />
+                {newDevice.deviceCatalogId ? (
+                  <>
+                    {/* General specifications for all device types */}
+                    <div className="border rounded-lg p-4 mb-4">
+                      <h3 className="font-medium mb-2">General Specifications</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="error-margin">Error Margin (%)</Label>
+                          <Input 
+                            id="error-margin" 
+                            placeholder="e.g. 2.5" 
+                            value={techSpecs.errorMargin}
+                            onChange={(e) => handleTechSpecsChange('errorMargin', e.target.value)}
+                          />
+                          <p className="text-xs text-muted-foreground">Measurement error margin in percentage</p>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="self-consumption">Self Consumption (W)</Label>
+                          <Input 
+                            id="self-consumption"
+                            placeholder="e.g. 5"
+                            value={techSpecs.selfConsumption}
+                            onChange={(e) => handleTechSpecsChange('selfConsumption', e.target.value)}
+                          />
+                          <p className="text-xs text-muted-foreground">Power consumed by the device itself</p>
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Conditional technical specs based on device type */}
+                    {newDevice.type === 'battery_storage' && (
+                      <div className="border rounded-lg p-4 mb-4">
+                        <h3 className="font-medium mb-2">Battery Specifications</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="round-trip-efficiency">Round Trip Efficiency (%)</Label>
+                            <Input 
+                              id="round-trip-efficiency" 
+                              placeholder="e.g. 95" 
+                              value={techSpecs.roundTripEfficiency}
+                              onChange={(e) => handleTechSpecsChange('roundTripEfficiency', e.target.value)}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="self-discharge-rate">Self-Discharge Rate (%/month)</Label>
+                            <Input 
+                              id="self-discharge-rate" 
+                              placeholder="e.g. 2" 
+                              value={techSpecs.selfDischargeRate}
+                              onChange={(e) => handleTechSpecsChange('selfDischargeRate', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {newDevice.type === 'solar_pv' && (
+                      <div className="border rounded-lg p-4 mb-4">
+                        <h3 className="font-medium mb-2">Solar Panel Specifications</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="temp-coefficient">Temperature Coefficient (%/°C)</Label>
+                            <Input 
+                              id="temp-coefficient" 
+                              placeholder="e.g. -0.35" 
+                              value={techSpecs.temperatureCoefficient}
+                              onChange={(e) => handleTechSpecsChange('temperatureCoefficient', e.target.value)}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="degradation-rate">Annual Degradation Rate (%)</Label>
+                            <Input 
+                              id="degradation-rate" 
+                              placeholder="e.g. 0.5" 
+                              value={techSpecs.degradationRate}
+                              onChange={(e) => handleTechSpecsChange('degradationRate', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {newDevice.type === 'ev_charger' && (
+                      <div className="border rounded-lg p-4 mb-4">
+                        <h3 className="font-medium mb-2">EV Charger Specifications</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="charger-efficiency">Charging Efficiency (%)</Label>
+                            <Input 
+                              id="charger-efficiency" 
+                              placeholder="e.g. 94" 
+                              value={techSpecs.chargingEfficiency}
+                              onChange={(e) => handleTechSpecsChange('chargingEfficiency', e.target.value)}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="standby-power">Standby Power (W)</Label>
+                            <Input 
+                              id="standby-power" 
+                              placeholder="e.g. 2.5" 
+                              value={techSpecs.standbyPower}
+                              onChange={(e) => handleTechSpecsChange('standbyPower', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {newDevice.type === 'heat_pump' && (
+                      <div className="border rounded-lg p-4 mb-4">
+                        <h3 className="font-medium mb-2">Heat Pump Specifications</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="cop-at-7c">COP at 7°C</Label>
+                            <Input 
+                              id="cop-at-7c" 
+                              placeholder="e.g. 4.8" 
+                              value={techSpecs.copAt7C}
+                              onChange={(e) => handleTechSpecsChange('copAt7C', e.target.value)}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="cop-at-minus-7c">COP at -7°C</Label>
+                            <Input 
+                              id="cop-at-minus-7c" 
+                              placeholder="e.g. 3.2" 
+                              value={techSpecs.copAtMinus7C}
+                              onChange={(e) => handleTechSpecsChange('copAtMinus7C', e.target.value)}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="refrigerant-type">Refrigerant Type</Label>
+                            <Input 
+                              id="refrigerant-type" 
+                              placeholder="e.g. R32" 
+                              value={techSpecs.refrigerantType}
+                              onChange={(e) => handleTechSpecsChange('refrigerantType', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Compliance and certification section */}
+                    <div className="border rounded-lg p-4 mb-4">
+                      <h3 className="font-medium mb-2">Certifications & Compliance</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="certifications">Certifications</Label>
+                          <Input 
+                            id="certifications" 
+                            placeholder="e.g. CE, TÜV, UL" 
+                            value={techSpecs.certifications}
+                            onChange={(e) => handleTechSpecsChange('certifications', e.target.value)}
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="compliance">Compliance Standards</Label>
+                          <Input 
+                            id="compliance" 
+                            placeholder="e.g. IEC 62109-1/2, VDE-AR-N 4105" 
+                            value={techSpecs.complianceStandards}
+                            onChange={(e) => handleTechSpecsChange('complianceStandards', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Save button */}
+                    <div className="flex justify-end">
+                      <Button 
+                        type="button"
+                        onClick={handleSaveTechSpecs}
+                        disabled={saveTechSpecsMutation.isPending}
+                      >
+                        {saveTechSpecsMutation.isPending && (
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Save Technical Specifications
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="border rounded-lg p-8 text-center">
+                    <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Device Model Selected</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Please select a manufacturer and model in the Basic Information tab before entering technical specifications.
+                    </p>
                   </div>
                 )}
-                
-                {newDevice.type === 'solar_pv' && (
-                  <div className="border rounded-lg p-4 mb-4">
-                    <h3 className="font-medium mb-2">Solar Panel Specifications</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="temp-coefficient">Temperature Coefficient (%/°C)</Label>
-                        <Input 
-                          id="temp-coefficient" 
-                          placeholder="e.g. -0.35" 
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="degradation-rate">Annual Degradation Rate (%)</Label>
-                        <Input 
-                          id="degradation-rate" 
-                          placeholder="e.g. 0.5" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {newDevice.type === 'ev_charger' && (
-                  <div className="border rounded-lg p-4 mb-4">
-                    <h3 className="font-medium mb-2">EV Charger Specifications</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="charger-efficiency">Charging Efficiency (%)</Label>
-                        <Input 
-                          id="charger-efficiency" 
-                          placeholder="e.g. 94" 
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="standby-power">Standby Power (W)</Label>
-                        <Input 
-                          id="standby-power" 
-                          placeholder="e.g. 2.5" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {newDevice.type === 'heat_pump' && (
-                  <div className="border rounded-lg p-4 mb-4">
-                    <h3 className="font-medium mb-2">Heat Pump Specifications</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor="cop-at-7c">COP at 7°C</Label>
-                        <Input 
-                          id="cop-at-7c" 
-                          placeholder="e.g. 4.8" 
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="cop-at-minus-7c">COP at -7°C</Label>
-                        <Input 
-                          id="cop-at-minus-7c" 
-                          placeholder="e.g. 3.2" 
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="refrigerant-type">Refrigerant Type</Label>
-                        <Input 
-                          id="refrigerant-type" 
-                          placeholder="e.g. R32" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Compliance and certification section */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-medium mb-2">Certifications & Compliance</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="certifications">Certifications</Label>
-                      <Input 
-                        id="certifications" 
-                        placeholder="e.g. CE, TÜV, UL" 
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="compliance">Compliance Standards</Label>
-                      <Input 
-                        id="compliance" 
-                        placeholder="e.g. IEC 62109-1/2, VDE-AR-N 4105" 
-                      />
-                    </div>
-                  </div>
-                </div>
               </TabsContent>
             </Tabs>
             

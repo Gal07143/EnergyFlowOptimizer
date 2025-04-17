@@ -141,6 +141,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Device technical specifications routes
+  app.get('/api/device-catalog/:id/technical-specs', async (req, res) => {
+    try {
+      const deviceCatalogId = parseInt(req.params.id);
+      
+      if (isNaN(deviceCatalogId)) {
+        return res.status(400).json({ message: 'Invalid device catalog ID' });
+      }
+      
+      const [specs] = await db
+        .select()
+        .from(deviceTechnicalSpecs)
+        .where(eq(deviceTechnicalSpecs.deviceCatalogId, deviceCatalogId));
+      
+      if (!specs) {
+        return res.status(404).json({ 
+          message: 'Technical specifications not found for this device model',
+          deviceCatalogId
+        });
+      }
+      
+      res.json(specs);
+    } catch (error) {
+      console.error('Error fetching technical specifications:', error);
+      res.status(500).json({ message: 'Failed to fetch technical specifications' });
+    }
+  });
+  
+  // Save technical specifications for a device model
+  app.post('/api/device-catalog/:id/technical-specs', requireManager, async (req, res) => {
+    try {
+      const deviceCatalogId = parseInt(req.params.id);
+      
+      if (isNaN(deviceCatalogId)) {
+        return res.status(400).json({ message: 'Invalid device catalog ID' });
+      }
+      
+      // Check if the device catalog entry exists
+      const [deviceModel] = await db
+        .select()
+        .from(deviceCatalog)
+        .where(eq(deviceCatalog.id, deviceCatalogId));
+      
+      if (!deviceModel) {
+        return res.status(404).json({ message: 'Device model not found' });
+      }
+      
+      // Check if specs already exist for this model
+      const [existingSpecs] = await db
+        .select()
+        .from(deviceTechnicalSpecs)
+        .where(eq(deviceTechnicalSpecs.deviceCatalogId, deviceCatalogId));
+      
+      // Initialize the technical specs object with the request body
+      const techSpecs = {
+        ...req.body,
+        deviceCatalogId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      let result;
+      
+      if (existingSpecs) {
+        // Update existing specs
+        [result] = await db
+          .update(deviceTechnicalSpecs)
+          .set({
+            ...techSpecs,
+            updatedAt: new Date() // Always update the updatedAt timestamp
+          })
+          .where(eq(deviceTechnicalSpecs.id, existingSpecs.id))
+          .returning();
+        
+        res.json(result);
+      } else {
+        // Create new specs
+        [result] = await db
+          .insert(deviceTechnicalSpecs)
+          .values(techSpecs)
+          .returning();
+        
+        res.status(201).json(result);
+      }
+    } catch (error) {
+      console.error('Error saving technical specifications:', error);
+      res.status(500).json({ message: 'Failed to save technical specifications' });
+    }
+  });
+  
   // Device manufacturers route
   app.get('/api/device-manufacturers', async (req, res) => {
     try {
