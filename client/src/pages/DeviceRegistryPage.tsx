@@ -177,7 +177,7 @@ const getStatusBadge = (status: string) => {
     case 'pending':
       return <Badge variant="secondary">{status}</Badge>;
     case 'provisioning':
-      return <Badge variant="warning">{status}</Badge>;
+      return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-400">{status}</Badge>;
     case 'decommissioned':
       return <Badge variant="destructive">{status}</Badge>;
     case 'rejected':
@@ -1626,7 +1626,7 @@ const DeviceRegistryPage: React.FC = () => {
                           </Badge>
                         )}
                         {healthStatus === 'warning' && (
-                          <Badge variant="warning" className="inline-flex items-center">
+                          <Badge variant="secondary" className="inline-flex items-center bg-yellow-500/20 text-yellow-700 dark:text-yellow-400">
                             <AlertTriangle className="h-3 w-3 mr-1" />Warning
                           </Badge>
                         )}

@@ -103,6 +103,12 @@ const navItems = [
 // Device Management
 const deviceItems = [
   {
+    title: 'Device Registry',
+    icon: <Settings className="h-5 w-5" />,
+    href: '/device-registry',
+    badge: { text: 'New', variant: 'success' as const }
+  },
+  {
     title: 'Battery Storage',
     icon: <Battery className="h-5 w-5" />,
     href: '/devices?type=battery',
