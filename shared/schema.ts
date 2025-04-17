@@ -550,10 +550,10 @@ export const deviceCatalogRegisters = pgTable('device_catalog_registers', {
   description: text('description'),
   dataType: text('data_type').notNull(), // 'integer', 'float', 'string', 'boolean'
   unit: text('unit'),
-  scale: numeric('scale'),
-  offset: numeric('offset'),
-  min: numeric('min'),
-  max: numeric('max'),
+  scaleFactor: numeric('scale_factor'),
+  offsetValue: numeric('offset_value'),
+  minValue: numeric('min_value'),
+  maxValue: numeric('max_value'),
   access: text('access').notNull(), // 'read', 'write', 'read-write'
   isRequired: boolean('is_required').default(false),
   defaultValue: text('default_value'),
@@ -1002,10 +1002,10 @@ export const insertDeviceCatalogDocumentSchema = createInsertSchema(deviceCatalo
 }).omit({ id: true, uploadDate: true });
 
 export const insertDeviceCatalogRegisterSchema = createInsertSchema(deviceCatalogRegisters, {
-  scale: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
-  offset: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
-  min: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
-  max: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  scaleFactor: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  offsetValue: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  minValue: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  maxValue: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
 }).omit({ id: true });
 
 export const insertDeviceCatalogPresetSchema = createInsertSchema(deviceCatalogPresets)
