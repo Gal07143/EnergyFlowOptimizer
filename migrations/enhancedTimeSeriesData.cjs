@@ -29,6 +29,32 @@ async function runMigration(client) {
     `;
     await client.query(energyReadingsAlterColumns);
     console.log('Enhanced energy_readings table');
+    
+    // Add new columns to device_readings table
+    const deviceReadingsAlterColumns = `
+      ALTER TABLE device_readings
+      ADD COLUMN IF NOT EXISTS humidity NUMERIC,
+      ADD COLUMN IF NOT EXISTS pressure NUMERIC,
+      ADD COLUMN IF NOT EXISTS irradiance NUMERIC,
+      ADD COLUMN IF NOT EXISTS wind_speed NUMERIC,
+      ADD COLUMN IF NOT EXISTS wind_direction NUMERIC,
+      ADD COLUMN IF NOT EXISTS rain_intensity NUMERIC,
+      ADD COLUMN IF NOT EXISTS noise_level NUMERIC,
+      ADD COLUMN IF NOT EXISTS air_quality_index NUMERIC,
+      ADD COLUMN IF NOT EXISTS co2_level NUMERIC,
+      ADD COLUMN IF NOT EXISTS sampling_rate TEXT DEFAULT 'medium',
+      ADD COLUMN IF NOT EXISTS data_quality TEXT DEFAULT 'validated',
+      ADD COLUMN IF NOT EXISTS storage_tier TEXT DEFAULT 'hot',
+      ADD COLUMN IF NOT EXISTS retention_category TEXT DEFAULT 'standard',
+      ADD COLUMN IF NOT EXISTS is_aggregated BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS aggregation_period TEXT,
+      ADD COLUMN IF NOT EXISTS aggregation_method TEXT,
+      ADD COLUMN IF NOT EXISTS source_readings JSONB,
+      ADD COLUMN IF NOT EXISTS weather_data JSONB,
+      ADD COLUMN IF NOT EXISTS additional_data JSONB;
+    `;
+    await client.query(deviceReadingsAlterColumns);
+    console.log('Enhanced device_readings table');
 
     // Create the event category enum type if it doesn't exist
     const eventCategoryEnumCreate = `
@@ -134,11 +160,14 @@ async function runMigration(client) {
            EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'users') THEN
           IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'event_logs' AND column_name = 'user_id') AND
              NOT EXISTS (
-               SELECT 1 FROM information_schema.table_constraints tc
-               JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
+               SELECT 1 FROM information_schema.constraint_column_usage AS ccu
+               JOIN information_schema.table_constraints AS tc
+               ON tc.constraint_name = ccu.constraint_name
                WHERE tc.constraint_type = 'FOREIGN KEY' 
                  AND tc.table_name = 'event_logs' 
-                 AND ccu.column_name = 'user_id'
+                 AND ccu.table_name = 'users'
+                 AND ccu.column_name = 'id'
+                 AND tc.constraint_name = 'event_logs_user_id_fkey'
              ) THEN
             ALTER TABLE event_logs
             ADD CONSTRAINT event_logs_user_id_fkey
@@ -155,11 +184,14 @@ async function runMigration(client) {
            EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'devices') THEN
           IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'event_logs' AND column_name = 'device_id') AND
              NOT EXISTS (
-               SELECT 1 FROM information_schema.table_constraints tc
-               JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
+               SELECT 1 FROM information_schema.constraint_column_usage AS ccu
+               JOIN information_schema.table_constraints AS tc
+               ON tc.constraint_name = ccu.constraint_name
                WHERE tc.constraint_type = 'FOREIGN KEY' 
                  AND tc.table_name = 'event_logs' 
-                 AND ccu.column_name = 'device_id'
+                 AND ccu.table_name = 'devices'
+                 AND ccu.column_name = 'id'
+                 AND tc.constraint_name = 'event_logs_device_id_fkey'
              ) THEN
             ALTER TABLE event_logs
             ADD CONSTRAINT event_logs_device_id_fkey
@@ -176,11 +208,14 @@ async function runMigration(client) {
            EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'sites') THEN
           IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'event_logs' AND column_name = 'site_id') AND
              NOT EXISTS (
-               SELECT 1 FROM information_schema.table_constraints tc
-               JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
+               SELECT 1 FROM information_schema.constraint_column_usage AS ccu
+               JOIN information_schema.table_constraints AS tc
+               ON tc.constraint_name = ccu.constraint_name
                WHERE tc.constraint_type = 'FOREIGN KEY' 
                  AND tc.table_name = 'event_logs' 
-                 AND ccu.column_name = 'site_id'
+                 AND ccu.table_name = 'sites'
+                 AND ccu.column_name = 'id'
+                 AND tc.constraint_name = 'event_logs_site_id_fkey'
              ) THEN
             ALTER TABLE event_logs
             ADD CONSTRAINT event_logs_site_id_fkey
@@ -196,11 +231,14 @@ async function runMigration(client) {
         IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'event_logs') THEN
           IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'event_logs' AND column_name = 'parent_event_id') AND
              NOT EXISTS (
-               SELECT 1 FROM information_schema.table_constraints tc
-               JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
+               SELECT 1 FROM information_schema.constraint_column_usage AS ccu
+               JOIN information_schema.table_constraints AS tc
+               ON tc.constraint_name = ccu.constraint_name
                WHERE tc.constraint_type = 'FOREIGN KEY' 
                  AND tc.table_name = 'event_logs' 
-                 AND ccu.column_name = 'parent_event_id'
+                 AND ccu.table_name = 'event_logs'
+                 AND ccu.column_name = 'id'
+                 AND tc.constraint_name = 'event_logs_parent_event_id_fkey'
              ) THEN
             ALTER TABLE event_logs
             ADD CONSTRAINT event_logs_parent_event_id_fkey
@@ -303,11 +341,14 @@ async function runMigration(client) {
            EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'storage_policy_rules') THEN
           IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'data_transfer_jobs' AND column_name = 'policy_rule_id') AND
              NOT EXISTS (
-               SELECT 1 FROM information_schema.table_constraints tc
-               JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
+               SELECT 1 FROM information_schema.constraint_column_usage AS ccu
+               JOIN information_schema.table_constraints AS tc
+               ON tc.constraint_name = ccu.constraint_name
                WHERE tc.constraint_type = 'FOREIGN KEY' 
                  AND tc.table_name = 'data_transfer_jobs' 
-                 AND ccu.column_name = 'policy_rule_id'
+                 AND ccu.table_name = 'storage_policy_rules'
+                 AND ccu.column_name = 'id'
+                 AND tc.constraint_name = 'data_transfer_jobs_policy_rule_id_fkey'
              ) THEN
             ALTER TABLE data_transfer_jobs
             ADD CONSTRAINT data_transfer_jobs_policy_rule_id_fkey
