@@ -451,17 +451,38 @@ export function broadcastCommandExecution(deviceId: number, command: string, res
   
   let sentCount = 0;
   
+  // Process each connection
   for (const connection of activeConnections) {
-    // Send to clients subscribed to this device or the site containing the device
-    if ((connection.deviceId === deviceId || 
-        (connection.siteId && deviceBelongsToSite(deviceId, connection.siteId))) && 
-        connection.ws.readyState === WebSocket.OPEN) {
+    // Process device subscription immediately
+    if (connection.deviceId === deviceId && connection.ws.readyState === WebSocket.OPEN) {
       try {
         connection.ws.send(message);
         sentCount++;
       } catch (error) {
         console.error('Error broadcasting command execution:', error);
       }
+      continue; // Skip site check if we already sent based on device
+    }
+    
+    // Check site subscription async
+    if (connection.siteId && connection.ws.readyState === WebSocket.OPEN) {
+      // Use IIFE to handle the async check without blocking the loop
+      (async (conn) => {
+        try {
+          const belongs = await deviceBelongsToSite(deviceId, conn.siteId);
+          if (belongs) {
+            try {
+              conn.ws.send(message);
+              sentCount++;
+              console.log(`Sent command execution to client subscribed to site ${conn.siteId}`);
+            } catch (sendError) {
+              console.error('Error sending message after site check:', sendError);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking site subscription:', error);
+        }
+      })(connection);
     }
   }
   
@@ -474,7 +495,10 @@ export function broadcastCommandExecution(deviceId: number, command: string, res
 async function deviceBelongsToSite(deviceId: number, siteId: number): Promise<boolean> {
   try {
     const device = await storage.getDevice(deviceId);
-    return device?.siteId === siteId;
+    if (!device) {
+      return false;
+    }
+    return device.siteId === siteId;
   } catch (error) {
     console.error('Error checking if device belongs to site:', error);
     return false;

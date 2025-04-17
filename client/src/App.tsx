@@ -12,10 +12,19 @@ import DemandResponse from "@/pages/DemandResponse";
 import ProfilePage from "@/pages/ProfilePage";
 import AuthPage from "@/pages/auth-page";
 import EmailVerificationPage from "@/pages/email-verification-page";
+import { WebSocketStatus } from "@/components/ui/websocket-status";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { SiteProvider } from "@/hooks/use-site-context";
+import { WebSocketProvider } from "@/hooks/WebSocketProvider";
 import { ProtectedRoute } from "@/lib/protected-route";
+
+// Component to show connection status in corner
+const ConnectionStatus = () => (
+  <div className="fixed bottom-4 right-4 z-50">
+    <WebSocketStatus showBadge />
+  </div>
+);
 
 function Router() {
   return (
@@ -48,8 +57,11 @@ function App() {
   return (
     <AuthProvider>
       <SiteProvider>
-        <Router />
-        <Toaster />
+        <WebSocketProvider>
+          <Router />
+          <ConnectionStatus />
+          <Toaster />
+        </WebSocketProvider>
       </SiteProvider>
     </AuthProvider>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useWebSocket } from '@/hooks/useWebSocket';
+import { useWebSocketContext } from '@/hooks/WebSocketProvider';
 import { 
   Tooltip,
   TooltipContent,
@@ -20,7 +20,7 @@ export function WebSocketStatus({
   showBadge = false,
   className = ""
 }: WebSocketStatusProps) {
-  const { isConnected, connectionId } = useWebSocket();
+  const { isConnected, connectionId } = useWebSocketContext();
   const [hasActivity, setHasActivity] = useState(false);
   
   // Flash activity indicator

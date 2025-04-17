@@ -4,6 +4,7 @@ interface WebSocketMessage {
   type: string;
   id?: string;
   device?: number;
+  deviceId?: number; // Include both forms for compatibility
   siteId?: number;
   action?: string;
   data?: any;

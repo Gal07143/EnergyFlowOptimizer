@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useEffect, useState, useCallback } from 'react';
 import { webSocketManager } from '@/lib/websocket';
+import { useToast } from '@/hooks/use-toast';
 
+// Define the event types
 export type WebSocketEventType = 
   | 'message' 
   | 'connected' 
@@ -14,34 +16,74 @@ export type WebSocketEventType =
 
 export type WebSocketMessageHandler<T = any> = (data: T) => void;
 
-/**
- * Hook for using WebSocket connections in React components
- */
-export function useWebSocket() {
+// Type definitions for the WebSocket context
+interface WebSocketContextType {
+  isConnected: boolean;
+  connectionId: string | null;
+  subscribedSiteId: number | null;
+  subscribedDeviceId: number | null;
+  lastMessages: Record<string, any>;
+  subscribeSite: (siteId: number) => void;
+  unsubscribeSite: () => void;
+  subscribeDevice: (deviceId: number) => void;
+  unsubscribeDevice: () => void;
+  sendMessage: (message: any) => void;
+  ping: () => void;
+  registerHandler: (eventType: WebSocketEventType, handler: WebSocketMessageHandler) => () => void;
+  getLastMessage: (eventType: WebSocketEventType) => any;
+}
+
+// Create a context for WebSocket
+const WebSocketContext = createContext<WebSocketContextType | null>(null);
+
+export interface WebSocketProviderProps {
+  children: ReactNode;
+  autoConnect?: boolean;
+}
+
+export function WebSocketProvider({
+  children,
+  autoConnect = true
+}: WebSocketProviderProps) {
+  // Connection state
   const [isConnected, setIsConnected] = useState(webSocketManager.isConnected());
   const [connectionId, setConnectionId] = useState<string | null>(null);
-  const eventHandlers = useRef(new Map<string, Set<WebSocketMessageHandler>>());
-  
-  // Track the site subscription
   const [subscribedSiteId, setSubscribedSiteId] = useState<number | null>(null);
-  
-  // Track the device subscription
   const [subscribedDeviceId, setSubscribedDeviceId] = useState<number | null>(null);
-  
-  // Track the last received messages by type
   const [lastMessages, setLastMessages] = useState<Record<string, any>>({});
   
-  // Register basic event handlers on mount
+  // Toast for displaying connection status
+  const { toast } = useToast();
+  
+  // Auto-connect if specified
   useEffect(() => {
-    const handleConnected = (data: { connectionId: string }) => {
+    if (autoConnect && !webSocketManager.isConnected()) {
+      webSocketManager.connect();
+    }
+    
+    // Handle connection status changes
+    const handleConnect = (data: { connectionId: string }) => {
       setIsConnected(true);
       setConnectionId(data.connectionId);
+      
+      toast({
+        title: "WebSocket Connected",
+        description: "Real-time connection established",
+        variant: "default",
+      });
     };
     
-    const handleDisconnected = () => {
+    const handleDisconnect = () => {
       setIsConnected(false);
+      
+      toast({
+        title: "WebSocket Disconnected",
+        description: "Real-time connection lost. Reconnecting...",
+        variant: "destructive",
+      });
     };
     
+    // Handle incoming messages
     const handleMessage = (message: any) => {
       const messageType = message.type;
       
@@ -52,39 +94,25 @@ export function useWebSocket() {
           [messageType]: message.data || message
         }));
       }
-      
-      // Call any registered handlers for this message type
-      if (messageType && eventHandlers.current.has(messageType)) {
-        const handlers = eventHandlers.current.get(messageType);
-        if (handlers) {
-          handlers.forEach(handler => {
-            try {
-              handler(message.data || message);
-            } catch (error) {
-              console.error(`Error in WebSocket handler for ${messageType}:`, error);
-            }
-          });
-        }
-      }
     };
     
     // Register handlers
     webSocketManager
-      .on('connected', handleConnected)
-      .on('disconnected', handleDisconnected)
+      .on('connected', handleConnect)
+      .on('disconnected', handleDisconnect)
       .on('message', handleMessage);
     
-    // Initial connection state
+    // Set initial connection state
     setIsConnected(webSocketManager.isConnected());
     
-    // Cleanup on unmount
+    // Cleanup
     return () => {
       webSocketManager
-        .off('connected', handleConnected)
-        .off('disconnected', handleDisconnected)
+        .off('connected', handleConnect)
+        .off('disconnected', handleDisconnect)
         .off('message', handleMessage);
     };
-  }, []);
+  }, [autoConnect, toast]);
   
   // Subscribe to site updates
   const subscribeSite = useCallback((siteId: number) => {
@@ -136,48 +164,29 @@ export function useWebSocket() {
     webSocketManager.ping();
   }, []);
   
-  // Register an event handler
+  // Register a handler
   const registerHandler = useCallback((
     eventType: WebSocketEventType, 
     handler: WebSocketMessageHandler
   ) => {
-    if (!eventHandlers.current.has(eventType)) {
-      eventHandlers.current.set(eventType, new Set());
-    }
-    
-    const handlers = eventHandlers.current.get(eventType);
-    if (handlers) {
-      handlers.add(handler);
-    }
-    
-    // Return cleanup function
+    webSocketManager.on(eventType as any, handler as any);
     return () => {
-      const handlers = eventHandlers.current.get(eventType);
-      if (handlers) {
-        handlers.delete(handler);
-      }
+      webSocketManager.off(eventType as any, handler as any);
     };
   }, []);
-  
-  // Register event listener with useEffect cleanup
-  const useEventListener = useCallback(<T = any>(
-    eventType: WebSocketEventType, 
-    handler: WebSocketMessageHandler<T>
-  ) => {
-    useEffect(() => {
-      return registerHandler(eventType, handler as WebSocketMessageHandler);
-    }, [eventType, handler]);
-  }, [registerHandler]);
   
   // Get the last message of a specific type
   const getLastMessage = useCallback((eventType: WebSocketEventType) => {
     return lastMessages[eventType] || null;
   }, [lastMessages]);
   
-  // Expose all the methods
-  return {
+  // Context value
+  const contextValue = {
     isConnected,
     connectionId,
+    subscribedSiteId,
+    subscribedDeviceId,
+    lastMessages,
     subscribeSite,
     unsubscribeSite,
     subscribeDevice,
@@ -185,14 +194,21 @@ export function useWebSocket() {
     sendMessage,
     ping,
     registerHandler,
-    useEventListener,
-    getLastMessage,
-    
-    // Direct access to last message by event type
-    lastMessages,
-    
-    // Current subscriptions
-    subscribedSiteId,
-    subscribedDeviceId
+    getLastMessage
   };
+  
+  return (
+    <WebSocketContext.Provider value={contextValue}>
+      {children}
+    </WebSocketContext.Provider>
+  );
+}
+
+// Hook to use the WebSocket context
+export function useWebSocketContext() {
+  const context = useContext(WebSocketContext);
+  if (!context) {
+    throw new Error('useWebSocketContext must be used within a WebSocketProvider');
+  }
+  return context;
 }
