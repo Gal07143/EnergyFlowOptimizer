@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { storage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
-import { UserRoleSchema } from '@shared/schema';
+import { UserRoleSchema, User } from '@shared/schema';
 import { hashPassword, comparePasswords } from '../auth';
 
 // Schema for updating profile information

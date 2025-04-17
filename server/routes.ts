@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
+import { requireAdmin, requireManager, canManageSite } from './middleware/roleAuth';
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
@@ -18,6 +19,7 @@ import * as optimizationController from './controllers/optimizationController';
 import * as demandResponseController from './controllers/demandResponseController';
 import * as tariffController from './controllers/tariffController';
 import * as authController from './controllers/authController';
+import * as profileController from './controllers/profileController';
 import * as setupController from './controllers/setupController';
 import * as initController from './controllers/initController';
 import { weatherController } from './controllers/weatherController';
@@ -37,6 +39,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/verify-email', authController.verifyEmail);
   app.post('/api/resend-verification', authController.resendVerificationCode);
   app.get('/api/email-verification-status', authController.checkEmailVerification);
+  
+  // User profile routes
+  app.get('/api/profile', profileController.getProfile);
+  app.put('/api/profile', profileController.updateProfile);
+  app.post('/api/change-password', profileController.changePassword);
   
   // Site routes
   app.get('/api/sites', async (req, res) => {
@@ -69,9 +76,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/sites/:siteId/devices', deviceController.getDevices);
   app.get('/api/sites/:siteId/devices/type/:type', deviceController.getDevicesByType);
   app.get('/api/devices/:id', deviceController.getDevice);
-  app.post('/api/devices', deviceController.createDevice);
-  app.put('/api/devices/:id', deviceController.updateDevice);
-  app.delete('/api/devices/:id', deviceController.deleteDevice);
+  app.post('/api/devices', requireManager, deviceController.createDevice);
+  app.put('/api/devices/:id', requireManager, deviceController.updateDevice);
+  app.delete('/api/devices/:id', requireAdmin, deviceController.deleteDevice);
   
   // Device readings routes
   app.get('/api/devices/:id/readings', deviceController.getDeviceReadings);
@@ -93,17 +100,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Optimization routes
   app.get('/api/sites/:siteId/optimization-settings', optimizationController.getOptimizationSettings);
-  app.post('/api/optimization-settings', optimizationController.createOptimizationSettings);
-  app.put('/api/sites/:siteId/optimization-settings', optimizationController.updateOptimizationSettings);
+  app.post('/api/optimization-settings', requireManager, optimizationController.createOptimizationSettings);
+  app.put('/api/sites/:siteId/optimization-settings', requireManager, optimizationController.updateOptimizationSettings);
   
   // Tariff routes
   app.get('/api/sites/:siteId/tariffs', tariffController.getTariffs);
   app.get('/api/sites/:siteId/tariff', tariffController.getTariffBySite);
   app.get('/api/sites/:siteId/tariff/rate', tariffController.getCurrentTariffRate);
-  app.post('/api/sites/:siteId/tariff', tariffController.createTariff);
-  app.put('/api/tariffs/:id', tariffController.updateTariff);
-  app.delete('/api/tariffs/:id', tariffController.deleteTariff);
-  app.post('/api/sites/:siteId/tariff/israeli', tariffController.createIsraeliTariff);
+  app.post('/api/sites/:siteId/tariff', requireManager, tariffController.createTariff);
+  app.put('/api/tariffs/:id', requireManager, tariffController.updateTariff);
+  app.delete('/api/tariffs/:id', requireAdmin, tariffController.deleteTariff);
+  app.post('/api/sites/:siteId/tariff/israeli', requireManager, tariffController.createIsraeliTariff);
   
   // Setup routes
   app.post('/api/create-demo-user', setupController.createDemoUser);
