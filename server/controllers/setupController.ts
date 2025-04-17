@@ -189,9 +189,7 @@ export const createDemoData = async (req: Request, res: Response) => {
         evCharging: [
           { start: '10:00', end: '15:00', priority: 'medium', mode: 'solar_only' }
         ]
-      },
-      createdAt: new Date(),
-      updatedAt: new Date()
+      }
     });
     
     // Create tariff

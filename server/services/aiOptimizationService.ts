@@ -202,10 +202,19 @@ export class AIOptimizationService {
       let gridElectricityPrice = 0.15; // Default price
       let feedInTariff = 0.05; // Default feed-in tariff
       
-      if (siteEnergyData && siteEnergyData.additionalData) {
-        const tariffData = siteEnergyData.additionalData as any;
-        gridElectricityPrice = tariffData.currentPrice || gridElectricityPrice;
-        feedInTariff = tariffData.feedInTariff || feedInTariff;
+      // Try to get tariff information from the site or use defaults
+      try {
+        const [tariff] = await db.select()
+          .from(tariffs)
+          .where(eq(tariffs.siteId, siteId));
+          
+        if (tariff) {
+          gridElectricityPrice = Number(tariff.importRate) || gridElectricityPrice;
+          feedInTariff = Number(tariff.exportRate) || feedInTariff;
+        }
+      } catch (error) {
+        console.error('Error fetching tariff data:', error);
+        // Continue with default values
       }
       
       // Forecasts would be fetched from forecasting service
