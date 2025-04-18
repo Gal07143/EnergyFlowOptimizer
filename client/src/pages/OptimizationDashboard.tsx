@@ -244,7 +244,9 @@ export default function OptimizationDashboard() {
               </Card>
               
               {/* Real-Time Energy Flow */}
-              <RealTimeEnergyFlow />
+              <div className="w-full">
+                <RealTimeEnergyFlow />
+              </div>
               
               {/* Forecast Card */}
               <Card>

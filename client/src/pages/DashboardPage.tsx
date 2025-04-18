@@ -579,7 +579,9 @@ export default function DashboardPage() {
         </div>
         
         {/* Real-time energy flow visualization */}
-        <RealTimeEnergyFlow />
+        <div className="w-full lg:px-2">
+          <RealTimeEnergyFlow />
+        </div>
         
         {/* Bottom row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

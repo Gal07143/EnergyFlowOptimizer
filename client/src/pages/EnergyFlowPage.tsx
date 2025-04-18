@@ -143,7 +143,9 @@ export default function EnergyFlowPage() {
         </div>
         
         {/* Real-time energy flow visualization */}
-        <RealTimeEnergyFlow />
+        <div className="w-full mx-auto max-w-[1200px]">
+          <RealTimeEnergyFlow />
+        </div>
         
         {/* Historical Energy Flow */}
         <Card className="col-span-2">
