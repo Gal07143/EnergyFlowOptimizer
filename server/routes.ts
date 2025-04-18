@@ -30,6 +30,8 @@ import * as setupController from './controllers/setupController';
 import * as initController from './controllers/initController';
 import { weatherController } from './controllers/weatherController';
 import * as aiOptimizationController from './controllers/aiOptimizationController';
+import * as reportController from './controllers/reportController';
+import * as analyticsController from './controllers/analyticsController';
 import { VPPController } from './controllers/vppController';
 import { initVPPService } from './services/vppService';
 import { ConsumptionPatternController } from './controllers/consumptionPatternController';
@@ -566,6 +568,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/sites/:siteId/arbitrage/performance', arbitrageController.getArbitragePerformance);
   app.get('/api/sites/:siteId/prices/historical', arbitrageController.getHistoricalPrices);
   app.get('/api/sites/:siteId/prices/forecast', arbitrageController.getPriceForecast);
+
+  // Report Generator Routes
+  app.post('/api/reports/generate', reportController.generateReport);
+  app.get('/api/reports/types', reportController.getReportTypes);
+  app.get('/api/reports/formats', reportController.getReportFormats);
+  app.get('/api/reports/time-periods', reportController.getTimePeriods);
+
+  // Analytics Routes
+  app.post('/api/analytics/run', analyticsController.runAnalytics);
+  app.get('/api/analytics/types', analyticsController.getAnalyticsTypes);
+  app.get('/api/analytics/granularities', analyticsController.getTimeGranularities);
 
   return httpServer;
 }

@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { getAnalyticsService, AnalyticsType, TimeGranularity } from '../services/analyticsService';
+import { AnalyticsType, TimeGranularity } from '../services/analyticsService';
 
-const analyticsService = getAnalyticsService();
+// We'll initialize the service when needed rather than immediately to prevent circular dependencies
+let analyticsService: any;
 
 /**
  * Run analytics
@@ -46,6 +47,12 @@ export async function runAnalytics(req: Request, res: Response): Promise<void> {
     if (parsedEndDate < parsedStartDate) {
       res.status(400).json({ error: 'End date must be after start date' });
       return;
+    }
+
+    // Lazy-load the service only when needed to avoid circular dependencies
+    if (!analyticsService) {
+      const { getAnalyticsService } = require('../services/analyticsService');
+      analyticsService = getAnalyticsService();
     }
 
     // Run analytics

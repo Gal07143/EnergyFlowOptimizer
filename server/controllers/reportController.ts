@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { getReportGeneratorService, ReportType, ReportFormat, ReportTimePeriod } from '../services/reportGeneratorService';
+import { ReportType, ReportFormat, ReportTimePeriod } from '../services/reportGeneratorService';
 
-const reportGeneratorService = getReportGeneratorService();
+// We'll initialize the service when needed rather than immediately to prevent circular dependencies
+let reportGeneratorService: any;
 
 /**
  * Generate a report
@@ -65,6 +66,12 @@ export async function generateReport(req: Request, res: Response): Promise<void>
       }
     }
 
+    // Lazy-load the service only when needed to avoid circular dependencies
+    if (!reportGeneratorService) {
+      const { getReportGeneratorService } = require('../services/reportGeneratorService');
+      reportGeneratorService = getReportGeneratorService();
+    }
+    
     // Generate the report
     const reportBuffer = await reportGeneratorService.generateReport(
       Number(siteId),
