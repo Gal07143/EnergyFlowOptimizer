@@ -8,6 +8,7 @@ import DeviceDetail from "@/pages/DeviceDetail";
 import LocationsPage from "@/pages/LocationsPage";
 import EnergyFlowPage from "@/pages/EnergyFlowPage";
 import OptimizationDashboard from "@/pages/OptimizationDashboard";
+import BatteryArbitragePage from "@/pages/BatteryArbitragePage";
 import Settings from "@/pages/Settings";
 import Weather from "@/pages/Weather";
 import DemandResponse from "@/pages/DemandResponse";
@@ -63,6 +64,7 @@ function Router() {
       <ProtectedPageWithLayout path="/energy-flow" component={EnergyFlowPage} />
       <ProtectedPageWithLayout path="/optimization" component={OptimizationDashboard} />
       <ProtectedPageWithLayout path="/vpp" component={OptimizationDashboard} />
+      <ProtectedPageWithLayout path="/battery-arbitrage" component={BatteryArbitragePage} />
       <ProtectedPageWithLayout path="/weather" component={Weather} />
       <ProtectedPageWithLayout path="/demand-response" component={DemandResponse} />
       <ProtectedPageWithLayout path="/settings" component={Settings} />

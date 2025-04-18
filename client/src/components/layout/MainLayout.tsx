@@ -45,9 +45,9 @@ const navItems = [
     badge: null
   },
   {
-    title: 'Devices',
-    icon: <Plug className="h-5 w-5" />,
-    href: '/devices',
+    title: 'Energy Flow',
+    icon: <Activity className="h-5 w-5" />,
+    href: '/energy-flow',
     badge: null
   },
   {
@@ -57,39 +57,9 @@ const navItems = [
     badge: null
   },
   {
-    title: 'Optimization',
-    icon: <Zap className="h-5 w-5" />,
-    href: '/optimization',
-    badge: { text: 'New', variant: 'default' as const }
-  },
-  {
-    title: 'Energy Flow',
-    icon: <Activity className="h-5 w-5" />,
-    href: '/energy-flow',
-    badge: null
-  },
-  {
-    title: 'VPP Programs',
-    icon: <PlugZap className="h-5 w-5" />,
-    href: '/vpp',
-    badge: { text: '3', variant: 'outline' as const }
-  },
-  {
-    title: 'Demand Response',
-    icon: <Battery className="h-5 w-5" />,
-    href: '/demand-response',
-    badge: null
-  },
-  {
     title: 'Weather',
     icon: <Sun className="h-5 w-5" />,
     href: '/weather',
-    badge: null
-  },
-  {
-    title: 'Users',
-    icon: <Users className="h-5 w-5" />,
-    href: '/users',
     badge: null
   },
   {
@@ -97,28 +67,46 @@ const navItems = [
     icon: <Settings className="h-5 w-5" />,
     href: '/settings',
     badge: null
+  },
+  {
+    title: 'Users',
+    icon: <Users className="h-5 w-5" />,
+    href: '/users',
+    badge: null
   }
 ];
 
 // Device Management
 const deviceItems = [
   {
+    title: 'All Devices',
+    icon: <Plug className="h-5 w-5" />,
+    href: '/devices',
+    badge: null
+  },
+  {
     title: 'Device Registry',
     icon: <Settings className="h-5 w-5" />,
     href: '/device-registry',
-    badge: { text: 'New', variant: 'success' as const }
+    badge: null
+  },
+  {
+    title: 'Gateways',
+    icon: <PlugZap className="h-5 w-5" />,
+    href: '/gateways',
+    badge: null
   },
   {
     title: 'Electrical Diagrams',
     icon: <Activity className="h-5 w-5" />,
     href: '/electrical-diagrams',
-    badge: { text: 'New', variant: 'success' as const }
+    badge: null
   },
   {
     title: 'One-Line Diagram',
     icon: <PlugZap className="h-5 w-5" />,
     href: '/one-line-diagram',
-    badge: { text: 'New', variant: 'success' as const }
+    badge: null
   },
   {
     title: 'Battery Storage',
@@ -142,6 +130,34 @@ const deviceItems = [
     title: 'Smart Meters',
     icon: <Activity className="h-5 w-5" />,
     href: '/devices?type=meter',
+    badge: null
+  }
+];
+
+// Energy Management Section
+const energyItems = [
+  {
+    title: 'Energy Optimization',
+    icon: <Zap className="h-5 w-5" />,
+    href: '/optimization',
+    badge: null
+  },
+  {
+    title: 'VPP Programs',
+    icon: <PlugZap className="h-5 w-5" />,
+    href: '/vpp',
+    badge: { text: '3', variant: 'outline' as const }
+  },
+  {
+    title: 'Battery Arbitrage',
+    icon: <Battery className="h-5 w-5" />,
+    href: '/battery-arbitrage',
+    badge: { text: 'New', variant: 'default' as const }
+  },
+  {
+    title: 'Demand Response',
+    icon: <BarChart2 className="h-5 w-5" />,
+    href: '/demand-response',
     badge: null
   }
 ];
@@ -350,6 +366,60 @@ export function MainLayout({ children }: MainLayoutProps) {
               );
             })}
           </ul>
+
+          {/* Energy Management Section */}
+          {!collapsed && (
+            <div className="mt-6 px-3">
+              <h3 className="mb-2 px-2 text-xs font-semibold text-muted-foreground">
+                ENERGY MANAGEMENT
+              </h3>
+            </div>
+          )}
+          <ul className="space-y-1 px-2">
+            {energyItems.map((item) => {
+              const isActive = location === item.href;
+              
+              return (
+                <li key={item.href}>
+                  <Link href={item.href}>
+                    <a 
+                      className={cn(
+                        "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                        isActive 
+                          ? "bg-primary/10 text-primary" 
+                          : "text-muted-foreground",
+                        collapsed && "justify-center px-2"
+                      )}
+                    >
+                      {collapsed ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>{item.icon}</span>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">{item.title}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <>
+                          {item.icon}
+                          <span className="ml-3">{item.title}</span>
+                          {item.badge && (
+                            <Badge
+                              variant={item.badge.variant}
+                              className="ml-auto"
+                            >
+                              {item.badge.text}
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </a>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
         {/* User menu */}
@@ -429,8 +499,10 @@ export function MainLayout({ children }: MainLayoutProps) {
             <h1 className="text-xl font-semibold md:block">
               {navItems.find(item => item.href === location)?.title || 
                deviceItems.find(item => item.href === location)?.title || 
+               energyItems.find(item => item.href === location)?.title ||
                (location.startsWith('/electrical-diagrams/') ? 'Electrical Diagram' : 
-                location === '/one-line-diagram' ? 'One-Line Diagram' : 'Dashboard')}
+                location === '/one-line-diagram' ? 'One-Line Diagram' : 
+                location === '/battery-arbitrage' ? 'Battery Arbitrage' : 'Dashboard')}
             </h1>
           </div>
           
