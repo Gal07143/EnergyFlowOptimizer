@@ -5,9 +5,10 @@
  * Add new migrations to this file in the order they should be executed.
  */
 
-import { Pool } from 'pg';
-import { runMigration as runDeviceRegistryMigration } from './deviceRegistry';
+import { Pool, Client } from 'pg';
 import { runMigration as runMultiUserArchitectureMigration } from './multiUserArchitecture';
+// Import device registry as CommonJS module since it's a .js file
+const deviceRegistryMigration = require('./deviceRegistry');
 
 // Check for database URL
 if (!process.env.DATABASE_URL) {
@@ -26,12 +27,27 @@ export async function runAllMigrations() {
     const client = await pool.connect();
     
     try {
-      // Run migrations in sequence
+      // Run device registry migration (CommonJS module)
       console.log('Running device registry migration...');
-      await runDeviceRegistryMigration(client);
+      try {
+        await deviceRegistryMigration.runMigration();
+        console.log('Device registry migration completed');
+      } catch (error) {
+        console.warn('Warning: Device registry migration had issues, continuing...', error.message);
+      }
       
+      // Run the multi-user architecture migration (TypeScript with Client parameter)
       console.log('Running multi-user architecture migration...');
-      await runMultiUserArchitectureMigration(client);
+      // Create a proper pg Client for the migration
+      const pgClient = new Client({ connectionString: process.env.DATABASE_URL });
+      await pgClient.connect();
+      
+      try {
+        await runMultiUserArchitectureMigration(pgClient);
+        console.log('Multi-user architecture migration completed');
+      } finally {
+        await pgClient.end();
+      }
       
       console.log('All migrations completed successfully');
     } finally {

@@ -177,6 +177,34 @@ export class DatabaseStorage implements IStorage {
     return user?.isEmailVerified || false;
   }
 
+  async getUsersByPartner(partnerId: number): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.partnerId, partnerId));
+  }
+
+  // Partner operations
+  async getPartner(id: number): Promise<Partner | undefined> {
+    const [partner] = await db.select().from(partners).where(eq(partners.id, id));
+    return partner || undefined;
+  }
+
+  async getPartners(): Promise<Partner[]> {
+    return await db.select().from(partners);
+  }
+
+  async createPartner(partner: InsertPartner): Promise<Partner> {
+    const [newPartner] = await db.insert(partners).values(partner).returning();
+    return newPartner;
+  }
+
+  async updatePartner(id: number, partnerData: Partial<Partner>): Promise<Partner | undefined> {
+    const [updatedPartner] = await db
+      .update(partners)
+      .set({ ...partnerData, updatedAt: new Date() })
+      .where(eq(partners.id, id))
+      .returning();
+    return updatedPartner || undefined;
+  }
+
   // Site operations
   async getSite(id: number): Promise<Site | undefined> {
     const [site] = await db.select().from(sites).where(eq(sites.id, id));
@@ -185,6 +213,10 @@ export class DatabaseStorage implements IStorage {
 
   async getSites(): Promise<Site[]> {
     return await db.select().from(sites);
+  }
+
+  async getSitesByPartner(partnerId: number): Promise<Site[]> {
+    return await db.select().from(sites).where(eq(sites.partnerId, partnerId));
   }
 
   async createSite(site: InsertSite): Promise<Site> {

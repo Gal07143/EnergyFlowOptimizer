@@ -1673,3 +1673,12 @@ export type InsertSiteEventParticipation = z.infer<typeof insertSiteEventPartici
 
 export type DemandResponseAction = typeof demandResponseActions.$inferSelect;
 export type InsertDemandResponseAction = z.infer<typeof insertDemandResponseActionSchema>;
+
+// Partner types
+export const insertPartnerSchema = createInsertSchema(partners).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+export type Partner = typeof partners.$inferSelect;
+export type InsertPartner = z.infer<typeof insertPartnerSchema>;
