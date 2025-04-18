@@ -678,7 +678,7 @@ export default function RealTimeEnergyFlow() {
             </div>
             
             {/* Flow lines */}
-            <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
+            <svg className="absolute inset-0 pointer-events-none scale-[0.95] md:scale-100 origin-center" width="100%" height="100%">
               <defs>
                 <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="7" refY="3.5" orient="auto">
                   <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e" />
