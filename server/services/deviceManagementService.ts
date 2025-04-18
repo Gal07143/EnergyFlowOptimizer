@@ -429,6 +429,43 @@ class DeviceRegistry {
       const apiKey = Buffer.from(randomBytes(32)).toString('hex');
       const apiKeyHash = createHash('sha256').update(apiKey).digest('hex');
       
+      // Generate device specs based on type and model
+      let specs = {};
+      
+      // Set specs based on device type
+      if (type === 'battery_storage') {
+        // Extract model number from PowerWall-X format
+        const batteryModelNum = parseInt(model.split('-')[1]) || 1;
+        
+        // Scale specs based on model number
+        const baseCapacity = 10; // kWh
+        const baseChargeRate = 5; // kW
+        const baseDischargeRate = 5; // kW
+        
+        specs = {
+          capacity: baseCapacity * batteryModelNum,
+          maxChargeRate: baseChargeRate * Math.min(batteryModelNum, 3),
+          maxDischargeRate: baseDischargeRate * Math.min(batteryModelNum, 3),
+          efficiency: 0.92 - (Math.random() * 0.04), // 88-92% efficiency
+          nominalVoltage: 48,
+          cycles: Math.floor(Math.random() * 500), // Random cycles count
+          cellType: ['LiFePO4', 'NMC', 'LTO'][Math.floor(Math.random() * 3)],
+          warrantyYears: 10
+        };
+      } else if (type === 'solar_pv') {
+        // Generate power rating between 5-20 kW
+        const powerVariant = Math.floor(Math.random() * 15) + 5;
+        
+        specs = {
+          maxPower: powerVariant,
+          ratedPower: powerVariant * 0.9,
+          nominalVoltage: 230,
+          mpptChannels: Math.floor(powerVariant / 5) + 1,
+          efficiency: 0.96 + (Math.random() * 0.03), // 96-99% efficiency
+          warrantyYears: 10
+        };
+      }
+      
       const mockDevice = this.addDevice({
         name: `${type.replace('_', ' ')} ${i + 1}`,
         type,
@@ -446,6 +483,7 @@ class DeviceRegistry {
         },
         siteId: 1, // Assign all mock devices to site 1
         capabilities: this.getCapabilitiesForDeviceType(type),
+        specs, // Add device-specific specifications
         metadata: {
           isMockDevice: true,
           mockDeviceIndex: i
@@ -551,6 +589,81 @@ class DeviceRegistry {
         ];
       default:
         return [];
+    }
+  }
+  
+  // Helper to get device specs based on device type and model
+  private getDeviceSpecsForDeviceType(type: DeviceType, model: string): any {
+    switch (type) {
+      case 'battery_storage':
+        // Extract model number from PowerWall-X format
+        const batteryModelNum = parseInt(model.split('-')[1]) || 1;
+        
+        // Scale specs based on model number
+        const baseCapacity = 10; // kWh
+        const baseChargeRate = 5; // kW
+        const baseDischargeRate = 5; // kW
+        
+        return {
+          capacity: baseCapacity * batteryModelNum,
+          maxChargeRate: baseChargeRate * Math.min(batteryModelNum, 3),
+          maxDischargeRate: baseDischargeRate * Math.min(batteryModelNum, 3),
+          efficiency: 0.92 - (Math.random() * 0.04), // 88-92% efficiency
+          nominalVoltage: 48,
+          cycles: Math.floor(Math.random() * 500), // Random cycles count
+          cellType: ['LiFePO4', 'NMC', 'LTO'][Math.floor(Math.random() * 3)],
+          warrantyYears: 10
+        };
+        
+      case 'solar_pv':
+        // Generate power rating between 5-20 kW
+        const powerVariant = Math.floor(Math.random() * 15) + 5;
+        
+        return {
+          maxPower: powerVariant,
+          ratedPower: powerVariant * 0.9,
+          nominalVoltage: 230,
+          mpptChannels: Math.floor(powerVariant / 5) + 1,
+          efficiency: 0.96 + (Math.random() * 0.03), // 96-99% efficiency
+          warrantyYears: 10
+        };
+        
+      case 'ev_charger':
+        // Extract from ChargePro-X format 
+        const chargerVariant = parseInt(model.split('-')[1]) || 1;
+        
+        return {
+          maxPower: 7.4 * chargerVariant, // 7.4kW, 14.8kW, or 22.2kW
+          maxCurrent: 32,
+          phases: chargerVariant,
+          nominalVoltage: 230,
+          connectorType: ['Type 2', 'CCS', 'CHAdeMO'][Math.floor(Math.random() * 3)],
+          smartChargingEnabled: true
+        };
+        
+      case 'smart_meter':
+        return {
+          accuracy: 0.5, // 0.5% accuracy
+          maxCurrent: 100,
+          nominalVoltage: 230,
+          phases: 3,
+          communicationProtocol: 'Modbus'
+        };
+        
+      case 'heat_pump':
+        const pumpVariant = parseInt(model.split('-')[1]) || 1;
+        
+        return {
+          maxPower: 3 * pumpVariant, // 3-30kW depending on model
+          cop: 3.5 + (Math.random() * 1.5), // COP between 3.5-5.0
+          refrigerantType: 'R32',
+          heatingCapacity: 3 * pumpVariant, // kW
+          coolingCapacity: 2.8 * pumpVariant, // kW
+          temperatureRange: [-20, 45] // Operation between -20°C and 45°C
+        };
+        
+      default:
+        return {};
     }
   }
   
@@ -1016,6 +1129,81 @@ export class DeviceManagementService {
         return ['device_management', 'protocol_translation', 'data_aggregation', 'remote_configuration', 'device_discovery'];
       default:
         return [];
+    }
+  }
+  
+  // Helper to get device specs based on device type and model
+  private getDeviceSpecsForDeviceType(type: DeviceType, model: string): any {
+    switch (type) {
+      case 'battery_storage':
+        // Extract model number from PowerWall-X format
+        const batteryModelNum = parseInt(model.split('-')[1]) || 1;
+        
+        // Scale specs based on model number
+        const baseCapacity = 10; // kWh
+        const baseChargeRate = 5; // kW
+        const baseDischargeRate = 5; // kW
+        
+        return {
+          capacity: baseCapacity * batteryModelNum,
+          maxChargeRate: baseChargeRate * Math.min(batteryModelNum, 3),
+          maxDischargeRate: baseDischargeRate * Math.min(batteryModelNum, 3),
+          efficiency: 0.92 - (Math.random() * 0.04), // 88-92% efficiency
+          nominalVoltage: 48,
+          cycles: Math.floor(Math.random() * 500), // Random cycles count
+          cellType: ['LiFePO4', 'NMC', 'LTO'][Math.floor(Math.random() * 3)],
+          warrantyYears: 10
+        };
+        
+      case 'solar_pv':
+        // Generate power rating between 5-20 kW
+        const powerVariant = Math.floor(Math.random() * 15) + 5;
+        
+        return {
+          maxPower: powerVariant,
+          ratedPower: powerVariant * 0.9,
+          nominalVoltage: 230,
+          mpptChannels: Math.floor(powerVariant / 5) + 1,
+          efficiency: 0.96 + (Math.random() * 0.03), // 96-99% efficiency
+          warrantyYears: 10
+        };
+        
+      case 'ev_charger':
+        // Extract from ChargePro-X format 
+        const chargerVariant = parseInt(model.split('-')[1]) || 1;
+        
+        return {
+          maxPower: 7.4 * chargerVariant, // 7.4kW, 14.8kW, or 22.2kW
+          maxCurrent: 32,
+          phases: chargerVariant,
+          nominalVoltage: 230,
+          connectorType: ['Type 2', 'CCS', 'CHAdeMO'][Math.floor(Math.random() * 3)],
+          smartChargingEnabled: true
+        };
+        
+      case 'smart_meter':
+        return {
+          accuracy: 0.5, // 0.5% accuracy
+          maxCurrent: 100,
+          nominalVoltage: 230,
+          phases: 3,
+          communicationProtocol: 'Modbus'
+        };
+        
+      case 'heat_pump':
+        const pumpVariant = parseInt(model.split('-')[1]) || 1;
+        
+        return {
+          maxPower: 3 * pumpVariant, // 3-30kW depending on model
+          cop: 3.5 + (Math.random() * 1.5), // COP between 3.5-5.0
+          refrigerantType: 'R32',
+          heatingCapacity: 3 * pumpVariant, // kW
+          coolingCapacity: 2.8 * pumpVariant, // kW
+          temperatureRange: [-20, 45] // Operation between -20°C and 45°C
+        };
+        
+      default:
+        return {};
     }
   }
 }

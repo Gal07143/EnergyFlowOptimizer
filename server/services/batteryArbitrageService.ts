@@ -583,7 +583,7 @@ export class BatteryArbitrageService {
     console.log(`Applying Self Consumption strategy for site ${siteId}`);
     
     // Get device management service
-    const deviceService = getDeviceManagementService();
+    const deviceService = initDeviceManagementService();
     
     // Get solar devices at the site
     const solarDevices = deviceService.getDevicesBySiteAndType(siteId, 'solar_pv');
@@ -886,7 +886,7 @@ export class BatteryArbitrageService {
   ): Promise<void> {
     console.log(`Applying optimization schedules to batteries at site ${siteId}`);
     
-    const deviceService = getDeviceManagementService();
+    const deviceService = initDeviceManagementService();
     
     for (const schedule of schedules) {
       const batteryId = schedule.batteryId;
