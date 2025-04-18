@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMS Standalone Diagnostic</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #1a6eaf;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+    .test-card {
+      background-color: #f5f5f5;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-card h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    button {
+      background-color: #1a6eaf;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #135d93;
+    }
+    pre {
+      background-color: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    #wsMessages {
+      height: 150px;
+      overflow-y: auto;
+    }
+    #browserInfo {
+      font-size: 12px;
+      color: #666;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>EMS Standalone Diagnostic Page</h1>
+  
+  <div class="test-card">
+    <h2>Browser Information</h2>
+    <div id="browserInfo"></div>
+  </div>
+  
+  <div class="test-card">
+    <h2>1. API Health Check</h2>
+    <div id="apiStatus">Status: Not checked</div>
+    <button onclick="testApiHealth()">Test API Health</button>
+    <pre id="apiResponse">Response will appear here</pre>
+  </div>
+  
+  <div class="test-card">
+    <h2>2. WebSocket Connection</h2>
+    <div id="wsStatus">Status: Not connected</div>
+    <button onclick="connectWebSocket()">Connect WebSocket</button>
+    <button onclick="disconnectWebSocket()">Disconnect</button>
+    <button onclick="sendPing()">Send Ping</button>
+    <div id="wsMessages"></div>
+  </div>
+
+  <div class="test-card">
+    <h2>3. Network Request Test</h2>
+    <div id="networkStatus">Status: Not tested</div>
+    <button onclick="testNetworkFetch()">Test Fetch</button>
+    <button onclick="testXhr()">Test XHR</button>
+    <pre id="networkResponse">Response will appear here</pre>
+  </div>
+
+  <script>
+    // Global variables
+    let socket = null;
+    
+    // Display browser information
+    function displayBrowserInfo() {
+      const browserInfo = document.getElementById('browserInfo');
+      browserInfo.innerHTML = `
+        <p><strong>User Agent:</strong> ${navigator.userAgent}</p>
+        <p><strong>Current URL:</strong> ${window.location.href}</p>
+        <p><strong>Protocol:</strong> ${window.location.protocol}</p>
+        <p><strong>Host:</strong> ${window.location.host}</p>
+        <p><strong>Origin:</strong> ${window.location.origin}</p>
+      `;
+    }
+    
+    // API Health Check
+    async function testApiHealth() {
+      const apiStatus = document.getElementById('apiStatus');
+      const apiResponse = document.getElementById('apiResponse');
+      
+      apiStatus.innerHTML = 'Status: Testing...';
+      apiStatus.className = '';
+      
+      try {
+        console.log('Fetching API health from /api/health');
+        const response = await fetch('/api/health', {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin'
+        });
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        apiStatus.innerHTML = `Status: <span class="success">Connected (${response.status})</span>`;
+        apiResponse.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        console.error('API health check error:', error);
+        apiStatus.innerHTML = `Status: <span class="error">Failed (${error.message})</span>`;
+        apiResponse.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    // WebSocket Connection
+    function connectWebSocket() {
+      const wsStatus = document.getElementById('wsStatus');
+      
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        addWsMessage('Already connected');
+        return;
+      }
+      
+      wsStatus.innerHTML = 'Status: Connecting...';
+      wsStatus.className = '';
+      
+      try {
+        // Determine the WebSocket URL based on the current page URL
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        addWsMessage(`Connecting to ${wsUrl}`);
+        console.log('Attempting WebSocket connection to:', wsUrl);
+        
+        socket = new WebSocket(wsUrl);
+        
+        socket.onopen = (event) => {
+          wsStatus.innerHTML = `Status: <span class="success">Connected</span>`;
+          addWsMessage('WebSocket connection established');
+          console.log('WebSocket connected:', event);
+        };
+        
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            addWsMessage(`Received: ${JSON.stringify(data)}`);
+            console.log('WebSocket message received:', data);
+          } catch (error) {
+            addWsMessage(`Received non-JSON message: ${event.data}`);
+            console.log('WebSocket raw message:', event.data);
+          }
+        };
+        
+        socket.onclose = (event) => {
+          wsStatus.innerHTML = `Status: <span class="error">Disconnected (code: ${event.code})</span>`;
+          addWsMessage(`Connection closed: ${event.code} - ${event.reason || 'No reason provided'}`);
+          console.log('WebSocket closed:', event);
+        };
+        
+        socket.onerror = (error) => {
+          wsStatus.innerHTML = `Status: <span class="error">Error</span>`;
+          addWsMessage(`WebSocket error occurred`);
+          console.error('WebSocket error:', error);
+        };
+      } catch (error) {
+        wsStatus.innerHTML = `Status: <span class="error">Failed (${error.message})</span>`;
+        addWsMessage(`Error creating WebSocket: ${error.message}`);
+        console.error('WebSocket creation error:', error);
+      }
+    }
+    
+    function disconnectWebSocket() {
+      if (!socket) {
+        addWsMessage('No active WebSocket connection');
+        return;
+      }
+      
+      try {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.close(1000, 'User initiated disconnect');
+          addWsMessage('Closing WebSocket connection...');
+        } else {
+          addWsMessage(`Cannot close. WebSocket is in state: ${getReadyStateString(socket.readyState)}`);
+        }
+      } catch (error) {
+        addWsMessage(`Error closing WebSocket: ${error.message}`);
+        console.error('WebSocket close error:', error);
+      }
+    }
+    
+    function sendPing() {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        addWsMessage('Cannot send ping: WebSocket not connected');
+        return;
+      }
+      
+      try {
+        const pingMessage = {
+          type: 'ping',
+          timestamp: Date.now()
+        };
+        
+        socket.send(JSON.stringify(pingMessage));
+        addWsMessage(`Sent: ${JSON.stringify(pingMessage)}`);
+      } catch (error) {
+        addWsMessage(`Error sending ping: ${error.message}`);
+        console.error('WebSocket send error:', error);
+      }
+    }
+    
+    function addWsMessage(message) {
+      const wsMessages = document.getElementById('wsMessages');
+      const timestamp = new Date().toLocaleTimeString();
+      
+      const messageElement = document.createElement('div');
+      messageElement.textContent = `[${timestamp}] ${message}`;
+      
+      wsMessages.appendChild(messageElement);
+      wsMessages.scrollTop = wsMessages.scrollHeight;
+    }
+    
+    function getReadyStateString(state) {
+      switch (state) {
+        case WebSocket.CONNECTING: return 'CONNECTING (0)';
+        case WebSocket.OPEN: return 'OPEN (1)';
+        case WebSocket.CLOSING: return 'CLOSING (2)';
+        case WebSocket.CLOSED: return 'CLOSED (3)';
+        default: return `UNKNOWN (${state})`;
+      }
+    }
+    
+    // Network Request Tests
+    async function testNetworkFetch() {
+      const networkStatus = document.getElementById('networkStatus');
+      const networkResponse = document.getElementById('networkResponse');
+      
+      networkStatus.innerHTML = 'Status: Testing fetch...';
+      networkStatus.className = '';
+      
+      try {
+        const timestamp = Date.now();
+        console.log('Testing fetch with timestamp:', timestamp);
+        const response = await fetch(`/api/health?t=${timestamp}`, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+        console.log('Fetch response status:', response.status);
+        const data = await response.json();
+        console.log('Fetch response data:', data);
+        
+        networkStatus.innerHTML = `Status: <span class="success">Fetch Succeeded (${response.status})</span>`;
+        networkResponse.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        console.error('Fetch error:', error);
+        networkStatus.innerHTML = `Status: <span class="error">Fetch Failed (${error.message})</span>`;
+        networkResponse.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    function testXhr() {
+      const networkStatus = document.getElementById('networkStatus');
+      const networkResponse = document.getElementById('networkResponse');
+      
+      networkStatus.innerHTML = 'Status: Testing XHR...';
+      networkStatus.className = '';
+      
+      try {
+        const xhr = new XMLHttpRequest();
+        const timestamp = Date.now();
+        console.log('Testing XHR with timestamp:', timestamp);
+        
+        xhr.open('GET', `/api/health?t=${timestamp}`, true);
+        xhr.setRequestHeader('Cache-Control', 'no-cache');
+        xhr.setRequestHeader('Pragma', 'no-cache');
+        xhr.setRequestHeader('Expires', '0');
+        
+        xhr.onload = function() {
+          if (this.status >= 200 && this.status < 300) {
+            console.log('XHR response status:', this.status);
+            try {
+              const data = JSON.parse(this.responseText);
+              console.log('XHR response data:', data);
+              
+              networkStatus.innerHTML = `Status: <span class="success">XHR Succeeded (${this.status})</span>`;
+              networkResponse.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+              console.error('XHR parse error:', error);
+              networkStatus.innerHTML = `Status: <span class="error">XHR Parse Failed (${error.message})</span>`;
+              networkResponse.textContent = `Parse Error: ${error.message}\nRaw: ${this.responseText}`;
+            }
+          } else {
+            console.error('XHR error status:', this.status);
+            networkStatus.innerHTML = `Status: <span class="error">XHR Failed (${this.status})</span>`;
+            networkResponse.textContent = `Error ${this.status}: ${this.statusText}`;
+          }
+        };
+        
+        xhr.onerror = function() {
+          console.error('XHR network error');
+          networkStatus.innerHTML = `Status: <span class="error">XHR Network Error</span>`;
+          networkResponse.textContent = 'Network error occurred';
+        };
+        
+        xhr.send();
+      } catch (error) {
+        console.error('XHR setup error:', error);
+        networkStatus.innerHTML = `Status: <span class="error">XHR Setup Failed (${error.message})</span>`;
+        networkResponse.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    // Load browser info on page load
+    window.onload = function() {
+      displayBrowserInfo();
+    };
+  </script>
+</body>
+</html>

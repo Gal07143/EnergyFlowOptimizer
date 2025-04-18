@@ -17,6 +17,7 @@ import EmailVerificationPage from "@/pages/email-verification-page";
 import DeviceRegistryPage from "@/pages/DeviceRegistryPage";
 import ElectricalDiagramPage from "@/pages/electrical-diagram-page";
 import GatewayManagementPage from "@/pages/GatewayManagementPage";
+import DiagnosticPage from "@/pages/diagnostic/DiagnosticPage";
 import { WebSocketStatus } from "@/components/ui/websocket-status";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -66,6 +67,8 @@ function Router() {
       <ProtectedPageWithLayout path="/profile" component={ProfilePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/verify-email" component={EmailVerificationPage} />
+      {/* Add diagnostic route without auth protection */}
+      <Route path="/diagnostic" component={DiagnosticPage} />
       <Route component={NotFound} />
     </Switch>
   );

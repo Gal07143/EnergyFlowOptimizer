@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minimal Connectivity Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Minimal Connectivity Test</h1>
+  
+  <div>
+    <h2>1. Simple API Health Check</h2>
+    <div id="apiStatus">Status: Not checked</div>
+    <button onclick="testApiHealth()">Test API</button>
+    <pre id="apiResponse">Response will appear here</pre>
+  </div>
+
+  <script>
+    // API Health Check
+    async function testApiHealth() {
+      const apiStatus = document.getElementById('apiStatus');
+      const apiResponse = document.getElementById('apiResponse');
+      
+      apiStatus.innerHTML = 'Status: Testing...';
+      
+      try {
+        console.log('Fetching from /api/health');
+        const response = await fetch('/api/health');
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        apiStatus.innerHTML = `Status: <span class="success">Connected (${response.status})</span>`;
+        apiResponse.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        console.error('API health check error:', error);
+        apiStatus.innerHTML = `Status: <span class="error">Failed (${error.message})</span>`;
+        apiResponse.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    // Run test immediately
+    window.onload = function() {
+      testApiHealth();
+    };
+  </script>
+</body>
+</html>
