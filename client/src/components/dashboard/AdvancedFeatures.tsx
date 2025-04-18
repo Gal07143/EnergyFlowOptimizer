@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { OptimizationSettings } from '@/types/energy';
 import { Plug, Landmark, Handshake } from 'lucide-react';
 import { useUpdateOptimizationSettings } from '@/hooks/useOptimization';
+import { Link } from "wouter";
 
 interface AdvancedFeaturesProps {
   siteId: number;
@@ -97,13 +98,24 @@ export default function AdvancedFeatures({ siteId, settings }: AdvancedFeaturesP
             </div>
           </div>
           <div className="border-t border-gray-200 dark:border-gray-800 px-4 py-4 sm:px-6 bg-gray-50 dark:bg-gray-800">
-            <Button 
-              variant={settings?.vppEnabled ? "default" : "outline"} 
-              className="w-full"
-              onClick={() => enableFeature('vpp')}
-            >
-              {settings?.vppEnabled ? 'Enabled' : 'Learn More'}
-            </Button>
+            {settings?.vppEnabled ? (
+              <Link href="/vpp" className="w-full">
+                <Button 
+                  variant="default" 
+                  className="w-full"
+                >
+                  Manage VPP
+                </Button>
+              </Link>
+            ) : (
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => enableFeature('vpp')}
+              >
+                Enable Feature
+              </Button>
+            )}
           </div>
         </Card>
 
