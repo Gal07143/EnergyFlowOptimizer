@@ -150,7 +150,8 @@ export class BatteryArbitrageService {
       const priceService = getEnergyPriceService();
       
       // Get batteries at the site
-      const batteries = deviceService.getDevicesBySiteAndType(siteId, 'battery_storage');
+      const siteDevices = deviceService.getDevicesBySite(siteId);
+      const batteries = siteDevices.filter(device => device.type === 'battery_storage');
       if (!batteries || batteries.length === 0) {
         console.log(`No batteries found at site ${siteId}`);
         return null;
