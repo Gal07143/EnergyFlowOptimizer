@@ -42,6 +42,7 @@ async function runMigration(client) {
       ADD COLUMN IF NOT EXISTS noise_level NUMERIC,
       ADD COLUMN IF NOT EXISTS air_quality_index NUMERIC,
       ADD COLUMN IF NOT EXISTS co2_level NUMERIC,
+      ADD COLUMN IF NOT EXISTS operational_mode TEXT,
       ADD COLUMN IF NOT EXISTS sampling_rate TEXT DEFAULT 'medium',
       ADD COLUMN IF NOT EXISTS data_quality TEXT DEFAULT 'validated',
       ADD COLUMN IF NOT EXISTS storage_tier TEXT DEFAULT 'hot',

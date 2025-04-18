@@ -40,8 +40,31 @@ export const optimizationModeEnum = pgEnum('optimization_mode', [
   'battery_life'
 ]);
 
+// Security Enums
 export const userRoles = ['admin', 'manager', 'viewer'] as const;
 export const UserRoleSchema = z.enum(userRoles);
+
+export const apiKeyAccessLevelEnum = pgEnum('api_key_access_level', [
+  'read_only',
+  'device_control',
+  'full_access',
+  'admin'
+]);
+
+export const certificateTypeEnum = pgEnum('certificate_type', [
+  'client_auth',
+  'server_auth',
+  'mutual_tls',
+  'signing',
+  'encryption'
+]);
+
+export const certificateStatusEnum = pgEnum('certificate_status', [
+  'active',
+  'expired',
+  'revoked',
+  'pending'
+]);
 
 // Weather condition type enum
 export const weatherConditionEnum = pgEnum('weather_condition', [
@@ -83,6 +106,205 @@ export const users = pgTable("users", {
   isEmailVerified: boolean('is_email_verified').default(false),
   verificationCode: text('verification_code'),
   verificationCodeExpiry: timestamp('verification_code_expiry'),
+  // Security enhancements
+  twoFactorEnabled: boolean('two_factor_enabled').default(false),
+  twoFactorSecret: text('two_factor_secret'),
+  lastLoginAt: timestamp('last_login_at'),
+  lastLoginIp: text('last_login_ip'),
+  accountLocked: boolean('account_locked').default(false),
+  lockReason: text('lock_reason'),
+  failedLoginAttempts: integer('failed_login_attempts').default(0),
+  passwordLastChanged: timestamp('password_last_changed'),
+  requirePasswordChange: boolean('require_password_change').default(false),
+});
+
+// Security Tables
+// API Keys
+export const apiKeys = pgTable('api_keys', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  key: text('key').notNull().unique(),
+  secret: text('secret'), // Hashed secret for API key authentication
+  userId: integer('user_id').references(() => users.id),
+  accessLevel: apiKeyAccessLevelEnum('access_level').default('read_only'),
+  allowedIps: text('allowed_ips'),
+  expiresAt: timestamp('expires_at'),
+  lastUsedAt: timestamp('last_used_at'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  scopesJson: json('scopes_json'), // JSON array of allowed scopes
+  rotationEnabled: boolean('rotation_enabled').default(false),
+  rotationIntervalDays: integer('rotation_interval_days'),
+  lastRotatedAt: timestamp('last_rotated_at'),
+  previousKeys: json('previous_keys'), // Store previous key hashes for transition periods
+  metadata: json('metadata'),
+});
+
+// Client Certificates
+export const clientCertificates = pgTable('client_certificates', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  type: certificateTypeEnum('type').default('client_auth'),
+  userId: integer('user_id').references(() => users.id),
+  deviceId: integer('device_id').references(() => devices.id),
+  certificateData: text('certificate_data'), // PEM format
+  fingerprint: text('fingerprint').notNull().unique(),
+  serialNumber: text('serial_number').notNull(),
+  issuer: text('issuer').notNull(),
+  subject: text('subject').notNull(),
+  validFrom: timestamp('valid_from').notNull(),
+  validTo: timestamp('valid_to').notNull(),
+  status: certificateStatusEnum('status').default('active'),
+  revocationReason: text('revocation_reason'),
+  revokedAt: timestamp('revoked_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  lastUsedAt: timestamp('last_used_at'),
+  metadata: json('metadata'),
+});
+
+// Access Control - Permissions
+export const permissions = pgTable('permissions', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  category: text('category').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Role-Permission mapping
+export const rolePermissions = pgTable('role_permissions', {
+  id: serial('id').primaryKey(),
+  role: text('role').notNull(),
+  permissionId: integer('permission_id').notNull().references(() => permissions.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// User-specific permissions (overrides)
+export const userPermissions = pgTable('user_permissions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  permissionId: integer('permission_id').notNull().references(() => permissions.id),
+  granted: boolean('granted').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  grantedBy: integer('granted_by').references(() => users.id),
+});
+
+// Device Command Authorization
+export const commandAuthorizations = pgTable('command_authorizations', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  commandType: text('command_type').notNull(),
+  requiresMfa: boolean('requires_mfa').default(false),
+  requiredRole: text('required_role').default('manager'),
+  approvalRequired: boolean('approval_required').default(false),
+  approvalRoles: text('approval_roles'),
+  cooldownSeconds: integer('cooldown_seconds').default(0), // Time between allowed command executions
+  riskLevel: text('risk_level').default('medium'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Command Execution History
+export const commandExecutions = pgTable('command_executions', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  userId: integer('user_id').references(() => users.id),
+  commandType: text('command_type').notNull(),
+  parameters: json('parameters'),
+  timestamp: timestamp('timestamp').defaultNow(),
+  status: text('status').default('requested'),
+  completedAt: timestamp('completed_at'),
+  result: json('result'),
+  failureReason: text('failure_reason'),
+  approvedBy: integer('approved_by').references(() => users.id),
+  approvedAt: timestamp('approved_at'),
+  authenticationType: text('authentication_type'),
+  usedMfa: boolean('used_mfa').default(false),
+  sessionId: text('session_id'),
+  sourceIp: text('source_ip'),
+});
+
+// Rate Limiting
+export const rateLimits = pgTable('rate_limits', {
+  id: serial('id').primaryKey(),
+  resourceType: text('resource_type').notNull(),
+  resourceId: text('resource_id'),
+  limitKey: text('limit_key').notNull(), // e.g., 'login', 'api', 'device_command'
+  maxRequests: integer('max_requests').notNull(),
+  timeWindowSeconds: integer('time_window_seconds').notNull(),
+  blockDurationSeconds: integer('block_duration_seconds'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Rate Limit Tracking 
+export const rateLimitEvents = pgTable('rate_limit_events', {
+  id: serial('id').primaryKey(),
+  limitId: integer('limit_id').references(() => rateLimits.id),
+  resourceType: text('resource_type').notNull(),
+  resourceId: text('resource_id'),
+  userId: integer('user_id').references(() => users.id),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  timestamp: timestamp('timestamp').defaultNow(),
+  requestCount: integer('request_count').default(1),
+  isBlocked: boolean('is_blocked').default(false),
+  blockedUntil: timestamp('blocked_until'),
+});
+
+// Device Security Features
+export const deviceSecuritySettings = pgTable('device_security_settings', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  // TLS/encryption settings
+  tlsEnabled: boolean('tls_enabled').default(false),
+  tlsVersion: text('tls_version').default('1.3'),
+  certificateId: integer('certificate_id').references(() => clientCertificates.id),
+  // Authentication settings
+  authMethod: text('auth_method').default('token'), // token, certificate, oauth
+  requiresMutualTls: boolean('requires_mutual_tls').default(false),
+  // Verification settings
+  secureBootEnabled: boolean('secure_boot_enabled').default(false),
+  firmwareVerification: boolean('firmware_verification').default(false),
+  firmwareSigningKey: text('firmware_signing_key'),
+  // Communication security
+  allowedIps: text('allowed_ips'),
+  messageEncryption: boolean('message_encryption').default(false),
+  encryptionAlgorithm: text('encryption_algorithm'),
+  // Additional security features
+  anomalyDetectionEnabled: boolean('anomaly_detection_enabled').default(false),
+  branchProtectionEnabled: boolean('branch_protection_enabled').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Security Audit Log
+export const securityAuditLog = pgTable('security_audit_log', {
+  id: serial('id').primaryKey(),
+  timestamp: timestamp('timestamp').defaultNow(),
+  userId: integer('user_id').references(() => users.id),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  action: text('action').notNull(),
+  resourceType: text('resource_type').notNull(),
+  resourceId: text('resource_id'),
+  details: json('details'),
+  status: text('status').default('success'),
+  failureReason: text('failure_reason'),
+  // For tracking security-specific information
+  sessionId: text('session_id'),
+  authenticationType: text('authentication_type'),
+  riskScore: numeric('risk_score'),
+  isSuspicious: boolean('is_suspicious').default(false),
+  reviewedBy: integer('reviewed_by').references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  storageTier: text('storage_tier').default('hot'),
+  retentionPeriodDays: integer('retention_period_days').default(730), // 2 years retention by default
 });
 
 // Devices
