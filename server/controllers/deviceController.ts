@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { getDeviceManagementService } from '../services/deviceManagementService';
 import { getModbusManager } from '../adapters/modbusAdapter';
-import { getOCPPManager } from '../adapters/ocppAdapter';
+import { ocppManager } from '../adapters/ocppAdapter';
 import { getEEBusManager } from '../adapters/eebusAdapter';
-import { getSunSpecManager } from '../adapters/sunspecAdapter';
+import { sunspecManager } from '../adapters/sunspecAdapter';
 
 // Get all devices
 export async function getAllDevices(req: Request, res: Response) {
@@ -220,7 +220,7 @@ async function getProtocolSpecificData(device: any): Promise<any> {
       }
       
       case 'ocpp': {
-        const ocppManager = getOCPPManager();
+        // ocppManager is already imported
         const adapter = ocppManager.getAdapter(device.id);
         if (!adapter) return null;
         
@@ -250,7 +250,7 @@ async function getProtocolSpecificData(device: any): Promise<any> {
       }
       
       case 'sunspec': {
-        const sunspecManager = getSunSpecManager();
+        // sunspecManager is already imported
         const adapter = sunspecManager.getAdapter(device.id);
         if (!adapter) return null;
         

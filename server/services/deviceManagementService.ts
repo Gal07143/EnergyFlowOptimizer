@@ -3,9 +3,9 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { getMqttService, formatDeviceTopic, formatTopic } from './mqttService';
 import { TOPIC_PATTERNS } from '@shared/messageSchema';
 import { getModbusManager, ModbusDevice } from '../adapters/modbusAdapter';
-import { getOCPPManager, OCPPDevice } from '../adapters/ocppAdapter';
+import { ocppManager, OcppChargePointConfig as OCPPDevice } from '../adapters/ocppAdapter';
 import { getEEBusManager, EEBusDevice } from '../adapters/eebusAdapter';
-import { getSunSpecManager, SunSpecDevice } from '../adapters/sunspecAdapter';
+import { sunspecManager, SunSpecDeviceConfig as SunSpecDevice } from '../adapters/sunspecAdapter';
 import { getTCPIPManager, TCPIPDevice } from '../adapters/tcpipAdapter';
 import { getGatewayManager, GatewayDevice, GatewayDeviceType } from '../adapters/gatewayAdapter';
 
@@ -817,7 +817,7 @@ export class DeviceManagementService {
       console.warn(`Device ${device.id} has OCPP protocol but is not an EV charger`);
     }
     
-    const ocppManager = getOCPPManager();
+    // ocppManager is already imported
     const ocppDevice: OCPPDevice = {
       id: device.id,
       chargePointId: device.protocolConfig.chargePointId || `CP${device.id}`,
@@ -860,7 +860,7 @@ export class DeviceManagementService {
       console.warn(`Device ${device.id} has SunSpec protocol but is not a solar PV device`);
     }
     
-    const sunspecManager = getSunSpecManager();
+    // sunspecManager is already imported
     const sunspecDevice: SunSpecDevice = {
       id: device.id,
       deviceId: device.protocolConfig.deviceId || `INV${device.id}`,

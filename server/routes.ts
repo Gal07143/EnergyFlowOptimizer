@@ -13,7 +13,7 @@ import { promisify } from "util";
 import { requireAdmin, requireManager, canManageSite } from './middleware/roleAuth';
 import { initDeviceManagementService } from './services/deviceManagementService';
 import { initMqttService } from './services/mqttService';
-import { getOCPPManager } from './adapters/ocppAdapter';
+import { ocppManager } from './adapters/ocppAdapter';
 import { getEEBusManager } from './adapters/eebusAdapter';
 
 // Import controllers
@@ -283,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid parameters' });
       }
       
-      const ocppManager = getOCPPManager();
+      // ocppManager is already imported at the top
       const adapter = ocppManager.getAdapter(deviceId);
       
       if (!adapter) {
@@ -311,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid parameters' });
       }
       
-      const ocppManager = getOCPPManager();
+      // ocppManager is already imported at the top
       const adapter = ocppManager.getAdapter(deviceId);
       
       if (!adapter) {
