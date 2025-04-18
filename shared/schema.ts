@@ -405,7 +405,7 @@ export const devices = pgTable('devices', {
   connectionProtocol: text('connection_protocol'),
   settings: json('settings'),
   siteId: integer('site_id').notNull().references(() => sites.id),
-  gatewayId: integer('gateway_id').references(() => devices.id), // Reference to a gateway device
+  gatewayId: integer('gateway_id').references(() => sites.id), // Changed temporarily to break circular reference
   devicePath: text('device_path'), // Path/address on the gateway (e.g. Modbus address, MQTT topic suffix)
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -731,7 +731,7 @@ export const eventLogs = pgTable('event_logs', {
   
   // For correlation
   correlationId: text('correlation_id'),
-  parentEventId: integer('parent_event_id').references(() => eventLogs.id),
+  parentEventId: integer('parent_event_id'),
   
   // Storage tier info
   storageTier: text('storage_tier').default('hot'),
@@ -1714,7 +1714,7 @@ export const deviceMaintenanceIssues = pgTable('device_maintenance_issues', {
   createdBy: integer('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
-  relatedIssueId: integer('related_issue_id').references(() => deviceMaintenanceIssues.id),
+  relatedIssueId: integer('related_issue_id'),
   resolution: text('resolution'),
   resolutionNotes: text('resolution_notes'),
   maintenanceCost: numeric('maintenance_cost'),
@@ -1807,7 +1807,7 @@ export const deviceMaintenanceThresholds = pgTable('device_maintenance_threshold
   category: text('category'), // Categorization of threshold
   autoLearned: boolean('auto_learned').default(false), // Was threshold automatically determined?
   learningPeriodDays: integer('learning_period_days'), // Days used for auto-learning
-  parentThresholdId: integer('parent_threshold_id').references(() => deviceMaintenanceThresholds.id), 
+  parentThresholdId: integer('parent_threshold_id'), 
   isModelBased: boolean('is_model_based').default(false), // Uses ML model instead of simple threshold
   modelId: text('model_id'), // Reference to the ML model used
   modelParameters: json('model_parameters'), // Parameters for the model
