@@ -15,6 +15,17 @@ export const deviceTypeEnum = pgEnum('device_type', [
   'energy_gateway'
 ]);
 
+export const gatewayProtocolEnum = pgEnum('gateway_protocol', [
+  'mqtt',
+  'http',
+  'modbus_tcp',
+  'modbus_rtu',
+  'bacnet',
+  'canbus',
+  'zigbee',
+  'zwave'
+]);
+
 export const deviceStatusEnum = pgEnum('device_status', [
   'online', 
   'offline', 
@@ -307,6 +318,35 @@ export const securityAuditLog = pgTable('security_audit_log', {
   retentionPeriodDays: integer('retention_period_days').default(730), // 2 years retention by default
 });
 
+// Gateway Devices
+export const gatewayDevices = pgTable('gateway_devices', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
+  protocol: gatewayProtocolEnum('protocol').notNull(),
+  ipAddress: text('ip_address'),
+  port: integer('port'),
+  username: text('username'),
+  password: text('password'),
+  apiKey: text('api_key'),
+  mqttTopic: text('mqtt_topic'),
+  mqttBroker: text('mqtt_broker'),
+  mqttUsername: text('mqtt_username'),
+  mqttPassword: text('mqtt_password'),
+  mqttClientId: text('mqtt_client_id'),
+  lastConnectedAt: timestamp('last_connected_at'),
+  connectionStatus: text('connection_status').default('disconnected'),
+  connectionError: text('connection_error'),
+  heartbeatInterval: integer('heartbeat_interval').default(60), // seconds
+  autoReconnect: boolean('auto_reconnect').default(true),
+  maxReconnectAttempts: integer('max_reconnect_attempts').default(5),
+  securityEnabled: boolean('security_enabled').default(true),
+  tlsEnabled: boolean('tls_enabled').default(true),
+  certificatePath: text('certificate_path'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  additionalConfig: json('additional_config'),
+});
+
 // Devices
 export const devices = pgTable('devices', {
   id: serial('id').primaryKey(),
@@ -322,6 +362,8 @@ export const devices = pgTable('devices', {
   connectionProtocol: text('connection_protocol'),
   settings: json('settings'),
   siteId: integer('site_id').notNull().references(() => sites.id),
+  gatewayId: integer('gateway_id').references(() => devices.id), // Reference to a gateway device
+  devicePath: text('device_path'), // Path/address on the gateway (e.g. Modbus address, MQTT topic suffix)
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
