@@ -1005,7 +1005,7 @@ export class DeviceManagementService {
   async getMaintenanceRecords(deviceId: number): Promise<any[]> {
     // In a production environment, this would query a database
     // For now, we'll generate simulated maintenance records
-    const device = this.getDeviceById(deviceId);
+    const device = this.getDevice(deviceId);
     if (!device) {
       return [];
     }

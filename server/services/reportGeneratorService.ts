@@ -300,7 +300,7 @@ export class ReportGeneratorService {
         
         // Calculate efficiency based on device type
         switch(device.type) {
-          case 'solar_inverter':
+          case 'solar_pv':
             // Solar efficiency based on output vs theoretical max
             const outputReadings = telemetry.filter(t => t.power_output !== undefined);
             if (outputReadings.length > 0) {
@@ -309,7 +309,7 @@ export class ReportGeneratorService {
               efficiency = (avgOutput / maxCapacity) * 100;
             }
             break;
-          case 'battery':
+          case 'battery_storage':
             // Battery efficiency based on charge/discharge cycles
             const chargeReadings = telemetry.filter(t => t.state_of_charge !== undefined);
             if (chargeReadings.length > 0) {
@@ -468,16 +468,16 @@ export class ReportGeneratorService {
   }
 
   /**
-   * Get energy production data (for solar/wind generation)
+   * Get energy production data (for solar generation)
    */
   private async getEnergyProductionData(
     siteId: number,
     startDate: Date,
     endDate: Date
   ): Promise<any> {
-    // Get production devices (solar, wind, etc.)
+    // Get production devices (solar)
     const devices = this.deviceService.getDevicesBySite(siteId)
-      .filter(d => d.type === 'solar_pv' || d.type === 'wind_turbine');
+      .filter(d => d.type === 'solar_pv');
     
     if (devices.length === 0) {
       return {

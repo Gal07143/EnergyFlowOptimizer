@@ -148,6 +148,28 @@ export class EnergyPriceService {
   public async getTOUPeriods(siteId: number): Promise<any[]> {
     return this.touPeriods.get(siteId) || [];
   }
+  
+  /**
+   * Get time-of-use prices for a site
+   */
+  public async getPrices(siteId: number): Promise<{peak: number, standard: number, offPeak: number}> {
+    const tariff = this.siteTariffs.get(siteId);
+    
+    if (tariff && tariff.type === 'tou' && tariff.details) {
+      return {
+        peak: tariff.details.peakRate || 0.25,
+        standard: tariff.details.standardRate || 0.15,
+        offPeak: tariff.details.offPeakRate || 0.08
+      };
+    }
+    
+    // Default time-of-use rates if site doesn't have specific tariff
+    return {
+      peak: 0.25,      // $/kWh
+      standard: 0.15,  // $/kWh
+      offPeak: 0.08    // $/kWh
+    };
+  }
 
   /**
    * Get tariff information for a site
