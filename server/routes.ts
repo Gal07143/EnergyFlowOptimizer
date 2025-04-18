@@ -37,6 +37,7 @@ import deviceRegistryRoutes from './routes/deviceRegistry';
 import { electricalDiagramRoutes } from './routes/electricalDiagram';
 import gatewayRoutes from './routes/gatewayRoutes';
 import * as gatewayController from './controllers/gatewayController';
+import * as arbitrageController from './controllers/arbitrageController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
