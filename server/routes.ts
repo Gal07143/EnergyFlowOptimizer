@@ -574,6 +574,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/reports/types', reportController.getReportTypes);
   app.get('/api/reports/formats', reportController.getReportFormats);
   app.get('/api/reports/time-periods', reportController.getTimePeriods);
+  app.get('/api/reports/templates', reportController.getReportTemplates);
+  app.post('/api/reports/generate-from-template', reportController.generateReportFromTemplate);
 
   // Analytics Routes
   app.post('/api/analytics/run', analyticsController.runAnalytics);

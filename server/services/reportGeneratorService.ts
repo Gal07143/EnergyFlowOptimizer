@@ -67,8 +67,30 @@ export class ReportGeneratorService {
     format: ReportFormat,
     timePeriod: ReportTimePeriod,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
+    templateId?: string
   ): Promise<Buffer> {
+    // If using a template, apply pre-configured settings
+    if (templateId) {
+      const template = this.getReportTemplate(templateId);
+      reportType = template.reportType;
+      format = template.format;
+      timePeriod = template.timePeriod;
+      
+      // If template has custom date modifiers, apply them
+      if (template.dateModifier) {
+        const now = new Date();
+        if (template.dateModifier.startDaysOffset) {
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() + template.dateModifier.startDaysOffset);
+        }
+        if (template.dateModifier.endDaysOffset) {
+          endDate = new Date(now);
+          endDate.setDate(now.getDate() + template.dateModifier.endDaysOffset);
+        }
+      }
+    }
+    
     // Get date range based on time period
     const { start, end } = this.getDateRange(timePeriod, startDate, endDate);
     
@@ -80,6 +102,100 @@ export class ReportGeneratorService {
       return this.generatePdfReport(reportType, reportData, siteId, start, end);
     } else {
       return this.generateExcelReport(reportType, reportData, siteId, start, end);
+    }
+  }
+  
+  /**
+   * Get available report templates
+   */
+  public getAvailableTemplates(): { id: string, name: string, description: string }[] {
+    return [
+      {
+        id: 'monthly_energy',
+        name: 'Monthly Energy Report',
+        description: 'Comprehensive energy consumption and production analysis for the current month'
+      },
+      {
+        id: 'weekly_device_performance',
+        name: 'Weekly Device Performance',
+        description: 'Performance metrics for all devices over the past week'
+      },
+      {
+        id: 'battery_optimization',
+        name: 'Battery Optimization Analysis',
+        description: 'Detailed analysis of battery usage and arbitrage savings for the past 30 days'
+      },
+      {
+        id: 'carbon_impact',
+        name: 'Carbon Impact Report',
+        description: 'Environmental impact and carbon reduction metrics for the current quarter'
+      },
+      {
+        id: 'cost_savings_summary',
+        name: 'Cost Savings Summary',
+        description: 'Financial summary of all energy cost savings and optimizations'
+      }
+    ];
+  }
+  
+  /**
+   * Get report template configuration by template ID
+   */
+  public getReportTemplate(templateId: string): {
+    reportType: ReportType;
+    format: ReportFormat;
+    timePeriod: ReportTimePeriod;
+    dateModifier?: {
+      startDaysOffset?: number;
+      endDaysOffset?: number;
+    }
+  } {
+    switch (templateId) {
+      case 'monthly_energy':
+        return {
+          reportType: ReportType.ENERGY_CONSUMPTION,
+          format: ReportFormat.EXCEL,
+          timePeriod: ReportTimePeriod.MONTH
+        };
+      
+      case 'weekly_device_performance':
+        return {
+          reportType: ReportType.DEVICE_PERFORMANCE,
+          format: ReportFormat.PDF,
+          timePeriod: ReportTimePeriod.CUSTOM,
+          dateModifier: {
+            startDaysOffset: -7,
+            endDaysOffset: 0
+          }
+        };
+        
+      case 'battery_optimization':
+        return {
+          reportType: ReportType.BATTERY_ARBITRAGE,
+          format: ReportFormat.EXCEL,
+          timePeriod: ReportTimePeriod.CUSTOM,
+          dateModifier: {
+            startDaysOffset: -30,
+            endDaysOffset: 0
+          }
+        };
+        
+      case 'carbon_impact':
+        return {
+          reportType: ReportType.CARBON_REDUCTION,
+          format: ReportFormat.PDF,
+          timePeriod: ReportTimePeriod.QUARTER
+        };
+        
+      case 'cost_savings_summary':
+        return {
+          reportType: ReportType.BILL_SAVINGS,
+          format: ReportFormat.EXCEL,
+          timePeriod: ReportTimePeriod.MONTH
+        };
+        
+      default:
+        throw new Error(`Unknown report template: ${templateId}`);
     }
   }
 

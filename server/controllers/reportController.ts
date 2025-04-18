@@ -154,6 +154,73 @@ export function getTimePeriods(req: Request, res: Response): void {
 }
 
 /**
+ * Get available report templates
+ */
+export function getReportTemplates(req: Request, res: Response): void {
+  try {
+    // Lazy-load the service only when needed to avoid circular dependencies
+    if (!reportGeneratorService) {
+      const { getReportGeneratorService } = require('../services/reportGeneratorService');
+      reportGeneratorService = getReportGeneratorService();
+    }
+    
+    const templates = reportGeneratorService.getAvailableTemplates();
+    res.json(templates);
+  } catch (error) {
+    console.error('Error getting report templates:', error);
+    res.status(500).json({ error: 'Failed to get report templates' });
+  }
+}
+
+/**
+ * Generate report from template
+ */
+export async function generateReportFromTemplate(req: Request, res: Response): Promise<void> {
+  try {
+    const { siteId, templateId } = req.body;
+
+    // Validate input parameters
+    if (!siteId || !templateId) {
+      res.status(400).json({ error: 'Missing siteId or templateId' });
+      return;
+    }
+
+    // Lazy-load the service only when needed to avoid circular dependencies
+    if (!reportGeneratorService) {
+      const { getReportGeneratorService } = require('../services/reportGeneratorService');
+      reportGeneratorService = getReportGeneratorService();
+    }
+    
+    // Generate the report from template
+    const reportBuffer = await reportGeneratorService.generateReport(
+      Number(siteId),
+      ReportType.ENERGY_CONSUMPTION, // These will be overridden by template
+      ReportFormat.EXCEL,            // These will be overridden by template
+      ReportTimePeriod.MONTH,        // These will be overridden by template
+      undefined,
+      undefined,
+      templateId
+    );
+
+    // Set the appropriate content type and filename based on the template
+    const template = reportGeneratorService.getReportTemplate(templateId);
+    const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+    const fileExtension = template.format === ReportFormat.PDF ? 'pdf' : 'xlsx';
+    const filename = `${templateId}_${siteId}_${timestamp}.${fileExtension}`;
+    const contentType = template.format === ReportFormat.PDF 
+      ? 'application/pdf' 
+      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+    res.send(reportBuffer);
+  } catch (error) {
+    console.error('Error generating report from template:', error);
+    res.status(500).json({ error: 'Failed to generate report from template' });
+  }
+}
+
+/**
  * Format report type name for display
  */
 function formatReportTypeName(reportType: ReportType): string {
