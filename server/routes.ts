@@ -38,6 +38,7 @@ import { ConsumptionPatternController } from './controllers/consumptionPatternCo
 import { initConsumptionPatternService } from './services/consumptionPatternService';
 import deviceRegistryRoutes from './routes/deviceRegistry';
 import { electricalDiagramRoutes } from './routes/electricalDiagram';
+import { predictiveMaintenanceRoutes } from './routes/predictiveMaintenanceRoutes';
 import gatewayRoutes from './routes/gatewayRoutes';
 import * as gatewayController from './controllers/gatewayController';
 
@@ -592,6 +593,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/analytics/run', analyticsController.runAnalytics);
   app.get('/api/analytics/types', analyticsController.getAnalyticsTypes);
   app.get('/api/analytics/granularities', analyticsController.getTimeGranularities);
+
+  // Predictive Maintenance Routes
+  app.use('/api/maintenance', predictiveMaintenanceRoutes);
 
   return httpServer;
 }
