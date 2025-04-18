@@ -5,7 +5,8 @@
  * Add new migrations to this file in the order they should be executed.
  */
 
-import { Pool, Client } from 'pg';
+import pkg from 'pg';
+const { Pool, Client } = pkg;
 import { runMigration as runMultiUserArchitectureMigration } from './multiUserArchitecture';
 // Import device registry as CommonJS module since it's a .js file
 const deviceRegistryMigration = require('./deviceRegistry');
