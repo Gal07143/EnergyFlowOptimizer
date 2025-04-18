@@ -70,7 +70,7 @@ class PredictiveMaintenanceService {
     
     // If we already have a recent health score, return it
     if (recentMetrics?.overallHealthScore) {
-      return recentMetrics.overallHealthScore;
+      return Number(recentMetrics.overallHealthScore);
     }
     
     // Otherwise, let's calculate the health score based on device type
@@ -116,8 +116,8 @@ class PredictiveMaintenanceService {
         .limit(100);
         
       // Get specific metrics
-      const batteryCapacity = device.capacity || 10; // Default 10kWh if not specified
-      const stateOfCharge = latestReading.stateOfCharge || 50;
+      const batteryCapacity = Number(device.capacity) || 10; // Default 10kWh if not specified
+      const stateOfCharge = Number(latestReading.stateOfCharge) || 50;
       
       // Calculate estimated cycle count
       // This is a simplified estimate, in reality would use more sophisticated methods
@@ -129,7 +129,7 @@ class PredictiveMaintenanceService {
       const estimatedCapacityFade = (cycleCount / 1000) * 20;
       
       // Get temperature if available
-      const temperature = latestReading.temperature || 25; // Default 25°C
+      const temperature = Number(latestReading.temperature) || 25; // Default 25°C
       const temperatureImpact = this.calculateTemperatureImpact(temperature);
       
       // Calculate overall health score (0-100)
@@ -153,12 +153,12 @@ class PredictiveMaintenanceService {
       // Save the calculated metrics
       await db.insert(deviceHealthMetrics).values({
         deviceId,
-        cycleCount,
-        capacityFading: estimatedCapacityFade,
-        operatingTemperature: temperature,
-        overallHealthScore: healthScore,
-        remainingUsefulLife: this.estimateRemainingLife(healthScore, cycleCount),
-        failureProbability: 100 - healthScore,
+        cycleCount: Number(cycleCount),
+        capacityFading: Number(estimatedCapacityFade),
+        operatingTemperature: Number(temperature),
+        overallHealthScore: Number(healthScore),
+        remainingUsefulLife: Number(this.estimateRemainingLife(healthScore, cycleCount)),
+        failureProbability: Number(100 - healthScore),
         healthStatus: this.getHealthStatusFromScore(healthScore),
       });
       
@@ -208,9 +208,9 @@ class PredictiveMaintenanceService {
       // Calculate efficiency ratio (PR - Performance Ratio)
       // This is typically actual output / theoretical output
       // For a simplified version, we'll use relative performance to capacity
-      const capacity = device.capacity || 5; // Default 5kW if not specified
-      const currentPower = latestReading.power || 0;
-      const timeOfDay = new Date(latestReading.timestamp).getHours();
+      const capacity = Number(device.capacity) || 5; // Default 5kW if not specified
+      const currentPower = Number(latestReading.power) || 0;
+      const timeOfDay = latestReading.timestamp ? new Date(latestReading.timestamp).getHours() : new Date().getHours();
       const irradianceEstimate = this.estimateIrradiance(timeOfDay);
       const expectedPower = capacity * irradianceEstimate;
       const performanceRatio = expectedPower > 0 ? currentPower / expectedPower : 0.8;
@@ -243,12 +243,12 @@ class PredictiveMaintenanceService {
       // Save the calculated metrics
       await db.insert(deviceHealthMetrics).values({
         deviceId,
-        efficiencyRatio: performanceRatio,
-        degradationRate: estimatedDegradation / systemAgeYears,
-        soilingLossRate: soilingLoss,
-        overallHealthScore: healthScore,
-        remainingUsefulLife: this.estimateRemainingLife(healthScore, systemAgeYears * 365),
-        failureProbability: 100 - healthScore,
+        efficiencyRatio: Number(performanceRatio),
+        degradationRate: Number(estimatedDegradation / systemAgeYears),
+        soilingLossRate: Number(soilingLoss),
+        overallHealthScore: Number(healthScore),
+        remainingUsefulLife: Number(this.estimateRemainingLife(healthScore, systemAgeYears * 365)),
+        failureProbability: Number(100 - healthScore),
         healthStatus: this.getHealthStatusFromScore(healthScore),
       });
       
@@ -365,12 +365,12 @@ class PredictiveMaintenanceService {
     let primaryAnomaly = '';
     
     // Check for rapid capacity fading
-    if (latestMetrics.capacityFading && latestMetrics.capacityFading > 1) {
+    if (latestMetrics.capacityFading && Number(latestMetrics.capacityFading) > 1) {
       const avgHistoricalFading = this.calculateAverage(
-        historicalMetrics.filter(m => m.capacityFading).map(m => m.capacityFading)
+        historicalMetrics.filter(m => m.capacityFading).map(m => Number(m.capacityFading))
       );
       
-      if (latestMetrics.capacityFading > avgHistoricalFading * 1.5) {
+      if (Number(latestMetrics.capacityFading) > avgHistoricalFading * 1.5) {
         issues.push({
           type: 'capacity_degradation',
           confidence: 85,
@@ -386,10 +386,10 @@ class PredictiveMaintenanceService {
     // Check for high internal resistance
     if (latestMetrics.internalResistance) {
       const avgResistance = this.calculateAverage(
-        historicalMetrics.filter(m => m.internalResistance).map(m => m.internalResistance)
+        historicalMetrics.filter(m => m.internalResistance).map(m => Number(m.internalResistance))
       );
       
-      if (latestMetrics.internalResistance > avgResistance * 1.3) {
+      if (Number(latestMetrics.internalResistance) > avgResistance * 1.3) {
         issues.push({
           type: 'internal_resistance',
           confidence: 75,
@@ -404,7 +404,7 @@ class PredictiveMaintenanceService {
     
     // Check for temperature issues
     if (latestMetrics.operatingTemperature) {
-      if (latestMetrics.operatingTemperature > 40) {
+      if (Number(latestMetrics.operatingTemperature) > 40) {
         issues.push({
           type: 'high_temperature',
           confidence: 95,
@@ -414,7 +414,7 @@ class PredictiveMaintenanceService {
           highestConfidence = 95;
           primaryAnomaly = 'high_temperature';
         }
-      } else if (latestMetrics.operatingTemperature < 5) {
+      } else if (Number(latestMetrics.operatingTemperature) < 5) {
         issues.push({
           type: 'low_temperature',
           confidence: 90,
@@ -452,10 +452,10 @@ class PredictiveMaintenanceService {
     // Check for efficiency drop
     if (latestMetrics.efficiencyRatio) {
       const avgEfficiency = this.calculateAverage(
-        historicalMetrics.filter(m => m.efficiencyRatio).map(m => m.efficiencyRatio)
+        historicalMetrics.filter(m => m.efficiencyRatio).map(m => Number(m.efficiencyRatio))
       );
       
-      if (latestMetrics.efficiencyRatio < avgEfficiency * 0.8) {
+      if (Number(latestMetrics.efficiencyRatio) < avgEfficiency * 0.8) {
         issues.push({
           type: 'efficiency_drop',
           confidence: 80,
