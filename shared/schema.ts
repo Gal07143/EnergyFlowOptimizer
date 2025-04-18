@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric, json, pgEnum, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric, json, pgEnum, uuid, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -49,6 +49,30 @@ export const optimizationModeEnum = pgEnum('optimization_mode', [
   'carbon_reduction', 
   'grid_relief',
   'battery_life'
+]);
+
+// Maintenance Enums
+export const maintenanceSeverityEnum = pgEnum('maintenance_severity', [
+  'low',
+  'medium',
+  'high',
+  'critical'
+]);
+
+export const maintenanceStatusEnum = pgEnum('maintenance_status', [
+  'pending',
+  'scheduled',
+  'in_progress',
+  'completed',
+  'cancelled'
+]);
+
+export const maintenanceTypeEnum = pgEnum('maintenance_type', [
+  'preventive',
+  'corrective',
+  'predictive',
+  'condition_based',
+  'inspection'
 ]);
 
 // Security Enums
@@ -1673,6 +1697,432 @@ export type InsertSiteEventParticipation = z.infer<typeof insertSiteEventPartici
 
 export type DemandResponseAction = typeof demandResponseActions.$inferSelect;
 export type InsertDemandResponseAction = z.infer<typeof insertDemandResponseActionSchema>;
+
+// Predictive Maintenance Tables
+export const deviceMaintenanceIssues = pgTable('device_maintenance_issues', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  severity: maintenanceSeverityEnum('severity').default('medium'),
+  status: maintenanceStatusEnum('status').default('pending'),
+  type: maintenanceTypeEnum('type').default('predictive'),
+  detectedAt: timestamp('detected_at').defaultNow(),
+  predictedFailureAt: timestamp('predicted_failure_at'),
+  resolvedAt: timestamp('resolved_at'),
+  assignedTo: integer('assigned_to').references(() => users.id),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  relatedIssueId: integer('related_issue_id').references(() => deviceMaintenanceIssues.id),
+  resolution: text('resolution'),
+  resolutionNotes: text('resolution_notes'),
+  maintenanceCost: numeric('maintenance_cost'),
+  predictedCost: numeric('predicted_cost'),
+  costCurrency: text('cost_currency').default('USD'),
+  downtimeMinutes: integer('downtime_minutes'),
+  incidentNumber: text('incident_number'), // For tracking in external systems
+  attachments: json('attachments'), // URLs to photos or documents
+  anomalyScore: numeric('anomaly_score'), // 0-100, how unusual the issue is
+  confidenceScore: numeric('confidence_score'), // 0-100, prediction confidence
+  maintenanceHistoryIds: json('maintenance_history_ids'), // References to maintenance events
+  affectedComponents: json('affected_components'), // List of affected components
+  recommendedActions: json('recommended_actions'), // List of actions to take
+  tags: json('tags'), // For categorization and filtering
+});
+
+export const deviceHealthMetrics = pgTable('device_health_metrics', {
+  id: serial('id').primaryKey(), 
+  deviceId: integer('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
+  timestamp: timestamp('timestamp').defaultNow(),
+  // Battery-specific metrics
+  cycleCount: integer('cycle_count'), // For batteries
+  depthOfDischarge: numeric('depth_of_discharge'), // % of capacity used in a cycle
+  chargeDischargeRate: numeric('charge_discharge_rate'), // Rate of charging/discharging
+  internalResistance: numeric('internal_resistance'), // Battery internal resistance
+  capacityFading: numeric('capacity_fading'), // % of original capacity lost
+  temperatureVariance: numeric('temperature_variance'), // Range of temperature fluctuations
+  voltageStability: numeric('voltage_stability'), // Stability of voltage under load
+  selfDischargeRate: numeric('self_discharge_rate'), // Battery self-discharge rate
+  lastEqualization: timestamp('last_equalization'), // Last battery balancing
+  // Solar-specific metrics
+  efficiencyRatio: numeric('efficiency_ratio'), // Performance ratio
+  degradationRate: numeric('degradation_rate'), // Annual % degradation
+  soilingLossRate: numeric('soiling_loss_rate'), // Loss due to dirt/dust
+  shadingImpact: numeric('shading_impact'), // Impact of shading on production
+  hotspotCount: integer('hotspot_count'), // Number of detected hotspots
+  connectionIntegrityScore: numeric('connection_integrity_score'), // 0-100, quality of connections
+  inverterEfficiency: numeric('inverter_efficiency'), // Inverter efficiency
+  dcAcConversionRatio: numeric('dc_ac_conversion_ratio'), // DC to AC conversion efficiency
+  maximumPowerPointTracking: numeric('maximum_power_point_tracking'), // MPPT efficiency
+  // General metrics
+  operatingTemperature: numeric('operating_temperature'), // Current operating temperature
+  humidity: numeric('humidity'), // Current humidity (%)
+  vibrationLevel: numeric('vibration_level'), // Vibration level
+  noiseLevel: numeric('noise_level'), // Acoustic noise in dB
+  dustAccumulation: numeric('dust_accumulation'), // Dust accumulation level
+  correctionLevel: numeric('correction_level'), // Corrosion level
+  ipRating: text('ip_rating'), // Ingress Protection rating
+  lastMaintenanceDate: timestamp('last_maintenance_date'), // Last maintenance performed
+  uptime: numeric('uptime'), // % of time operating correctly
+  meanTimeBetweenFailures: numeric('mean_time_between_failures'), // MTBF in hours
+  overallHealthScore: numeric('overall_health_score'), // 0-100, composite health score
+  rawSensorData: json('raw_sensor_data'), // Raw sensor readings
+  failureProbability: numeric('failure_probability'), // 0-100%, likelihood of failure
+  remainingUsefulLife: numeric('remaining_useful_life'), // Estimated days of operational life
+  recommendedMaintenanceDate: timestamp('recommended_maintenance_date'), // Next suggested maintenance
+  healthStatus: text('health_status'), // 'good', 'fair', 'poor', 'critical'
+  statusReason: text('status_reason'), // Why the current status was assigned
+  alertLevel: text('alert_level'), // 'none', 'warning', 'alert', 'critical'
+  anomalyDetected: boolean('anomaly_detected').default(false), // Is current state anomalous?
+  anomalyDescription: text('anomaly_description'), // Description of detected anomaly
+  predictionHorizon: integer('prediction_horizon'), // Days the prediction looks ahead
+  predictionConfidence: numeric('prediction_confidence'), // 0-100%, confidence in predictions
+  dataQuality: text('data_quality'), // 'high', 'medium', 'low', 'suspect'
+  maintenanceRecommendation: text('maintenance_recommendation'), // Suggested maintenance action
+  analyticsVersion: text('analytics_version'), // Version of analytics engine used
+  additionalMetrics: json('additional_metrics'), // Device-specific additional metrics
+});
+
+export const deviceMaintenanceThresholds = pgTable('device_maintenance_thresholds', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
+  deviceTypeId: integer('device_type_id').references(() => deviceCatalog.id),
+  metricName: text('metric_name').notNull(), // Name of the monitored metric
+  warningThreshold: numeric('warning_threshold'), // Threshold for warning alerts
+  criticalThreshold: numeric('critical_threshold'), // Threshold for critical alerts
+  direction: text('direction').notNull(), // 'above', 'below', 'equal', 'between'
+  secondaryThreshold: numeric('secondary_threshold'), // For 'between' thresholds
+  timeThreshold: integer('time_threshold'), // Minutes threshold must be exceeded
+  combinationLogic: json('combination_logic'), // Rules for combining with other thresholds
+  enabled: boolean('enabled').default(true),
+  alertMessage: text('alert_message'), // Message to display when threshold is exceeded
+  alertActions: json('alert_actions'), // Actions to take when threshold is exceeded
+  lastUpdated: timestamp('last_updated').defaultNow(),
+  createdBy: integer('created_by').references(() => users.id),
+  severity: maintenanceSeverityEnum('severity').default('medium'),
+  description: text('description'),
+  unit: text('unit'), // Unit of measurement (e.g., %, °C, V)
+  relatedComponentId: text('related_component_id'), // Component this threshold monitors
+  category: text('category'), // Categorization of threshold
+  autoLearned: boolean('auto_learned').default(false), // Was threshold automatically determined?
+  learningPeriodDays: integer('learning_period_days'), // Days used for auto-learning
+  parentThresholdId: integer('parent_threshold_id').references(() => deviceMaintenanceThresholds.id), 
+  isModelBased: boolean('is_model_based').default(false), // Uses ML model instead of simple threshold
+  modelId: text('model_id'), // Reference to the ML model used
+  modelParameters: json('model_parameters'), // Parameters for the model
+});
+
+export const deviceMaintenancePredictions = pgTable('device_maintenance_predictions', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
+  metricName: text('metric_name').notNull(),
+  predictionType: text('prediction_type').notNull(), // 'failure', 'degradation', 'maintenance_needed'
+  predictedAt: timestamp('predicted_at').defaultNow(),
+  predictionForTimestamp: timestamp('prediction_for_timestamp').notNull(), // When the event is predicted to happen
+  probabilityPercentage: numeric('probability_percentage'), // 0-100
+  confidenceScore: numeric('confidence_score'), // 0-100
+  predictionHorizonDays: integer('prediction_horizon_days'), // How many days ahead prediction looks
+  algorithmUsed: text('algorithm_used'), // Algorithm/model used for prediction
+  modelVersion: text('model_version'),
+  featureImportance: json('feature_importance'), // Which metrics influenced the prediction most
+  rawPredictionData: json('raw_prediction_data'), // Raw output from prediction model
+  predictedValue: numeric('predicted_value'), // Actual predicted value
+  lowerBound: numeric('lower_bound'), // Prediction lower bound
+  upperBound: numeric('upper_bound'), // Prediction upper bound
+  actualValue: numeric('actual_value'), // Value actually observed (for validation)
+  predictionAccuracy: numeric('prediction_accuracy'), // How accurate was this prediction
+  predictionStatus: text('prediction_status').default('active'), // 'active', 'expired', 'validated', 'invalid'
+  affectedComponents: json('affected_components'), // Component(s) prediction applies to
+  recommendedActions: json('recommended_actions'), // Recommended maintenance actions
+  potentialImpact: text('potential_impact'), // Impact if issue not addressed
+  estimatedMaintenanceCost: numeric('estimated_maintenance_cost'), // Cost if addressed now
+  estimatedReplacementCost: numeric('estimated_replacement_cost'), // Cost if replaced
+  estimatedDowntimeHours: numeric('estimated_downtime_hours'), // Expected downtime
+  businessImpactScore: numeric('business_impact_score'), // 0-100, impact on operations
+  validatedBy: integer('validated_by').references(() => users.id), // User who validated prediction
+  notes: text('notes'),
+});
+
+export const deviceMaintenanceModels = pgTable('device_maintenance_models', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  deviceType: deviceTypeEnum('device_type').notNull(),
+  algorithm: text('algorithm').notNull(), // 'random_forest', 'lstm', 'xgboost', etc.
+  targetMetric: text('target_metric').notNull(), // Metric the model predicts
+  predictionType: text('prediction_type').notNull(), // 'regression', 'classification', 'anomaly'
+  featuresUsed: json('features_used'), // Input features for the model
+  hyperparameters: json('hyperparameters'), // Model hyperparameters
+  trainingDataStartDate: timestamp('training_data_start_date'),
+  trainingDataEndDate: timestamp('training_data_end_date'),
+  trainingDatasetSize: integer('training_dataset_size'),
+  validationAccuracy: numeric('validation_accuracy'),
+  errorMetrics: json('error_metrics'), // RMSE, MAE, etc.
+  lastTrainingDate: timestamp('last_training_date').defaultNow(),
+  lastEvaluationDate: timestamp('last_evaluation_date'),
+  deploymentStatus: text('deployment_status').default('development'), // 'development', 'staging', 'production'
+  version: text('version').notNull(),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  retrainingFrequency: text('retraining_frequency'), // 'daily', 'weekly', 'monthly', 'quarterly'
+  lastRetrainingScore: numeric('last_retraining_score'), // Score improvement from last retraining
+  modelStoragePath: text('model_storage_path'), // Where model weights/definition is stored
+  isActive: boolean('is_active').default(true),
+  dependenciesVersion: json('dependencies_version'), // Versions of libraries/frameworks used
+  modelFormat: text('model_format'), // 'tensorflow', 'pickle', 'onnx', etc.
+  featureImportance: json('feature_importance'), // Importance of each feature
+});
+
+export const deviceMaintenanceAlerts = pgTable('device_maintenance_alerts', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
+  thresholdId: integer('threshold_id').references(() => deviceMaintenanceThresholds.id),
+  predictionId: integer('prediction_id').references(() => deviceMaintenancePredictions.id),
+  alertType: text('alert_type').notNull(), // 'threshold_exceeded', 'anomaly_detected', 'failure_predicted'
+  severity: maintenanceSeverityEnum('severity').default('medium'),
+  message: text('message').notNull(),
+  triggeredAt: timestamp('triggered_at').defaultNow(),
+  acknowledgedAt: timestamp('acknowledged_at'),
+  acknowledgedBy: integer('acknowledged_by').references(() => users.id),
+  resolvedAt: timestamp('resolved_at'),
+  resolvedBy: integer('resolved_by').references(() => users.id),
+  resolutionNotes: text('resolution_notes'),
+  notificationSent: boolean('notification_sent').default(false),
+  notificationChannels: json('notification_channels'), // Which channels were used
+  triggerValue: numeric('trigger_value'), // Value that triggered the alert
+  thresholdValue: numeric('threshold_value'), // Threshold that was exceeded
+  metricName: text('metric_name'), // Name of the metric that triggered the alert
+  silencedUntil: timestamp('silenced_until'), // Temporarily silenced until this time
+  silencedBy: integer('silenced_by').references(() => users.id),
+  silenceReason: text('silence_reason'),
+  relatedIssueId: integer('related_issue_id').references(() => deviceMaintenanceIssues.id),
+  relatedAlertIds: json('related_alert_ids'), // IDs of related alerts
+  alertContext: json('alert_context'), // Additional context about alert
+  falsePositive: boolean('false_positive').default(false), // Was this a false positive?
+  autoResolved: boolean('auto_resolved').default(false), // Was resolved automatically
+  isRecurring: boolean('is_recurring').default(false), // Has happened before
+  recurrenceCount: integer('recurrence_count').default(0), // How many times it has occurred
+  firstOccurrence: timestamp('first_occurrence'), // When first occurred
+  businessImpact: text('business_impact'), // Assessed impact on business
+});
+
+export const deviceMaintenanceSchedules = pgTable('device_maintenance_schedules', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  description: text('description'),
+  type: maintenanceTypeEnum('type').default('preventive'),
+  frequency: text('frequency').notNull(), // 'daily', 'weekly', 'monthly', 'quarterly', 'annually', 'custom'
+  intervalDays: integer('interval_days'), // For custom frequency
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date'),
+  nextDueDate: date('next_due_date'),
+  lastCompletedDate: date('last_completed_date'),
+  assignedTo: integer('assigned_to').references(() => users.id),
+  estimatedDurationHours: numeric('estimated_duration_hours'),
+  estimatedCost: numeric('estimated_cost'),
+  costCurrency: text('cost_currency').default('USD'),
+  instructions: text('instructions'),
+  checklistItems: json('checklist_items'), // Array of tasks to complete
+  documentationLinks: json('documentation_links'), // Links to relevant documentation
+  requiredTools: json('required_tools'), // Tools needed for maintenance
+  requiredParts: json('required_parts'), // Parts needed for maintenance
+  requiredSkills: json('required_skills'), // Skills required for maintenance
+  safetyProcedures: text('safety_procedures'),
+  priorityLevel: text('priority_level').default('medium'), // 'low', 'medium', 'high', 'critical'
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  isActive: boolean('is_active').default(true),
+  notificationDays: integer('notification_days').default(7), // Days before to send notification
+  notificationRecipients: json('notification_recipients'), // Who to notify
+  lastModifiedBy: integer('last_modified_by').references(() => users.id),
+  seasonalAdjustment: json('seasonal_adjustment'), // Adjustments for seasonal factors
+  integrationReference: text('integration_reference'), // Reference in external system
+  compliance: text('compliance'), // Compliance requirements this schedule satisfies
+  managementApproval: boolean('management_approval').default(false), // Requires management approval
+  performanceMetricTargets: json('performance_metric_targets'), // Expected performance after maintenance
+});
+
+// Maintenance types
+export const insertDeviceMaintenanceIssueSchema = createInsertSchema(deviceMaintenanceIssues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertDeviceHealthMetricsSchema = createInsertSchema(deviceHealthMetrics).omit({
+  id: true,
+  timestamp: true
+});
+
+export const insertDeviceMaintenanceThresholdsSchema = createInsertSchema(deviceMaintenanceThresholds).omit({
+  id: true,
+  lastUpdated: true
+});
+
+export const insertDeviceMaintenancePredictionsSchema = createInsertSchema(deviceMaintenancePredictions).omit({
+  id: true,
+  predictedAt: true
+});
+
+export const insertDeviceMaintenanceModelsSchema = createInsertSchema(deviceMaintenanceModels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastTrainingDate: true
+});
+
+export const insertDeviceMaintenanceAlertsSchema = createInsertSchema(deviceMaintenanceAlerts).omit({
+  id: true,
+  triggeredAt: true
+});
+
+export const insertDeviceMaintenanceSchedulesSchema = createInsertSchema(deviceMaintenanceSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export type DeviceMaintenanceIssue = typeof deviceMaintenanceIssues.$inferSelect;
+export type InsertDeviceMaintenanceIssue = z.infer<typeof insertDeviceMaintenanceIssueSchema>;
+
+export type DeviceHealthMetrics = typeof deviceHealthMetrics.$inferSelect;
+export type InsertDeviceHealthMetrics = z.infer<typeof insertDeviceHealthMetricsSchema>;
+
+export type DeviceMaintenanceThreshold = typeof deviceMaintenanceThresholds.$inferSelect;
+export type InsertDeviceMaintenanceThreshold = z.infer<typeof insertDeviceMaintenanceThresholdsSchema>;
+
+export type DeviceMaintenancePrediction = typeof deviceMaintenancePredictions.$inferSelect;
+export type InsertDeviceMaintenancePrediction = z.infer<typeof insertDeviceMaintenancePredictionsSchema>;
+
+export type DeviceMaintenanceModel = typeof deviceMaintenanceModels.$inferSelect;
+export type InsertDeviceMaintenanceModel = z.infer<typeof insertDeviceMaintenanceModelsSchema>;
+
+export type DeviceMaintenanceAlert = typeof deviceMaintenanceAlerts.$inferSelect;
+export type InsertDeviceMaintenanceAlert = z.infer<typeof insertDeviceMaintenanceAlertsSchema>;
+
+export type DeviceMaintenanceSchedule = typeof deviceMaintenanceSchedules.$inferSelect;
+export type InsertDeviceMaintenanceSchedule = z.infer<typeof insertDeviceMaintenanceSchedulesSchema>;
+
+// Relations for maintenance tables
+export const deviceMaintenanceIssuesRelations = relations(deviceMaintenanceIssues, ({ one, many }) => ({
+  device: one(devices, {
+    fields: [deviceMaintenanceIssues.deviceId],
+    references: [devices.id]
+  }),
+  relatedIssue: one(deviceMaintenanceIssues, {
+    fields: [deviceMaintenanceIssues.relatedIssueId],
+    references: [deviceMaintenanceIssues.id]
+  }),
+  assignedToUser: one(users, {
+    fields: [deviceMaintenanceIssues.assignedTo],
+    references: [users.id]
+  }),
+  createdByUser: one(users, {
+    fields: [deviceMaintenanceIssues.createdBy],
+    references: [users.id]
+  }),
+  alerts: many(deviceMaintenanceAlerts)
+}));
+
+export const deviceHealthMetricsRelations = relations(deviceHealthMetrics, ({ one }) => ({
+  device: one(devices, {
+    fields: [deviceHealthMetrics.deviceId],
+    references: [devices.id]
+  })
+}));
+
+export const deviceMaintenanceThresholdsRelations = relations(deviceMaintenanceThresholds, ({ one, many }) => ({
+  device: one(devices, {
+    fields: [deviceMaintenanceThresholds.deviceId],
+    references: [devices.id]
+  }),
+  deviceType: one(deviceCatalog, {
+    fields: [deviceMaintenanceThresholds.deviceTypeId],
+    references: [deviceCatalog.id]
+  }),
+  parentThreshold: one(deviceMaintenanceThresholds, {
+    fields: [deviceMaintenanceThresholds.parentThresholdId],
+    references: [deviceMaintenanceThresholds.id]
+  }),
+  createdByUser: one(users, {
+    fields: [deviceMaintenanceThresholds.createdBy],
+    references: [users.id]
+  }),
+  alerts: many(deviceMaintenanceAlerts)
+}));
+
+export const deviceMaintenancePredictionsRelations = relations(deviceMaintenancePredictions, ({ one, many }) => ({
+  device: one(devices, {
+    fields: [deviceMaintenancePredictions.deviceId],
+    references: [devices.id]
+  }),
+  validatedByUser: one(users, {
+    fields: [deviceMaintenancePredictions.validatedBy],
+    references: [users.id]
+  }),
+  alerts: many(deviceMaintenanceAlerts)
+}));
+
+export const deviceMaintenanceModelsRelations = relations(deviceMaintenanceModels, ({ one }) => ({
+  createdByUser: one(users, {
+    fields: [deviceMaintenanceModels.createdBy],
+    references: [users.id]
+  })
+}));
+
+export const deviceMaintenanceAlertsRelations = relations(deviceMaintenanceAlerts, ({ one }) => ({
+  device: one(devices, {
+    fields: [deviceMaintenanceAlerts.deviceId],
+    references: [devices.id]
+  }),
+  threshold: one(deviceMaintenanceThresholds, {
+    fields: [deviceMaintenanceAlerts.thresholdId],
+    references: [deviceMaintenanceThresholds.id]
+  }),
+  prediction: one(deviceMaintenancePredictions, {
+    fields: [deviceMaintenanceAlerts.predictionId],
+    references: [deviceMaintenancePredictions.id]
+  }),
+  issue: one(deviceMaintenanceIssues, {
+    fields: [deviceMaintenanceAlerts.relatedIssueId],
+    references: [deviceMaintenanceIssues.id]
+  }),
+  acknowledgedByUser: one(users, {
+    fields: [deviceMaintenanceAlerts.acknowledgedBy],
+    references: [users.id]
+  }),
+  resolvedByUser: one(users, {
+    fields: [deviceMaintenanceAlerts.resolvedBy],
+    references: [users.id]
+  }),
+  silencedByUser: one(users, {
+    fields: [deviceMaintenanceAlerts.silencedBy],
+    references: [users.id]
+  })
+}));
+
+export const deviceMaintenanceSchedulesRelations = relations(deviceMaintenanceSchedules, ({ one }) => ({
+  device: one(devices, {
+    fields: [deviceMaintenanceSchedules.deviceId],
+    references: [devices.id]
+  }),
+  assignedToUser: one(users, {
+    fields: [deviceMaintenanceSchedules.assignedTo],
+    references: [users.id]
+  }),
+  createdByUser: one(users, {
+    fields: [deviceMaintenanceSchedules.createdBy],
+    references: [users.id]
+  }),
+  lastModifiedByUser: one(users, {
+    fields: [deviceMaintenanceSchedules.lastModifiedBy],
+    references: [users.id]
+  })
+}));
 
 // Partner types
 export const insertPartnerSchema = createInsertSchema(partners).omit({ 
