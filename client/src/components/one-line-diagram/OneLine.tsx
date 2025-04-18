@@ -345,6 +345,15 @@ const OneLineDiagram = () => {
       refetchInterval: 10000, // Auto refetch every 10 seconds
     });
     
+  // Query for device telemetry data
+  const { data: deviceTelemetry, isLoading: isLoadingTelemetry, error: telemetryError, refetch: refetchTelemetry } = 
+    useQuery<Record<string, any>>({ 
+      queryKey: [`/api/sites/${currentSiteId}/telemetry`], 
+      enabled: !!currentSiteId,
+      staleTime: 5000, // 5 seconds
+      refetchInterval: 10000, // Auto refetch every 10 seconds
+    });
+    
   // Function to manually refresh data
   const refreshData = useCallback(() => {
     refetchDevices();
