@@ -867,6 +867,235 @@ export class DeviceManagementService {
       .filter(device => device.type === type);
   }
   
+  // Get device telemetry history
+  async getDeviceTelemetryHistory(
+    deviceId: number, 
+    startDate: Date, 
+    endDate: Date
+  ): Promise<any[]> {
+    // In a production environment, this would query a time-series database
+    // For this implementation, we'll generate simulated telemetry data based on device type
+    const device = this.getDevice(deviceId);
+    if (!device) {
+      return [];
+    }
+    
+    const telemetryData = [];
+    const hours = Math.ceil((endDate.getTime() - startDate.getTime()) / (60 * 60 * 1000));
+    
+    // Generate hourly telemetry data
+    for (let i = 0; i < hours; i++) {
+      const timestamp = new Date(startDate.getTime() + (i * 60 * 60 * 1000));
+      
+      // Base telemetry record
+      const telemetry: any = {
+        deviceId,
+        timestamp,
+        status: Math.random() > 0.05 ? 'online' : 'offline', // 95% uptime
+      };
+      
+      // Add device-specific metrics
+      switch (device.type) {
+        case 'solar_pv':
+          // Solar production follows a bell curve during daylight hours
+          const solarHour = timestamp.getHours();
+          const isDaylight = solarHour >= 6 && solarHour <= 18;
+          const peakProduction = isDaylight ? 
+            Math.sin(Math.PI * (solarHour - 6) / 12) * (device.specs?.capacity || 5) : 0;
+          
+          telemetry.power_output = Math.max(0, peakProduction * (0.7 + Math.random() * 0.3));
+          telemetry.dc_voltage = 300 + Math.random() * 50;
+          telemetry.dc_current = telemetry.power_output / telemetry.dc_voltage;
+          telemetry.ac_voltage = 230 + Math.random() * 10;
+          telemetry.efficiency = 90 + Math.random() * 8;
+          telemetry.temperature = 25 + Math.random() * 20;
+          telemetry.error_flags = Math.random() > 0.97 ? 1 : 0; // 3% error rate
+          break;
+          
+        case 'battery_storage':
+          // Battery state of charge cycles throughout the day
+          const hourOfDay = timestamp.getHours();
+          
+          // Charge during solar production hours, discharge during evening peak
+          let socTrend = 0;
+          if (hourOfDay >= 9 && hourOfDay <= 15) {
+            socTrend = 0.5; // Charging during solar hours
+          } else if (hourOfDay >= 17 && hourOfDay <= 22) {
+            socTrend = -1; // Discharging during evening peak
+          }
+          
+          telemetry.state_of_charge = 30 + Math.random() * 70; // 30-100%
+          telemetry.power_output = socTrend < 0 ? (device.specs?.capacity || 10) * 0.8 : 0;
+          telemetry.power_input = socTrend > 0 ? (device.specs?.capacity || 10) * 0.8 : 0;
+          telemetry.voltage = 48 + Math.random() * 5;
+          telemetry.temperature = 20 + Math.random() * 15;
+          telemetry.charge_cycles = 100 + Math.floor(Math.random() * 50);
+          telemetry.error_flags = Math.random() > 0.98 ? 1 : 0; // 2% error rate
+          break;
+          
+        case 'ev_charger':
+          // EV charger has random charging sessions throughout the day
+          const isCharging = Math.random() > 0.7; // 30% chance of active charging
+          
+          telemetry.status = isCharging ? 'active' : 'idle';
+          telemetry.power_output = isCharging ? (device.specs?.capacity || 7.4) * (0.8 + Math.random() * 0.2) : 0;
+          telemetry.voltage = 230 + Math.random() * 10;
+          telemetry.current = isCharging ? telemetry.power_output * 1000 / telemetry.voltage : 0;
+          telemetry.session_id = isCharging ? `session_${deviceId}_${timestamp.getTime()}` : null;
+          telemetry.session_duration = isCharging ? Math.random() * 120 : 0; // minutes
+          telemetry.energy_delivered = isCharging ? telemetry.power_output * (telemetry.session_duration / 60) : 0;
+          telemetry.error_flags = Math.random() > 0.98 ? 1 : 0; // 2% error rate
+          break;
+          
+        case 'smart_meter':
+          // Smart meter consumption patterns based on time of day
+          const meterHour = timestamp.getHours();
+          let loadFactor = 0.5; // baseline load
+          
+          // Morning peak
+          if (meterHour >= 6 && meterHour <= 9) {
+            loadFactor = 0.8 + Math.random() * 0.2;
+          } 
+          // Evening peak
+          else if (meterHour >= 17 && meterHour <= 22) {
+            loadFactor = 0.9 + Math.random() * 0.3;
+          }
+          // Night low
+          else if (meterHour >= 23 || meterHour <= 5) {
+            loadFactor = 0.2 + Math.random() * 0.2;
+          }
+          
+          telemetry.power_consumption = 2 * loadFactor * (0.8 + Math.random() * 0.4);
+          telemetry.voltage = 230 + Math.random() * 10;
+          telemetry.current = telemetry.power_consumption * 1000 / telemetry.voltage;
+          telemetry.frequency = 50 + (Math.random() * 0.2 - 0.1);
+          telemetry.power_factor = 0.9 + Math.random() * 0.1;
+          telemetry.error_flags = Math.random() > 0.99 ? 1 : 0; // 1% error rate
+          break;
+          
+        case 'heat_pump':
+          // Heat pump operation varies with outdoor temperature
+          const isHeating = Math.random() > 0.4; // 60% chance of operation
+          const outdoorTemp = 5 + Math.random() * 25; // 5-30°C
+          
+          telemetry.status = isHeating ? 'active' : 'idle';
+          telemetry.power_consumption = isHeating ? (device.specs?.capacity || 3) * (0.7 + Math.random() * 0.3) : 0.1;
+          telemetry.outdoor_temperature = outdoorTemp;
+          telemetry.indoor_temperature = 20 + Math.random() * 5;
+          telemetry.target_temperature = 21 + Math.random() * 3;
+          telemetry.cop = 3 + Math.random() * 2; // Coefficient of Performance
+          telemetry.flow_temperature = isHeating ? 35 + Math.random() * 10 : outdoorTemp;
+          telemetry.return_temperature = isHeating ? telemetry.flow_temperature - 5 - Math.random() * 3 : outdoorTemp;
+          telemetry.error_flags = Math.random() > 0.97 ? 1 : 0; // 3% error rate
+          break;
+          
+        default:
+          // Generic device telemetry
+          telemetry.power = Math.random() * 2;
+          telemetry.error_flags = Math.random() > 0.95 ? 1 : 0; // 5% error rate
+      }
+      
+      telemetryData.push(telemetry);
+    }
+    
+    return telemetryData;
+  }
+  
+  // Get maintenance records for a device
+  async getMaintenanceRecords(deviceId: number): Promise<any[]> {
+    // In a production environment, this would query a database
+    // For now, we'll generate simulated maintenance records
+    const device = this.getDeviceById(deviceId);
+    if (!device) {
+      return [];
+    }
+    
+    // Generate some random maintenance records
+    const numRecords = Math.floor(Math.random() * 4); // 0-3 records
+    const records = [];
+    
+    for (let i = 0; i < numRecords; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - Math.floor(Math.random() * 365)); // Random date in the past year
+      
+      records.push({
+        id: `maint_${deviceId}_${i}`,
+        deviceId,
+        date: date.toISOString(),
+        technician: `Technician ${Math.floor(Math.random() * 5) + 1}`,
+        description: getRandomMaintenanceDescription(device.type),
+        cost: Math.floor(Math.random() * 500) + 50,
+        duration: Math.floor(Math.random() * 120) + 30, // 30-150 minutes
+        status: 'completed'
+      });
+    }
+    
+    // Sort by date (most recent first)
+    return records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+  
+  // Get site energy consumption data
+  async getSiteEnergyConsumption(
+    siteId: number, 
+    startDate: Date, 
+    endDate: Date
+  ): Promise<any[]> {
+    // In a production environment, this would query a time-series database
+    // For now, we'll simulate site consumption data
+    
+    // Get smart meters at the site
+    const meters = this.getDevicesBySiteAndType(siteId, 'smart_meter');
+    if (meters.length === 0) {
+      return [];
+    }
+    
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
+    const consumptionData = [];
+    
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      const dateString = date.toISOString().split('T')[0];
+      
+      // Base consumption depends on number of meters and day of week
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      const baseConsumption = meters.length * (isWeekend ? 15 : 12); // kWh per meter
+      
+      // Daily variation factor
+      const dailyFactor = 0.85 + Math.random() * 0.3;
+      
+      // Calculate total consumption with variation
+      const totalConsumption = baseConsumption * dailyFactor;
+      
+      // Time-of-day consumption breakdown
+      const peakConsumption = totalConsumption * 0.45; // 45% during peak hours
+      const offPeakConsumption = totalConsumption * 0.25; // 25% during off-peak
+      const standardConsumption = totalConsumption * 0.3; // 30% during standard hours
+      
+      // Calculate cost based on time-of-use pricing
+      const peakPrice = 0.25; // $/kWh
+      const standardPrice = 0.15; // $/kWh
+      const offPeakPrice = 0.08; // $/kWh
+      
+      const cost = 
+        (peakConsumption * peakPrice) +
+        (standardConsumption * standardPrice) +
+        (offPeakConsumption * offPeakPrice);
+      
+      consumptionData.push({
+        date: dateString,
+        totalConsumption,
+        peakConsumption,
+        standardConsumption,
+        offPeakConsumption,
+        cost,
+        meterCount: meters.length
+      });
+    }
+    
+    return consumptionData;
+  }
+  
   // Add a new device
   addDevice(device: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Device {
     const newDevice = this.deviceRegistry.addDevice(device);
@@ -1277,6 +1506,66 @@ export class DeviceManagementService {
 let deviceManagementServiceInstance: DeviceManagementService | null = null;
 
 // Initialize the device management service
+// Helper function to get random maintenance descriptions based on device type
+function getRandomMaintenanceDescription(deviceType: DeviceType): string {
+  const descriptions: Record<string, string[]> = {
+    'solar_pv': [
+      'Panel cleaning and inspection',
+      'Inverter firmware update',
+      'DC connector replacement',
+      'Damaged panel replacement',
+      'Inverter cooling system maintenance'
+    ],
+    'battery_storage': [
+      'Battery management system diagnostics',
+      'Thermal management system check',
+      'Firmware update',
+      'Cell balancing operation',
+      'Preventive terminal inspection'
+    ],
+    'ev_charger': [
+      'Cable and connector inspection',
+      'Firmware update',
+      'Safety system test',
+      'Communication module replacement',
+      'Physical damage repair'
+    ],
+    'smart_meter': [
+      'Calibration check',
+      'Communication module inspection',
+      'Firmware update',
+      'Seal replacement',
+      'Terminal connection check'
+    ],
+    'heat_pump': [
+      'Refrigerant pressure check',
+      'Coil cleaning',
+      'Control system inspection',
+      'Filter replacement',
+      'Compressor maintenance'
+    ],
+    'gateway': [
+      'Firmware update',
+      'Network configuration update',
+      'Antenna replacement',
+      'Security audit',
+      'Hardware diagnostics'
+    ]
+  };
+
+  // Get descriptions for device type or use generic descriptions as fallback
+  const options = descriptions[deviceType] || [
+    'Regular maintenance',
+    'Firmware update',
+    'Hardware inspection',
+    'Connectivity troubleshooting',
+    'Component replacement'
+  ];
+
+  // Return a random description
+  return options[Math.floor(Math.random() * options.length)];
+}
+
 export function initDeviceManagementService(config?: DeviceManagementConfig): DeviceManagementService {
   if (!deviceManagementServiceInstance) {
     deviceManagementServiceInstance = new DeviceManagementService(config);
