@@ -861,6 +861,12 @@ export class DeviceManagementService {
     return this.deviceRegistry.getDevicesByType(type);
   }
   
+  // Get devices by site and type
+  getDevicesBySiteAndType(siteId: number, type: DeviceType): Device[] {
+    return this.deviceRegistry.getDevicesBySite(siteId)
+      .filter(device => device.type === type);
+  }
+  
   // Add a new device
   addDevice(device: Omit<Device, 'id' | 'createdAt' | 'updatedAt'>): Device {
     const newDevice = this.deviceRegistry.addDevice(device);
@@ -1108,6 +1114,65 @@ export class DeviceManagementService {
     // In production, compute hash and compare
     const providedKeyHash = createHash('sha256').update(apiKey).digest('hex');
     return device.authCredentials.apiKeyHash === providedKeyHash;
+  }
+  
+  // Send command to a device
+  async sendDeviceCommand(deviceId: number, command: any): Promise<boolean> {
+    const device = this.deviceRegistry.getDevice(deviceId);
+    if (!device) {
+      console.error(`Cannot send command to non-existent device: ${deviceId}`);
+      return false;
+    }
+    
+    // Log the command attempt
+    console.log(`Sending command to device ${deviceId} (${device.type}): ${JSON.stringify(command)}`);
+    
+    try {
+      // For MQTT devices, publish to the command topic
+      if (device.protocol === 'mqtt') {
+        const commandTopic = formatTopic(TOPIC_PATTERNS.COMMANDS, { deviceId: deviceId.toString() });
+        await this.mqttService.publish(commandTopic, {
+          messageType: 'command',
+          timestamp: new Date().toISOString(),
+          command,
+          deviceId
+        });
+        return true;
+      }
+      
+      // For other protocol types, use specific protocol managers
+      switch (device.protocol) {
+        case 'modbus':
+          return await getModbusManager().sendCommand(deviceId, command);
+          
+        case 'ocpp':
+          return await ocppManager.sendCommand(deviceId, command);
+          
+        case 'tcpip':
+          return await getTCPIPManager().sendCommand(deviceId, command);
+          
+        case 'gateway':
+          return await getGatewayManager().sendCommandToDevice(deviceId, command);
+          
+        case 'sunspec':
+          return await sunspecManager.sendCommand(deviceId, command);
+          
+        case 'eebus':
+          return await getEEBusManager().sendCommand(deviceId, command);
+          
+        case 'rest':
+          // Implement REST API calls here
+          console.log(`REST commands not fully implemented for device ${deviceId}`);
+          return false;
+          
+        default:
+          console.error(`Unknown protocol ${device.protocol} for device ${deviceId}`);
+          return false;
+      }
+    } catch (error) {
+      console.error(`Error sending command to device ${deviceId}:`, error);
+      return false;
+    }
   }
   
   // Helper to get capabilities based on device type
