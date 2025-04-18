@@ -615,7 +615,7 @@ export function formatTopic(pattern: string, params: Record<string, any>): strin
   let formattedTopic = pattern;
   
   for (const [key, value] of Object.entries(params)) {
-    formattedTopic = formattedTopic.replace(`:${key}`, value.toString());
+    formattedTopic = formattedTopic.replace(`{${key}}`, value.toString());
   }
   
   return formattedTopic;
