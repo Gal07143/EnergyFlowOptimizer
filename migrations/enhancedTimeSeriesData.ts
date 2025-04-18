@@ -30,6 +30,25 @@ export async function runMigration(client: Client) {
     `;
     await client.query(energyReadingsAlterColumns);
     console.log('Enhanced energy_readings table');
+    
+    // Add new columns to device_readings table
+    const deviceReadingsAlterColumns = `
+      ALTER TABLE device_readings
+      ADD COLUMN IF NOT EXISTS status_code INTEGER,
+      ADD COLUMN IF NOT EXISTS operational_mode TEXT,
+      ADD COLUMN IF NOT EXISTS sampling_rate TEXT DEFAULT 'medium',
+      ADD COLUMN IF NOT EXISTS data_quality TEXT DEFAULT 'validated',
+      ADD COLUMN IF NOT EXISTS storage_tier TEXT DEFAULT 'hot',
+      ADD COLUMN IF NOT EXISTS retention_category TEXT DEFAULT 'standard',
+      ADD COLUMN IF NOT EXISTS is_aggregated BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS aggregation_period TEXT,
+      ADD COLUMN IF NOT EXISTS aggregation_method TEXT,
+      ADD COLUMN IF NOT EXISTS source_readings JSONB,
+      ADD COLUMN IF NOT EXISTS additional_data JSONB,
+      ADD COLUMN IF NOT EXISTS processing_metadata JSONB;
+    `;
+    await client.query(deviceReadingsAlterColumns);
+    console.log('Enhanced device_readings table');
 
     // Create the event category enum type if it doesn't exist
     const eventCategoryEnumCreate = `

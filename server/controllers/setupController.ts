@@ -232,7 +232,9 @@ export const createDemoData = async (req: Request, res: Response) => {
       current: 24.3,
       temperature: 42.5,
       stateOfCharge: null,
-      frequency: null
+      frequency: null,
+      statusCode: 0,
+      operationalMode: 'normal'
     });
     
     const batteryReading = await storage.createDeviceReading({
@@ -244,7 +246,9 @@ export const createDemoData = async (req: Request, res: Response) => {
       voltage: 48.2,
       current: 58.1,
       temperature: 32.8,
-      frequency: null
+      frequency: null,
+      statusCode: 0,
+      operationalMode: 'discharging'
     });
     
     const evReading = await storage.createDeviceReading({
@@ -256,7 +260,9 @@ export const createDemoData = async (req: Request, res: Response) => {
       current: 32.2,
       stateOfCharge: 67,
       frequency: null,
-      temperature: null
+      temperature: null,
+      statusCode: 0,
+      operationalMode: 'charging'
     });
     
     const meterReading = await storage.createDeviceReading({
@@ -268,7 +274,9 @@ export const createDemoData = async (req: Request, res: Response) => {
       current: 13.9,
       frequency: 49.9,
       stateOfCharge: null,
-      temperature: null
+      temperature: null,
+      statusCode: 0,
+      operationalMode: 'metering'
     });
     
     // Create demand response demo data
