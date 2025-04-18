@@ -28,6 +28,12 @@ export function initWebSocketServer(server: Server) {
     path: '/ws',
     // Increase the timeout to prevent premature connection closures
     clientTracking: true,
+    // Set WebSocket server to handle CORS verification
+    verifyClient: (info, callback) => {
+      // Accept connections from all origins in development
+      console.log('WebSocket connection attempt from origin:', info.origin);
+      callback(true); // Accept the connection
+    },
     // WebSocket server configuration
     perMessageDeflate: {
       zlibDeflateOptions: {
