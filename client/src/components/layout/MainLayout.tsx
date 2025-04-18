@@ -17,7 +17,9 @@ import {
   ChevronLeft,
   LogOut,
   Menu,
-  MapPin
+  MapPin,
+  AlertTriangle,
+  Wrench
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -152,6 +154,12 @@ const energyItems = [
     title: 'Battery Arbitrage',
     icon: <Battery className="h-5 w-5" />,
     href: '/battery-arbitrage',
+    badge: { text: 'New', variant: 'default' as const }
+  },
+  {
+    title: 'Predictive Maintenance',
+    icon: <Wrench className="h-5 w-5" />,
+    href: '/predictive-maintenance',
     badge: { text: 'New', variant: 'default' as const }
   },
   {
@@ -502,7 +510,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                energyItems.find(item => item.href === location)?.title ||
                (location.startsWith('/electrical-diagrams/') ? 'Electrical Diagram' : 
                 location === '/one-line-diagram' ? 'One-Line Diagram' : 
-                location === '/battery-arbitrage' ? 'Battery Arbitrage' : 'Dashboard')}
+                location === '/battery-arbitrage' ? 'Battery Arbitrage' :
+                location === '/predictive-maintenance' ? 'Predictive Maintenance' : 'Dashboard')}
             </h1>
           </div>
           

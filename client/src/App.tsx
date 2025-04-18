@@ -20,6 +20,7 @@ import DeviceRegistryPage from "@/pages/DeviceRegistryPage";
 import ElectricalDiagramPage from "@/pages/electrical-diagram-page";
 import OneLineDiagramPage from "@/pages/one-line-diagram/OneLineDiagramPage";
 import GatewayManagementPage from "@/pages/GatewayManagementPage";
+import PredictiveMaintenancePage from "@/pages/predictive-maintenance-page";
 import DiagnosticPage from "@/pages/diagnostic/DiagnosticPage";
 import { WebSocketStatus } from "@/components/ui/websocket-status";
 import { useEffect } from "react";
@@ -66,6 +67,7 @@ function Router() {
       <ProtectedPageWithLayout path="/optimization" component={OptimizationDashboard} />
       <ProtectedPageWithLayout path="/vpp" component={OptimizationDashboard} />
       <ProtectedPageWithLayout path="/battery-arbitrage" component={BatteryArbitragePage} />
+      <ProtectedPageWithLayout path="/predictive-maintenance" component={PredictiveMaintenancePage} />
       <ProtectedPageWithLayout path="/reports" component={ReportsPage} />
       <ProtectedPageWithLayout path="/weather" component={Weather} />
       <ProtectedPageWithLayout path="/demand-response" component={DemandResponse} />
