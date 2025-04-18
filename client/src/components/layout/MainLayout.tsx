@@ -38,43 +38,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+// Define badge type to fix type errors
+type BadgeType = { text: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } | null;
+
 // Define sidebar navigation items
 const navItems = [
   {
     title: 'Dashboard',
     icon: <LayoutDashboard className="h-5 w-5" />,
     href: '/',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Energy Flow',
     icon: <Activity className="h-5 w-5" />,
     href: '/energy-flow',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Locations',
     icon: <MapPin className="h-5 w-5" />,
     href: '/locations',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Weather',
     icon: <Sun className="h-5 w-5" />,
     href: '/weather',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Settings',
     icon: <Settings className="h-5 w-5" />,
     href: '/settings',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Users',
     icon: <Users className="h-5 w-5" />,
     href: '/users',
-    badge: null
+    badge: null as BadgeType
   }
 ];
 
@@ -84,55 +87,55 @@ const deviceItems = [
     title: 'All Devices',
     icon: <Plug className="h-5 w-5" />,
     href: '/devices',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Device Registry',
     icon: <Settings className="h-5 w-5" />,
     href: '/device-registry',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Gateways',
     icon: <PlugZap className="h-5 w-5" />,
     href: '/gateways',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Electrical Diagrams',
     icon: <Activity className="h-5 w-5" />,
     href: '/electrical-diagrams',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'One-Line Diagram',
     icon: <PlugZap className="h-5 w-5" />,
     href: '/one-line-diagram',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Battery Storage',
     icon: <Battery className="h-5 w-5" />,
     href: '/devices?type=battery',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'EV Chargers',
     icon: <PlugZap className="h-5 w-5" />,
     href: '/devices?type=ev',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Solar PV',
     icon: <Sun className="h-5 w-5" />,
     href: '/devices?type=solar',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'Smart Meters',
     icon: <Activity className="h-5 w-5" />,
     href: '/devices?type=meter',
-    badge: null
+    badge: null as BadgeType
   }
 ];
 
@@ -142,31 +145,31 @@ const energyItems = [
     title: 'Energy Optimization',
     icon: <Zap className="h-5 w-5" />,
     href: '/optimization',
-    badge: null
+    badge: null as BadgeType
   },
   {
     title: 'VPP Programs',
     icon: <PlugZap className="h-5 w-5" />,
     href: '/vpp',
-    badge: { text: '3', variant: 'outline' as const }
+    badge: { text: '3', variant: 'outline' as const } as BadgeType
   },
   {
     title: 'Battery Arbitrage',
     icon: <Battery className="h-5 w-5" />,
     href: '/battery-arbitrage',
-    badge: { text: 'New', variant: 'default' as const }
+    badge: { text: 'New', variant: 'default' as const } as BadgeType
   },
   {
     title: 'Predictive Maintenance',
     icon: <Wrench className="h-5 w-5" />,
     href: '/predictive-maintenance',
-    badge: { text: 'New', variant: 'default' as const }
+    badge: { text: 'New', variant: 'default' as const } as BadgeType
   },
   {
     title: 'Demand Response',
     icon: <BarChart2 className="h-5 w-5" />,
     href: '/demand-response',
-    badge: null
+    badge: null as BadgeType
   }
 ];
 
