@@ -126,14 +126,29 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
+    console.log("Login attempt for username:", req.body.username);
+    
     passport.authenticate("local", (err: Error | null, user: SelectUser | false, info: { message: string }) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid credentials" });
+      if (err) {
+        console.error("Login error:", err);
+        return next(err);
+      }
       
+      if (!user) {
+        console.log("Authentication failed for:", req.body.username);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      
+      console.log("Authentication successful for:", user.username);
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Session creation error:", err);
+          return next(err);
+        }
+        
         // Remove password from response
         const { password, ...userWithoutPassword } = user;
+        console.log("Login completed successfully for:", user.username);
         res.status(200).json(userWithoutPassword);
       });
     })(req, res, next);
@@ -147,9 +162,16 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    console.log("GET /api/user - isAuthenticated:", req.isAuthenticated());
+    
+    if (!req.isAuthenticated()) {
+      console.log("User not authenticated, returning 401");
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
     // Remove password from response
     const { password, ...userWithoutPassword } = req.user;
+    console.log("Returning authenticated user:", userWithoutPassword.username);
     res.json(userWithoutPassword);
   });
 }

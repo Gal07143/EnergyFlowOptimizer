@@ -1,9 +1,24 @@
 import { Request, Response } from 'express';
 import { GatewayService } from '../services/gatewayService';
 import { MqttService } from '../services/mqttService';
-import { insertDeviceSchema, insertGatewayDeviceSchema } from '@shared/schema';
-import { ZodError } from 'zod';
+import { insertDeviceSchema, insertGatewayDeviceSchema, InsertDevice } from '@shared/schema';
+import { ZodError, z } from 'zod';
 import { createEventLog } from '../services/eventLoggingService';
+
+// Define validation schema for gateway creation
+const createGatewaySchema = z.object({
+  name: z.string().min(1, "Gateway name is required"),
+  manufacturer: z.string().optional(),
+  model: z.string().optional(),
+  protocol: z.enum(['mqtt', 'http']),
+  siteId: z.number().optional(),
+});
+
+// Define type for gateway creation data
+type GatewayData = Partial<InsertDevice> & { 
+  name: string; 
+  type: 'energy_gateway'; 
+};
 
 // Initialize services
 let gatewayService: GatewayService;
@@ -54,22 +69,24 @@ export async function createGateway(req: Request, res: Response) {
   try {
     const { siteId, ...otherData } = req.body;
     
-    // Ensure we have the required fields
-    const validated = insertDeviceSchema.parse({
-      ...otherData,
-      type: 'energy_gateway'
-    });
+    // Validate the incoming data
+    const validatedInput = createGatewaySchema.parse(req.body);
     
-    const siteIdNum = parseInt(siteId, 10);
+    const siteIdNum = parseInt(String(validatedInput.siteId), 10);
     if (isNaN(siteIdNum)) {
       return res.status(400).json({ error: 'Invalid site ID' });
     }
     
-    const gateway = await gatewayService.createGateway(siteIdNum, {
-      ...validated,
-      name: validated.name,
+    // Prepare data for gateway creation
+    const gatewayData: GatewayData = {
+      name: validatedInput.name,
+      manufacturer: validatedInput.manufacturer,
+      model: validatedInput.model,
+      protocol: validatedInput.protocol,
       type: 'energy_gateway'
-    });
+    };
+    
+    const gateway = await gatewayService.createGateway(siteIdNum, gatewayData);
     
     res.status(201).json(gateway);
   } catch (error) {
@@ -134,9 +151,13 @@ export async function connectDevice(req: Request, res: Response) {
       eventType: 'device',
       eventCategory: 'operational',
       message: `Device ${deviceId} connected to gateway ${gatewayId}`,
-      deviceId,
-      metadata: { gatewayId, devicePath }
-    });
+      deviceId: deviceId,
+      siteId: device.siteId,
+      metadata: {
+        gatewayId: gatewayId,
+        devicePath: devicePath || null
+      }
+    } as any);
     
     res.json(device);
   } catch (error) {
@@ -158,9 +179,12 @@ export async function disconnectDevice(req: Request, res: Response) {
       eventType: 'device',
       eventCategory: 'operational',
       message: `Device ${deviceId} disconnected from gateway`,
-      deviceId,
-      metadata: { disconnectedFrom: req.params.id }
-    });
+      deviceId: deviceId,
+      siteId: device.siteId,
+      metadata: { 
+        disconnectedFrom: parseInt(req.params.id, 10)
+      }
+    } as any);
     
     res.json(device);
   } catch (error) {
@@ -186,9 +210,10 @@ export async function testGatewayConnection(req: Request, res: Response) {
     res.json(result);
   } catch (error) {
     console.error(`Error testing connection for gateway ${req.params.id}:`, error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     res.status(500).json({ 
       error: 'Failed to test gateway connection',
-      message: error.message
+      message: errorMessage
     });
   }
 }

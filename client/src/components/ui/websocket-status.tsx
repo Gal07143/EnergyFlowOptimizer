@@ -15,46 +15,24 @@ interface WebSocketStatusProps {
 }
 
 export function WebSocketStatus({ showBadge = false, showRefresh = false }: WebSocketStatusProps) {
-  const { connectionState, connect } = useWebSocket();
+  const { connected, reconnect } = useWebSocket();
 
-  // Map connection state to colors and icons
+  // Map connection state based on connected status
   const getStatusDetails = () => {
-    switch (connectionState) {
-      case 'connected':
-        return {
-          icon: <Wifi className="h-4 w-4" />,
-          label: 'Connected',
-          badgeVariant: 'default' as const,
-          tooltipText: 'Real-time data connection is active'
-        };
-      case 'connecting':
-        return {
-          icon: <RefreshCw className="h-4 w-4 animate-spin" />,
-          label: 'Connecting',
-          badgeVariant: 'secondary' as const,
-          tooltipText: 'Establishing real-time data connection'
-        };
-      case 'disconnected':
-        return {
-          icon: <WifiOff className="h-4 w-4" />,
-          label: 'Disconnected',
-          badgeVariant: 'outline' as const,
-          tooltipText: 'Not connected to real-time data'
-        };
-      case 'error':
-        return {
-          icon: <AlertTriangle className="h-4 w-4" />,
-          label: 'Error',
-          badgeVariant: 'destructive' as const,
-          tooltipText: 'Connection error'
-        };
-      default:
-        return {
-          icon: <WifiOff className="h-4 w-4" />,
-          label: 'Unknown',
-          badgeVariant: 'outline' as const,
-          tooltipText: 'Connection status unknown'
-        };
+    if (connected) {
+      return {
+        icon: <Wifi className="h-4 w-4" />,
+        label: 'Connected',
+        badgeVariant: 'default' as const,
+        tooltipText: 'Real-time data connection is active'
+      };
+    } else {
+      return {
+        icon: <WifiOff className="h-4 w-4" />,
+        label: 'Disconnected',
+        badgeVariant: 'outline' as const,
+        tooltipText: 'Not connected to real-time data'
+      };
     }
   };
 
@@ -74,12 +52,12 @@ export function WebSocketStatus({ showBadge = false, showRefresh = false }: WebS
               <span className="flex items-center">{icon}</span>
             )}
             
-            {showRefresh && connectionState !== 'connected' && connectionState !== 'connecting' && (
+            {showRefresh && !connected && (
               <Button 
                 variant="ghost" 
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => connect()}
+                onClick={() => reconnect()}
               >
                 <RefreshCw className="h-4 w-4" />
               </Button>

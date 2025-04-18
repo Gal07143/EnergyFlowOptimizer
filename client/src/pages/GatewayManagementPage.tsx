@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // UI Components
 import {
@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, PlusCircle, Search, Router, Wifi, ExternalLink, Server, Power, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GatewayWizard } from "@/components/gateways/GatewayWizard";
@@ -112,6 +113,16 @@ interface Gateway {
   lastConnectionTime?: string;
   protocol?: string;
   connectedDevices?: number;
+}
+
+interface Device {
+  id: number;
+  name: string;
+  manufacturer?: string;
+  model?: string;
+  type?: string;
+  status?: string;
+  devicePath?: string;
 }
 
 export default function GatewayManagementPage() {
@@ -287,12 +298,39 @@ export default function GatewayManagementPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
+                              onClick={async () => {
                                 // Handle test connection
                                 toast({
                                   title: "Testing Connection",
                                   description: `Testing connection to ${gateway.name}...`,
                                 });
+                                
+                                try {
+                                  const response = await apiRequest(
+                                    "POST", 
+                                    `/api/gateways/${gateway.id}/test-connection`
+                                  );
+                                  const result = await response.json();
+                                  
+                                  if (result.success) {
+                                    toast({
+                                      title: "Connection Successful",
+                                      description: `Connected to ${gateway.name} successfully.`,
+                                    });
+                                  } else {
+                                    toast({
+                                      title: "Connection Failed",
+                                      description: result.message || "Could not connect to gateway.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                } catch (error) {
+                                  toast({
+                                    title: "Connection Error",
+                                    description: (error as Error).message || "An error occurred during connection test.",
+                                    variant: "destructive",
+                                  });
+                                }
                               }}
                             >
                               Test
@@ -389,12 +427,39 @@ export default function GatewayManagementPage() {
                   
                   <div className="mt-6">
                     <div className="flex justify-end space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => {
+                      <Button variant="outline" size="sm" onClick={async () => {
                         // Test connection
                         toast({
                           title: "Testing Connection",
                           description: `Testing connection to ${selectedGateway.name}...`,
                         });
+                        
+                        try {
+                          const response = await apiRequest(
+                            "POST", 
+                            `/api/gateways/${selectedGateway.id}/test-connection`
+                          );
+                          const result = await response.json();
+                          
+                          if (result.success) {
+                            toast({
+                              title: "Connection Successful",
+                              description: `Connected to ${selectedGateway.name} successfully.`,
+                            });
+                          } else {
+                            toast({
+                              title: "Connection Failed",
+                              description: result.message || "Could not connect to gateway.",
+                              variant: "destructive",
+                            });
+                          }
+                        } catch (error) {
+                          toast({
+                            title: "Connection Error",
+                            description: (error as Error).message || "An error occurred during connection test.",
+                            variant: "destructive",
+                          });
+                        }
                       }}>
                         Test Connection
                       </Button>
@@ -404,20 +469,143 @@ export default function GatewayManagementPage() {
                 </TabsContent>
                 
                 <TabsContent value="devices" className="p-4">
-                  <div className="text-center py-8">
-                    <Server className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">No Devices Connected</h3>
-                    <p className="text-muted-foreground mt-1 max-w-md mx-auto">
-                      This gateway doesn't have any devices connected to it yet.
-                      Add devices to enable communication through this gateway.
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="mt-4"
-                    >
-                      Connect Devices
-                    </Button>
-                  </div>
+                  {(() => {
+                    // Use a function to fetch connected devices when this tab is active
+                    const {
+                      data: connectedDevices = [],
+                      isLoading: isLoadingDevices,
+                      error: devicesError,
+                    } = useQuery<Device[]>({
+                      queryKey: [`/api/gateways/${selectedGateway.id}/devices`],
+                      queryFn: async () => {
+                        const response = await apiRequest("GET", `/api/gateways/${selectedGateway.id}/devices`);
+                        return await response.json();
+                      },
+                      enabled: !!selectedGateway, // Only run when a gateway is selected
+                    });
+                    
+                    if (isLoadingDevices) {
+                      return (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                      );
+                    }
+                    
+                    if (devicesError) {
+                      return (
+                        <Alert variant="destructive" className="my-4">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertTitle>Error</AlertTitle>
+                          <AlertDescription>
+                            Failed to load connected devices: {(devicesError as Error).message}
+                          </AlertDescription>
+                        </Alert>
+                      );
+                    }
+                    
+                    if (connectedDevices.length === 0) {
+                      return (
+                        <div className="text-center py-8">
+                          <Server className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-medium">No Devices Connected</h3>
+                          <p className="text-muted-foreground mt-1 max-w-md mx-auto">
+                            This gateway doesn't have any devices connected to it yet.
+                            Add devices to enable communication through this gateway.
+                          </p>
+                          <Button
+                            variant="outline"
+                            className="mt-4"
+                            onClick={() => {
+                              // Navigate to device registry
+                              window.location.href = "/device-registry?gatewayId=" + selectedGateway.id;
+                            }}
+                          >
+                            Connect Devices
+                          </Button>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Path</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {connectedDevices.map((device: Device) => (
+                              <TableRow key={device.id}>
+                                <TableCell className="font-medium">
+                                  <div>{device.name}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {device.manufacturer} {device.model}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {device.type?.replace('_', ' ')}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <GatewayStatus status={device.status || "unknown"} />
+                                </TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  {device.devicePath || "-"}
+                                </TableCell>
+                                <TableCell>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await apiRequest(
+                                          "DELETE", 
+                                          `/api/gateways/${selectedGateway.id}/disconnect/${device.id}`
+                                        );
+                                        
+                                        if (response.ok) {
+                                          toast({
+                                            title: "Device Disconnected",
+                                            description: `${device.name} has been disconnected from the gateway.`,
+                                          });
+                                          // Refetch devices
+                                          queryClient.invalidateQueries({ 
+                                            queryKey: [`/api/gateways/${selectedGateway.id}/devices`] 
+                                          });
+                                        } else {
+                                          const data = await response.json();
+                                          toast({
+                                            title: "Disconnection Failed",
+                                            description: data.error || "Failed to disconnect device.",
+                                            variant: "destructive",
+                                          });
+                                        }
+                                      } catch (error) {
+                                        toast({
+                                          title: "Error",
+                                          description: (error as Error).message,
+                                          variant: "destructive",
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    Disconnect
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    );
+                  })()}
                 </TabsContent>
                 
                 <TabsContent value="logs" className="p-4">

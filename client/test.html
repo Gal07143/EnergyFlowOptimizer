@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMS Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>Energy Management System - Connection Test</h1>
+    
+    <div class="card">
+        <h2>API Connection Test</h2>
+        <div id="apiStatus" class="status info">Waiting for test...</div>
+        <button id="testApiBtn">Test API Connection</button>
+        <pre id="apiResponse">No response yet</pre>
+    </div>
+    
+    <div class="card">
+        <h2>WebSocket Connection Test</h2>
+        <div id="wsStatus" class="status info">Waiting for test...</div>
+        <button id="testWsBtn">Test WebSocket Connection</button>
+        <pre id="wsResponse">No response yet</pre>
+    </div>
+    
+    <div class="card">
+        <h2>Authentication Test</h2>
+        <div id="authStatus" class="status info">Waiting for test...</div>
+        
+        <div>
+            <label for="username">Username:</label>
+            <input type="text" id="username" value="admin">
+        </div>
+        <div style="margin-top: 8px;">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="adminpassword">
+        </div>
+        
+        <button id="loginBtn" style="margin-top: 16px;">Login</button>
+        <button id="registerBtn">Register</button>
+        <button id="logoutBtn">Logout</button>
+        <button id="userInfoBtn">Get User Info</button>
+        
+        <pre id="authResponse">No response yet</pre>
+    </div>
+
+    <script>
+        // API Test
+        document.getElementById('testApiBtn').addEventListener('click', async () => {
+            const apiStatus = document.getElementById('apiStatus');
+            const apiResponse = document.getElementById('apiResponse');
+            
+            try {
+                apiStatus.textContent = 'Testing API connection...';
+                apiStatus.className = 'status info';
+                
+                const response = await fetch('/api/healthcheck');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    apiStatus.textContent = 'API connection successful!';
+                    apiStatus.className = 'status success';
+                } else {
+                    apiStatus.textContent = `API Error: ${response.status} ${response.statusText}`;
+                    apiStatus.className = 'status error';
+                }
+                
+                apiResponse.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                apiStatus.textContent = `API Connection Error: ${error.message}`;
+                apiStatus.className = 'status error';
+                apiResponse.textContent = error.toString();
+            }
+        });
+        
+        // WebSocket Test
+        document.getElementById('testWsBtn').addEventListener('click', () => {
+            const wsStatus = document.getElementById('wsStatus');
+            const wsResponse = document.getElementById('wsResponse');
+            
+            wsStatus.textContent = 'Testing WebSocket connection...';
+            wsStatus.className = 'status info';
+            
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws`;
+                const socket = new WebSocket(wsUrl);
+                
+                wsResponse.textContent = `Attempting to connect to ${wsUrl}...`;
+                
+                socket.onopen = function() {
+                    wsStatus.textContent = 'WebSocket connection successful!';
+                    wsStatus.className = 'status success';
+                    wsResponse.textContent += '\nConnection established!';
+                    
+                    // Send a test message
+                    const testMessage = {
+                        type: 'ping',
+                        timestamp: new Date().toISOString()
+                    };
+                    socket.send(JSON.stringify(testMessage));
+                    wsResponse.textContent += `\nSent: ${JSON.stringify(testMessage)}`;
+                };
+                
+                socket.onmessage = function(event) {
+                    wsResponse.textContent += `\nReceived: ${event.data}`;
+                };
+                
+                socket.onerror = function(error) {
+                    wsStatus.textContent = 'WebSocket connection error';
+                    wsStatus.className = 'status error';
+                    wsResponse.textContent += `\nError: ${JSON.stringify(error)}`;
+                };
+                
+                socket.onclose = function(event) {
+                    if (event.wasClean) {
+                        wsStatus.textContent = `WebSocket connection closed cleanly, code=${event.code} reason=${event.reason}`;
+                        wsStatus.className = 'status warning';
+                    } else {
+                        // e.g. server process killed or network down
+                        wsStatus.textContent = 'WebSocket connection died';
+                        wsStatus.className = 'status error';
+                    }
+                    wsResponse.textContent += `\nConnection closed: code=${event.code}, reason=${event.reason}`;
+                };
+            } catch (error) {
+                wsStatus.textContent = `WebSocket Error: ${error.message}`;
+                wsStatus.className = 'status error';
+                wsResponse.textContent = error.toString();
+            }
+        });
+        
+        // Authentication Tests
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const authStatus = document.getElementById('authStatus');
+            const authResponse = document.getElementById('authResponse');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            authStatus.textContent = 'Attempting login...';
+            authStatus.className = 'status info';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authStatus.textContent = 'Login successful!';
+                    authStatus.className = 'status success';
+                } else {
+                    authStatus.textContent = `Login failed: ${data.message || response.statusText}`;
+                    authStatus.className = 'status error';
+                }
+                
+                authResponse.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                authStatus.textContent = `Login error: ${error.message}`;
+                authStatus.className = 'status error';
+                authResponse.textContent = error.toString();
+            }
+        });
+        
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            const authStatus = document.getElementById('authStatus');
+            const authResponse = document.getElementById('authResponse');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            authStatus.textContent = 'Attempting registration...';
+            authStatus.className = 'status info';
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        email: `${username}@example.com`,
+                        role: 'user'
+                    }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authStatus.textContent = 'Registration successful!';
+                    authStatus.className = 'status success';
+                } else {
+                    authStatus.textContent = `Registration failed: ${data.message || response.statusText}`;
+                    authStatus.className = 'status error';
+                }
+                
+                authResponse.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                authStatus.textContent = `Registration error: ${error.message}`;
+                authStatus.className = 'status error';
+                authResponse.textContent = error.toString();
+            }
+        });
+        
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            const authStatus = document.getElementById('authStatus');
+            const authResponse = document.getElementById('authResponse');
+            
+            authStatus.textContent = 'Logging out...';
+            authStatus.className = 'status info';
+            
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    authStatus.textContent = 'Logout successful!';
+                    authStatus.className = 'status success';
+                    authResponse.textContent = 'User logged out successfully';
+                } else {
+                    const data = await response.json();
+                    authStatus.textContent = `Logout failed: ${data.message || response.statusText}`;
+                    authStatus.className = 'status error';
+                    authResponse.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                authStatus.textContent = `Logout error: ${error.message}`;
+                authStatus.className = 'status error';
+                authResponse.textContent = error.toString();
+            }
+        });
+        
+        document.getElementById('userInfoBtn').addEventListener('click', async () => {
+            const authStatus = document.getElementById('authStatus');
+            const authResponse = document.getElementById('authResponse');
+            
+            authStatus.textContent = 'Getting user info...';
+            authStatus.className = 'status info';
+            
+            try {
+                const response = await fetch('/api/user', {
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authStatus.textContent = 'User info retrieved successfully!';
+                    authStatus.className = 'status success';
+                } else {
+                    authStatus.textContent = `Failed to get user info: ${data.message || response.statusText}`;
+                    authStatus.className = 'status error';
+                }
+                
+                authResponse.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                authStatus.textContent = `User info error: ${error.message}`;
+                authStatus.className = 'status error';
+                authResponse.textContent = error.toString();
+            }
+        });
+    </script>
+</body>
+</html>

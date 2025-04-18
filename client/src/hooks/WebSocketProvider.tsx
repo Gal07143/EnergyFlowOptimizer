@@ -26,39 +26,70 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       // Create WebSocket connection
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws`;
-      console.log('Connecting to WebSocket at', wsUrl);
+      console.log('Attempting to connect to WebSocket at', wsUrl);
       
+      // Create a new socket with extended timeout
       const newSocket = new WebSocket(wsUrl);
+      
+      // Set a connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (newSocket.readyState !== WebSocket.OPEN) {
+          console.log('WebSocket connection timeout, closing socket');
+          newSocket.close();
+        }
+      }, 10000); // 10 second timeout
       
       // Connection opened
       newSocket.addEventListener('open', () => {
-        console.log('WebSocket connection established');
+        console.log('WebSocket connection established successfully');
+        clearTimeout(connectionTimeout);
         setConnected(true);
         setRetryCount(0);
+        
+        // Send an initial message to verify the connection
+        try {
+          newSocket.send(JSON.stringify({ 
+            type: 'ping', 
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.error('Error sending initial ping:', e);
+        }
       });
       
       // Listen for messages
       newSocket.addEventListener('message', (event) => {
-        // Handle message events
+        // Handle incoming messages
+        try {
+          const data = JSON.parse(event.data);
+          console.log('WebSocket message received:', data.type);
+        } catch (e) {
+          console.error('Error parsing WebSocket message:', e);
+        }
       });
       
-      // Handle errors
+      // Handle errors - log them but don't immediately close
       newSocket.addEventListener('error', (event) => {
         console.error('WebSocket error:', event);
       });
       
       // Connection closed
       newSocket.addEventListener('close', (event) => {
-        console.log(`WebSocket connection closed (code: ${event.code}, reason: ${event.reason})`);
+        console.log(`WebSocket connection closed (code: ${event.code}, reason: ${event.reason || 'No reason provided'})`);
+        clearTimeout(connectionTimeout);
         setConnected(false);
         
-        // Auto-reconnect if not a normal closure and under max retries
-        if (event.code !== 1000 && retryCount < maxRetries) {
-          console.log(`Attempting to reconnect (${retryCount + 1}/${maxRetries})...`);
+        // Auto-reconnect with exponential backoff if under max retries
+        if (retryCount < maxRetries) {
+          const delay = reconnectDelay * Math.pow(1.5, retryCount);
+          console.log(`Attempting to reconnect (${retryCount + 1}/${maxRetries}) in ${delay}ms...`);
+          
           setTimeout(() => {
             setRetryCount(prev => prev + 1);
             connect();
-          }, reconnectDelay);
+          }, delay);
+        } else {
+          console.log('Maximum retry attempts reached. Please try reconnecting manually.');
         }
       });
       
@@ -66,12 +97,15 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       
       // Clean up on unmount
       return () => {
-        newSocket.close();
+        clearTimeout(connectionTimeout);
+        if (newSocket && newSocket.readyState === WebSocket.OPEN) {
+          newSocket.close(1000, 'Component unmounted');
+        }
       };
     } catch (error) {
       console.error('Failed to establish WebSocket connection:', error);
     }
-  }, [retryCount]);
+  }, [retryCount, reconnectDelay, maxRetries]);
 
   // Initial connection
   useEffect(() => {

@@ -100,7 +100,7 @@ export function initWebSocketServer(server: Server) {
 
   // Set up WebSocket server connection handler
   wss.on('connection', (ws: WebSocket, req) => {
-    console.log('WebSocket client connected');
+    console.log('WebSocket client connected', req.url);
     
     // Generate a unique connection ID
     const connectionId = generateConnectionId();
@@ -113,6 +113,9 @@ export function initWebSocketServer(server: Server) {
       lastActivity: new Date(),
       isAlive: true
     };
+    
+    // Accept all WebSocket connections - we'll handle authentication via messages
+    // This is a development setting - in production we would add authentication checks
     
     // Add to active connections
     activeConnections.push(connection);

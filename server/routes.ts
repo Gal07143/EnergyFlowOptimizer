@@ -41,6 +41,17 @@ import * as gatewayController from './controllers/gatewayController';
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
+  // Add a health check endpoint that doesn't require authentication
+  app.get('/api/healthcheck', (req, res) => {
+    console.log('Health check request received');
+    res.json({ 
+      status: 'ok', 
+      time: new Date().toISOString(),
+      service: 'Energy Management System API',
+      environment: process.env.NODE_ENV || 'development' 
+    });
+  });
+  
   // Initialize WebSocket server
   const wss = initWebSocketServer(httpServer);
   
