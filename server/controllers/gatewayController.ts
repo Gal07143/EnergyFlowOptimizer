@@ -52,13 +52,24 @@ export async function getGatewayById(req: Request, res: Response) {
  */
 export async function createGateway(req: Request, res: Response) {
   try {
+    const { siteId, ...otherData } = req.body;
+    
+    // Ensure we have the required fields
     const validated = insertDeviceSchema.parse({
-      ...req.body,
+      ...otherData,
       type: 'energy_gateway'
     });
     
-    const siteId = parseInt(req.body.siteId, 10);
-    const gateway = await gatewayService.createGateway(siteId, validated);
+    const siteIdNum = parseInt(siteId, 10);
+    if (isNaN(siteIdNum)) {
+      return res.status(400).json({ error: 'Invalid site ID' });
+    }
+    
+    const gateway = await gatewayService.createGateway(siteIdNum, {
+      ...validated,
+      name: validated.name,
+      type: 'energy_gateway'
+    });
     
     res.status(201).json(gateway);
   } catch (error) {

@@ -1,13 +1,36 @@
 import { db } from '../db';
-import { gatewayDevices, devices, GatewayDevice, InsertGatewayDevice, InsertDevice, Device } from '@shared/schema';
-import { uuid } from 'uuid';
+import { 
+  gatewayDevices, 
+  devices, 
+  InsertDevice, 
+  Device, 
+  insertGatewayDeviceSchema
+} from '@shared/schema';
+import { v4 as uuidv4 } from 'uuid';
 import { and, eq } from 'drizzle-orm';
 import { MqttService } from './mqttService';
 import { EventEmitter } from 'events';
 import axios from 'axios';
 import net from 'net';
-import { generateRandomString, generateApiKey } from '../utils/securityUtils';
 import { createEventLog } from './eventLoggingService';
+import { z } from 'zod';
+
+// Define the InsertGatewayDevice type using the Zod schema
+type InsertGatewayDevice = z.infer<typeof insertGatewayDeviceSchema>;
+
+// Helper functions for security
+const generateRandomString = (length: number): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+const generateApiKey = (): string => {
+  return `gw_${uuidv4().replace(/-/g, '')}`;
+};
 
 // Gateway connection status event emitter
 const gatewayEvents = new EventEmitter();
@@ -439,21 +462,6 @@ export class GatewayService {
     
     return credentials;
   }
-}
-
-// Helper function for testing if not available in utils
-function generateRandomString(length: number): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
-// Helper function for testing if not available in utils
-function generateApiKey(): string {
-  return `gw_${generateRandomString(32)}`;
 }
 
 // Export events for other modules to subscribe to

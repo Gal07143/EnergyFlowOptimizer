@@ -36,6 +36,7 @@ import { initConsumptionPatternService } from './services/consumptionPatternServ
 import deviceRegistryRoutes from './routes/deviceRegistry';
 import { electricalDiagramRoutes } from './routes/electricalDiagram';
 import gatewayRoutes from './routes/gatewayRoutes';
+import * as gatewayController from './controllers/gatewayController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -67,6 +68,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Initialize WebSocket publisher to connect MQTT to WebSockets
     const wsPublisher = initWebSocketPublisher();
     console.log('WebSocket publisher service initialized');
+    
+    // Initialize Gateway controller with MQTT service
+    gatewayController.initGatewayController(mqttService);
+    console.log('Gateway controller initialized');
   } catch (error) {
     console.error('Error initializing services:', error);
   }
@@ -504,6 +509,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Electrical diagram routes
   app.use('/api/electrical-diagrams', electricalDiagramRoutes);
+  
+  // Gateway routes
+  app.use('/api/gateways', gatewayRoutes);
   
   // Development endpoint without auth for testing ML models
   app.post('/api/test/consumption-patterns/:id/train', ConsumptionPatternController.trainPatternModel);

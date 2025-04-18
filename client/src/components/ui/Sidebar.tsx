@@ -15,6 +15,7 @@ import {
   Cloud,
   UserCog,
   MapPin,
+  Router,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ export default function Sidebar({ isMobile = false, onClose }: SidebarProps) {
     { path: '/devices/ev', label: 'EV Chargers', icon: PlugZap },
     { path: '/devices/solar', label: 'Solar PV', icon: Sun },
     { path: '/devices/meter', label: 'Smart Meters', icon: Gauge },
+    { path: '/gateways', label: 'Gateways', icon: Router },
   ];
 
   const containerClasses = cn(
