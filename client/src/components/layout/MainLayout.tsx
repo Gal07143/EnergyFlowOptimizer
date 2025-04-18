@@ -115,6 +115,12 @@ const deviceItems = [
     badge: { text: 'New', variant: 'success' as const }
   },
   {
+    title: 'One-Line Diagram',
+    icon: <PlugZap className="h-5 w-5" />,
+    href: '/one-line-diagram',
+    badge: { text: 'New', variant: 'success' as const }
+  },
+  {
     title: 'Battery Storage',
     icon: <Battery className="h-5 w-5" />,
     href: '/devices?type=battery',
@@ -423,7 +429,8 @@ export function MainLayout({ children }: MainLayoutProps) {
             <h1 className="text-xl font-semibold md:block">
               {navItems.find(item => item.href === location)?.title || 
                deviceItems.find(item => item.href === location)?.title || 
-               (location.startsWith('/electrical-diagrams/') ? 'Electrical Diagram' : 'Dashboard')}
+               (location.startsWith('/electrical-diagrams/') ? 'Electrical Diagram' : 
+                location === '/one-line-diagram' ? 'One-Line Diagram' : 'Dashboard')}
             </h1>
           </div>
           

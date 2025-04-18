@@ -16,6 +16,7 @@ import AuthPage from "@/pages/auth-page";
 import EmailVerificationPage from "@/pages/email-verification-page";
 import DeviceRegistryPage from "@/pages/DeviceRegistryPage";
 import ElectricalDiagramPage from "@/pages/electrical-diagram-page";
+import OneLineDiagramPage from "@/pages/one-line-diagram/OneLineDiagramPage";
 import GatewayManagementPage from "@/pages/GatewayManagementPage";
 import DiagnosticPage from "@/pages/diagnostic/DiagnosticPage";
 import { WebSocketStatus } from "@/components/ui/websocket-status";
@@ -56,6 +57,7 @@ function Router() {
       <ProtectedPageWithLayout path="/device-registry" component={DeviceRegistryPage} />
       <ProtectedPageWithLayout path="/electrical-diagrams" component={ElectricalDiagramPage} />
       <ProtectedPageWithLayout path="/electrical-diagrams/:id" component={ElectricalDiagramPage} />
+      <ProtectedPageWithLayout path="/one-line-diagram" component={OneLineDiagramPage} />
       <ProtectedPageWithLayout path="/gateways" component={GatewayManagementPage} />
       <ProtectedPageWithLayout path="/locations" component={LocationsPage} />
       <ProtectedPageWithLayout path="/energy-flow" component={EnergyFlowPage} />
