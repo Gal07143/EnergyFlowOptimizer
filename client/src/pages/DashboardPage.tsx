@@ -324,9 +324,9 @@ export default function DashboardPage() {
                 <TabsContent value="energy" className="pt-4">
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
+                      <AreaChart
                         data={energyConsumptionData}
-                        margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis 
@@ -334,47 +334,66 @@ export default function DashboardPage() {
                           tick={{ fontSize: 12 }}
                         />
                         <YAxis 
-                          yAxisId="left"
                           tick={{ fontSize: 12 }}
                           label={{ value: 'Energy (kWh)', angle: -90, position: 'insideLeft', dx: -10 }}
                         />
-                        <YAxis 
-                          yAxisId="right"
-                          orientation="right"
-                          domain={[-10, 10]}
-                          tick={{ fontSize: 12 }}
-                          label={{ value: 'Net (kWh)', angle: 90, position: 'insideRight', dx: 10 }}
+                        <Tooltip 
+                          formatter={(value, name) => [
+                            `${value} kWh`,
+                            name === 'consumption' ? 'Consumption' : 
+                            name === 'generation' ? 'Generation' : 'Net Grid'
+                          ]}
+                          labelFormatter={(label) => `Date: ${label}`}
                         />
-                        <Tooltip />
-                        <Line 
+                        <Area 
                           type="monotone" 
                           dataKey="consumption" 
-                          yAxisId="left"
+                          stackId="1"
                           stroke="#8b5cf6" 
-                          strokeWidth={2}
+                          fill="#c4b5fd" 
                           name="Consumption"
-                          dot={{ strokeWidth: 2, r: 4 }}
                         />
-                        <Line 
+                        <Area 
                           type="monotone" 
                           dataKey="generation" 
-                          yAxisId="left"
                           stroke="#22c55e" 
-                          strokeWidth={2}
+                          fill="#bbf7d0" 
                           name="Generation"
-                          dot={{ strokeWidth: 2, r: 4 }}
                         />
-                        <Line 
+                        <Area 
                           type="monotone" 
                           dataKey="net" 
-                          yAxisId="right"
                           stroke="#3b82f6" 
-                          strokeWidth={2}
+                          fill="#bfdbfe" 
+                          fillOpacity={0.5}
                           name="Net Grid"
-                          dot={{ strokeWidth: 2, r: 4 }}
                         />
-                      </LineChart>
+                      </AreaChart>
                     </ResponsiveContainer>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4 pt-4">
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <div className="text-xs text-muted-foreground">Daily Generation</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-2xl font-semibold">{energyStats.dailyGeneration} kWh</div>
+                        <SunIcon className="h-8 w-8 text-yellow-500" />
+                      </div>
+                    </div>
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <div className="text-xs text-muted-foreground">Daily Consumption</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-2xl font-semibold">{energyStats.dailyConsumption} kWh</div>
+                        <Home className="h-8 w-8 text-purple-500" />
+                      </div>
+                    </div>
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <div className="text-xs text-muted-foreground">Self-Consumption</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-2xl font-semibold">{energyStats.selfConsumptionRate}%</div>
+                        <Zap className="h-8 w-8 text-green-500" />
+                      </div>
+                    </div>
                   </div>
                 </TabsContent>
                 

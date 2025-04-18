@@ -331,9 +331,9 @@ export default function RealTimeEnergyFlow() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="relative h-[420px] bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg mb-4 overflow-hidden">
+        <div className="relative h-[min(420px,70vh)] md:h-[420px] bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg mb-4 overflow-hidden">
           {/* Real energy diagram with realistic icons */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center scale-[0.95] md:scale-100">
             
             {/* Top row - Generation sources */}
             <div className="w-full px-8 pt-6 grid grid-cols-2">
