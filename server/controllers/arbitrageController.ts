@@ -9,11 +9,10 @@ export async function getArbitrageStrategies(req: Request, res: Response) {
   try {
     const arbitrageService = getBatteryArbitrageService();
     const strategies = arbitrageService.getAvailableStrategies();
-    
-    res.json(strategies);
+    res.status(200).json(strategies);
   } catch (error) {
-    console.error('Error getting arbitrage strategies:', error);
-    res.status(500).json({ error: 'Failed to retrieve arbitrage strategies' });
+    console.error('Error fetching arbitrage strategies:', error);
+    res.status(500).json({ error: 'Failed to fetch arbitrage strategies' });
   }
 }
 
@@ -26,14 +25,13 @@ export async function getActiveStrategies(req: Request, res: Response) {
     if (isNaN(siteId)) {
       return res.status(400).json({ error: 'Invalid site ID' });
     }
-    
+
     const arbitrageService = getBatteryArbitrageService();
     const strategies = arbitrageService.getActiveStrategies(siteId);
-    
-    res.json(strategies);
+    res.status(200).json(strategies);
   } catch (error) {
-    console.error('Error getting active strategies:', error);
-    res.status(500).json({ error: 'Failed to retrieve active strategies' });
+    console.error(`Error fetching active strategies for site ${req.params.siteId}:`, error);
+    res.status(500).json({ error: 'Failed to fetch active strategies' });
   }
 }
 
@@ -43,25 +41,26 @@ export async function getActiveStrategies(req: Request, res: Response) {
 export async function enableStrategy(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
+    const { strategy } = req.body;
+    
     if (isNaN(siteId)) {
       return res.status(400).json({ error: 'Invalid site ID' });
     }
     
-    const { strategy } = req.body;
     if (!strategy) {
       return res.status(400).json({ error: 'Strategy name is required' });
     }
-    
+
     const arbitrageService = getBatteryArbitrageService();
     const success = arbitrageService.enableStrategy(siteId, strategy);
     
     if (success) {
-      res.json({ message: `Strategy ${strategy} enabled for site ${siteId}` });
+      res.status(200).json({ success: true, message: `Strategy '${strategy}' enabled for site ${siteId}` });
     } else {
-      res.status(400).json({ error: `Invalid strategy: ${strategy}` });
+      res.status(400).json({ success: false, error: 'Invalid strategy or already enabled' });
     }
   } catch (error) {
-    console.error('Error enabling strategy:', error);
+    console.error(`Error enabling strategy for site ${req.params.siteId}:`, error);
     res.status(500).json({ error: 'Failed to enable strategy' });
   }
 }
@@ -72,25 +71,26 @@ export async function enableStrategy(req: Request, res: Response) {
 export async function disableStrategy(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
+    const { strategy } = req.body;
+    
     if (isNaN(siteId)) {
       return res.status(400).json({ error: 'Invalid site ID' });
     }
     
-    const { strategy } = req.body;
     if (!strategy) {
       return res.status(400).json({ error: 'Strategy name is required' });
     }
-    
+
     const arbitrageService = getBatteryArbitrageService();
     const success = arbitrageService.disableStrategy(siteId, strategy);
     
     if (success) {
-      res.json({ message: `Strategy ${strategy} disabled for site ${siteId}` });
+      res.status(200).json({ success: true, message: `Strategy '${strategy}' disabled for site ${siteId}` });
     } else {
-      res.status(400).json({ error: `Strategy ${strategy} not active for site ${siteId}` });
+      res.status(400).json({ success: false, error: 'Strategy not found or already disabled' });
     }
   } catch (error) {
-    console.error('Error disabling strategy:', error);
+    console.error(`Error disabling strategy for site ${req.params.siteId}:`, error);
     res.status(500).json({ error: 'Failed to disable strategy' });
   }
 }
@@ -101,20 +101,21 @@ export async function disableStrategy(req: Request, res: Response) {
 export async function runOptimization(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
+    
     if (isNaN(siteId)) {
       return res.status(400).json({ error: 'Invalid site ID' });
     }
-    
+
     const arbitrageService = getBatteryArbitrageService();
     const result = await arbitrageService.optimizeSite(siteId);
     
     if (result) {
-      res.json(result);
+      res.status(200).json(result);
     } else {
-      res.status(404).json({ error: `No active strategies or batteries found for site ${siteId}` });
+      res.status(404).json({ error: 'Optimization failed. No active strategies or batteries found for this site.' });
     }
   } catch (error) {
-    console.error('Error running optimization:', error);
+    console.error(`Error running optimization for site ${req.params.siteId}:`, error);
     res.status(500).json({ error: 'Failed to run optimization' });
   }
 }
@@ -125,17 +126,17 @@ export async function runOptimization(req: Request, res: Response) {
 export async function getArbitragePerformance(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
+    
     if (isNaN(siteId)) {
       return res.status(400).json({ error: 'Invalid site ID' });
     }
-    
+
     const arbitrageService = getBatteryArbitrageService();
     const performance = arbitrageService.getArbitragePerformance(siteId);
-    
-    res.json(performance);
+    res.status(200).json(performance);
   } catch (error) {
-    console.error('Error getting arbitrage performance:', error);
-    res.status(500).json({ error: 'Failed to retrieve arbitrage performance' });
+    console.error(`Error fetching arbitrage performance for site ${req.params.siteId}:`, error);
+    res.status(500).json({ error: 'Failed to fetch arbitrage performance' });
   }
 }
 
@@ -145,26 +146,23 @@ export async function getArbitragePerformance(req: Request, res: Response) {
 export async function getHistoricalPrices(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
+    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Default to 7 days ago
+    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date(); // Default to now
+    
     if (isNaN(siteId)) {
       return res.status(400).json({ error: 'Invalid site ID' });
     }
     
-    const { startDate, endDate } = req.query;
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'Start date and end date are required' });
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format' });
     }
-    
+
     const priceService = getEnergyPriceService();
-    const prices = await priceService.getHistoricalPrices(
-      siteId,
-      new Date(startDate as string),
-      new Date(endDate as string)
-    );
-    
-    res.json(prices);
+    const prices = await priceService.getHistoricalPrices(siteId, startDate, endDate);
+    res.status(200).json(prices);
   } catch (error) {
-    console.error('Error getting historical prices:', error);
-    res.status(500).json({ error: 'Failed to retrieve historical prices' });
+    console.error(`Error fetching historical prices for site ${req.params.siteId}:`, error);
+    res.status(500).json({ error: 'Failed to fetch historical prices' });
   }
 }
 
@@ -174,18 +172,21 @@ export async function getHistoricalPrices(req: Request, res: Response) {
 export async function getPriceForecast(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
+    const hours = req.query.hours ? parseInt(req.query.hours as string) : 24; // Default to 24 hours
+    
     if (isNaN(siteId)) {
       return res.status(400).json({ error: 'Invalid site ID' });
     }
     
-    const hours = req.query.hours ? parseInt(req.query.hours as string) : 24;
-    
+    if (isNaN(hours) || hours <= 0 || hours > 72) {
+      return res.status(400).json({ error: 'Hours must be between 1 and 72' });
+    }
+
     const priceService = getEnergyPriceService();
     const forecast = await priceService.getPriceForecast(siteId, hours);
-    
-    res.json(forecast);
+    res.status(200).json(forecast);
   } catch (error) {
-    console.error('Error getting price forecast:', error);
-    res.status(500).json({ error: 'Failed to retrieve price forecast' });
+    console.error(`Error fetching price forecast for site ${req.params.siteId}:`, error);
+    res.status(500).json({ error: 'Failed to fetch price forecast' });
   }
 }

@@ -1,4 +1,4 @@
-import { getAIOptimizationService } from './ai-optimization';
+import { initAiOptimizationService } from './ai-optimization';
 
 /**
  * Energy Price Service
@@ -316,7 +316,7 @@ export class EnergyPriceService {
     
     // Try to use AI for optimized forecasting if available
     try {
-      const aiService = getAIOptimizationService();
+      const aiService = initAiOptimizationService();
       const aiForecasts = await aiService.generatePriceForecasts({
         basePrice,
         volatility,
@@ -432,16 +432,16 @@ export class EnergyPriceService {
         case 'dynamic':
           // Generate pseudo-random historical prices with patterns
           const basePrice = 0.12;
-          const hour = currentDate.getHours();
-          const day = currentDate.getDay();
-          const isWeekend = day === 0 || day === 6;
+          const hourOfDay = currentDate.getHours();
+          const dayOfWeek = currentDate.getDay();
+          const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
           
           price = basePrice;
           
           // Add time-of-day pattern
-          if (hour >= 17 && hour <= 21) {
+          if (hourOfDay >= 17 && hourOfDay <= 21) {
             price += 0.08; // Evening peak
-          } else if (hour >= 1 && hour <= 5) {
+          } else if (hourOfDay >= 1 && hourOfDay <= 5) {
             price -= 0.05; // Overnight dip
           }
           

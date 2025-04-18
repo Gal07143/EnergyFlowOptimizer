@@ -18,6 +18,7 @@ import { getEEBusManager } from './adapters/eebusAdapter';
 
 // Import controllers
 import * as deviceController from './controllers/deviceController';
+import * as arbitrageController from './controllers/arbitrageController';
 import * as energyController from './controllers/energyController';
 import * as forecastController from './controllers/forecastController';
 import * as optimizationController from './controllers/optimizationController';
@@ -37,7 +38,6 @@ import deviceRegistryRoutes from './routes/deviceRegistry';
 import { electricalDiagramRoutes } from './routes/electricalDiagram';
 import gatewayRoutes from './routes/gatewayRoutes';
 import * as gatewayController from './controllers/gatewayController';
-import * as arbitrageController from './controllers/arbitrageController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -489,6 +489,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/vpp/programs/:id', requireManager, VPPController.updateProgram);
   app.delete('/api/vpp/programs/:id', requireAdmin, VPPController.deleteProgram);
   
+  // Battery Arbitrage routes
+  app.get('/api/arbitrage/strategies', arbitrageController.getArbitrageStrategies);
+  app.get('/api/sites/:siteId/arbitrage/strategies', arbitrageController.getActiveStrategies);
+  app.post('/api/sites/:siteId/arbitrage/strategies/enable', requireManager, arbitrageController.enableStrategy);
+  app.post('/api/sites/:siteId/arbitrage/strategies/disable', requireManager, arbitrageController.disableStrategy);
+  app.post('/api/sites/:siteId/arbitrage/optimize', requireManager, arbitrageController.runOptimization);
+  app.get('/api/sites/:siteId/arbitrage/performance', arbitrageController.getArbitragePerformance);
+  app.get('/api/sites/:siteId/prices/forecast', arbitrageController.getPriceForecast);
+  app.get('/api/sites/:siteId/prices/historical', arbitrageController.getHistoricalPrices);
+  
   // VPP Enrollment routes
   app.get('/api/vpp/sites/:siteId/enrollments', VPPController.getSiteEnrollments);
   app.get('/api/vpp/programs/:programId/enrollments', VPPController.getProgramEnrollments);
@@ -546,6 +556,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/consumption-patterns/:id/predictions', ConsumptionPatternController.generatePredictions);
   app.post('/api/sites/:siteId/consumption-patterns/anomalies', ConsumptionPatternController.detectAnomalies);
   app.get('/api/sites/:siteId/consumption-features', ConsumptionPatternController.getConsumptionFeatures);
+
+  // Battery Arbitrage Routes
+  app.get('/api/arbitrage/strategies', arbitrageController.getArbitrageStrategies);
+  app.get('/api/sites/:siteId/arbitrage/strategies', arbitrageController.getActiveStrategies);
+  app.post('/api/sites/:siteId/arbitrage/strategies/enable', requireManager, arbitrageController.enableStrategy);
+  app.post('/api/sites/:siteId/arbitrage/strategies/disable', requireManager, arbitrageController.disableStrategy);
+  app.post('/api/sites/:siteId/arbitrage/optimize', requireManager, arbitrageController.runOptimization);
+  app.get('/api/sites/:siteId/arbitrage/performance', arbitrageController.getArbitragePerformance);
+  app.get('/api/sites/:siteId/prices/historical', arbitrageController.getHistoricalPrices);
+  app.get('/api/sites/:siteId/prices/forecast', arbitrageController.getPriceForecast);
 
   return httpServer;
 }

@@ -1,6 +1,6 @@
-import { getAIOptimizationService } from './ai-optimization';
+import { initAiOptimizationService } from './ai-optimization';
 import { getEnergyPriceService } from './energyPriceService';
-import { getDeviceManagementService } from './deviceManagementService';
+import { initDeviceManagementService } from './deviceManagementService';
 
 /**
  * Battery Arbitrage Strategy Service
@@ -130,8 +130,9 @@ export class BatteryArbitrageService {
    * Run optimization for all sites
    */
   private async runOptimizationForAllSites(): Promise<void> {
-    const deviceService = getDeviceManagementService();
-    const sites = deviceService.getAllSites();
+    const deviceService = initDeviceManagementService();
+    // Use the getSites method to get all sites
+    const sites = await deviceService.getSites();
     
     for (const site of sites) {
       await this.optimizeSite(site.id);
@@ -145,7 +146,7 @@ export class BatteryArbitrageService {
     console.log(`Running battery arbitrage optimization for site ${siteId}`);
     
     try {
-      const deviceService = getDeviceManagementService();
+      const deviceService = initDeviceManagementService();
       const priceService = getEnergyPriceService();
       
       // Get batteries at the site
