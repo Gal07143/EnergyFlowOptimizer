@@ -1186,6 +1186,19 @@ export const devicesRelations = relations(devices, ({ one, many }) => ({
     references: [sites.id],
   }),
   readings: many(deviceReadings),
+  gateway: one(devices, {
+    fields: [devices.gatewayId],
+    references: [devices.id],
+  }),
+  connectedDevices: many(devices, { relationName: "connectedToGateway" }),
+}));
+
+export const gatewayDevicesRelations = relations(gatewayDevices, ({ one }) => ({
+  device: one(devices, {
+    fields: [gatewayDevices.deviceId],
+    references: [devices.id],
+    relationName: "deviceGateway"
+  }),
 }));
 
 export const deviceReadingsRelations = relations(deviceReadings, ({ one }) => ({
@@ -1403,6 +1416,18 @@ export const insertTariffSchema = createInsertSchema(tariffs, {
   exportRate: z.string().or(z.number()).transform(val => val === null ? null : Number(val)),
   dataIntervalSeconds: z.string().or(z.number()).optional().transform(val => val ? Number(val) : 60)
 }).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Gateway insert schemas
+export const insertGatewayDeviceSchema = createInsertSchema(gatewayDevices, {
+  port: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  heartbeatInterval: z.string().or(z.number()).optional().transform(val => val ? Number(val) : 60),
+  maxReconnectAttempts: z.string().or(z.number()).optional().transform(val => val ? Number(val) : 5)
+}).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true,
+  lastConnectedAt: true
+});
 
 // New insert schemas
 export const insertAlertSchema = createInsertSchema(alerts).omit({ 
