@@ -366,11 +366,11 @@ const OneLineDiagram = () => {
   
   // Create nodes from device data
   useEffect(() => {
-    if (!devices || !siteEnergy) return;
-    
-    if (showDefaultDiagram) {
-      setNodes(initialNodes);
-      setEdges(initialEdges);
+    if (!devices || !siteEnergy || (showDefaultDiagram && initialNodes.length > 0)) {
+      if (showDefaultDiagram) {
+        setNodes(initialNodes);
+        setEdges(initialEdges);
+      }
       return;
     }
     
@@ -387,6 +387,18 @@ const OneLineDiagram = () => {
       load: { x: 900, y: 400 },
     };
     
+    // Get device telemetry data
+    let solarDevice = devices.find(d => d.type === 'solar_pv');
+    let batteryDevice = devices.find(d => d.type === 'battery_storage');
+    let evChargerDevice = devices.find(d => d.type === 'ev_charger');
+    let smartMeterDevice = devices.find(d => d.type === 'smart_meter');
+    
+    // Extract telemetry data if available
+    const solarTelemetry = deviceTelemetry?.[solarDevice?.id];
+    const batteryTelemetry = deviceTelemetry?.[batteryDevice?.id];
+    const evChargerTelemetry = deviceTelemetry?.[evChargerDevice?.id];
+    const meterTelemetry = deviceTelemetry?.[smartMeterDevice?.id];
+    
     // Create necessary infrastructure nodes
     const infraNodes: Node[] = [
       {
@@ -397,7 +409,10 @@ const OneLineDiagram = () => {
           label: 'Grid Connection',
           voltage: '22kV',
           status: 'online',
-          power: Math.max(0, siteEnergy.gridImport - siteEnergy.gridExport)
+          power: Math.max(0, siteEnergy.gridImport - siteEnergy.gridExport),
+          frequency: meterTelemetry?.frequency || '50 Hz',
+          importPower: siteEnergy.gridImport,
+          exportPower: siteEnergy.gridExport
         }
       },
       {
@@ -410,7 +425,8 @@ const OneLineDiagram = () => {
           secondaryVoltage: '400V',
           rating: '500kVA',
           status: 'online',
-          loading: (siteEnergy.gridImport / 500) // Assume 500kW max capacity
+          loading: (siteEnergy.gridImport / 500), // Assume 500kW max capacity
+          temperature: Math.round(35 + Math.random() * 15) // Simulated temperature
         }
       },
       {
@@ -430,7 +446,7 @@ const OneLineDiagram = () => {
         position: positions.bus,
         data: {
           label: 'Main Bus',
-          voltage: '400V',
+          voltage: meterTelemetry?.voltage || '400V',
           status: 'energized'
         }
       },
@@ -439,11 +455,15 @@ const OneLineDiagram = () => {
         type: 'meter',
         position: positions.meter,
         data: {
-          label: 'Main Meter',
+          label: smartMeterDevice?.name || 'Main Meter',
           powerImport: `${siteEnergy.gridImport}kW`,
           powerExport: `${siteEnergy.gridExport}kW`,
-          energy: `${Math.round(siteEnergy.gridImport * 24)}kWh`, // Daily estimate
-          status: 'online'
+          energy: meterTelemetry?.totalEnergy ? `${Math.round(meterTelemetry.totalEnergy)}kWh` : `${Math.round(siteEnergy.gridImport * 24)}kWh`,
+          voltage: meterTelemetry?.voltage || '400V',
+          current: meterTelemetry?.current || `${Math.round(siteEnergy.gridImport * 1.5)}A`,
+          frequency: meterTelemetry?.frequency || '50 Hz',
+          powerFactor: meterTelemetry?.powerFactor || 0.95,
+          status: meterTelemetry?.status || 'online'
         }
       },
       {
@@ -460,47 +480,87 @@ const OneLineDiagram = () => {
       }
     ];
     
-    // Create device nodes based on real devices
+    // Create device nodes based on real devices with telemetry data
     const deviceNodes: Node[] = [];
     
     // Process each device
     devices.forEach(device => {
       if (device.type === 'solar_pv') {
+        // Get real telemetry data if available
+        const power = solarTelemetry?.power || siteEnergy.solarProduction;
+        const dailyEnergy = solarTelemetry?.dailyEnergy || Math.round(siteEnergy.solarProduction * 6);
+        const voltage = solarTelemetry?.voltage || 400;
+        const current = solarTelemetry?.current || Math.round(power * 1000 / voltage);
+        const efficiency = solarTelemetry?.efficiency || 96;
+        const temperature = solarTelemetry?.temperature || 45;
+        
         deviceNodes.push({
           id: `solar-${device.id}`,
           type: 'solar',
           position: positions.solar,
           data: {
             label: device.name,
-            capacity: '50kW', // Default capacity
-            generation: `${siteEnergy.solarProduction}kW`,
-            status: device.status
+            capacity: device.capabilities?.includes('50kW') ? '50kW' : '10kW',
+            generation: `${power}kW`,
+            dailyEnergy: `${dailyEnergy}kWh`,
+            voltage: `${voltage}V`,
+            current: `${current}A`,
+            efficiency: `${efficiency}%`,
+            temperature: `${temperature}°C`,
+            status: solarTelemetry?.status || device.status
           }
         });
       } else if (device.type === 'battery_storage') {
+        // Get real telemetry data if available
+        const power = batteryTelemetry?.power || Math.max(siteEnergy.batteryDischarging, siteEnergy.batteryCharging);
+        const soc = batteryTelemetry?.soc || siteEnergy.batterySoc;
+        const voltage = batteryTelemetry?.voltage || 48;
+        const current = batteryTelemetry?.current || Math.round(power * 1000 / voltage);
+        const temperature = batteryTelemetry?.temperature || 35;
+        const cycles = batteryTelemetry?.cycles || 125;
+        const status = batteryTelemetry?.status || (siteEnergy.batteryCharging > siteEnergy.batteryDischarging ? 'charging' : 'discharging');
+        
         deviceNodes.push({
           id: `battery-${device.id}`,
           type: 'battery',
           position: positions.battery,
           data: {
             label: device.name,
-            capacity: '100kWh', // Default capacity
-            power: `${Math.max(siteEnergy.batteryDischarging, siteEnergy.batteryCharging)}kW`,
-            soc: siteEnergy.batterySoc,
-            status: siteEnergy.batteryCharging > siteEnergy.batteryDischarging ? 'charging' : 'discharging'
+            capacity: device.capabilities?.includes('100kWh') ? '100kWh' : '20kWh',
+            power: `${power}kW`,
+            soc: soc,
+            voltage: `${voltage}V`,
+            current: `${current}A`,
+            temperature: `${temperature}°C`,
+            cycles: cycles,
+            status: status
           }
         });
       } else if (device.type === 'ev_charger') {
+        // Get real telemetry data if available
+        const power = evChargerTelemetry?.power || siteEnergy.evCharging;
+        const connectorStatus = evChargerTelemetry?.connectorStatus || (siteEnergy.evCharging > 0 ? 'connected' : 'available');
+        const energy = evChargerTelemetry?.energy || Math.round(siteEnergy.evCharging * 2);
+        const voltage = evChargerTelemetry?.voltage || 400;
+        const current = evChargerTelemetry?.current || Math.round(power * 1000 / voltage);
+        const temperature = evChargerTelemetry?.temperature || 30;
+        const status = evChargerTelemetry?.status || (siteEnergy.evCharging > 0 ? 'charging' : 'idle');
+        
         deviceNodes.push({
           id: `ev-charger-${device.id}`,
           type: 'ev_charger',
           position: positions.ev_charger,
           data: {
             label: device.name,
-            capacity: '22kW', // Default capacity
-            power: `${siteEnergy.evCharging}kW`,
-            connectedVehicles: siteEnergy.evCharging > 0 ? 1 : 0,
-            status: siteEnergy.evCharging > 0 ? 'charging' : 'idle'
+            capacity: device.capabilities?.includes('22kW') ? '22kW' : '7.4kW',
+            power: `${power}kW`,
+            connectorStatus: connectorStatus,
+            connectedVehicles: connectorStatus === 'connected' ? 1 : 0,
+            energy: `${energy}kWh`,
+            voltage: `${voltage}V`,
+            current: `${current}A`,
+            temperature: `${temperature}°C`,
+            status: status
           }
         });
       }
@@ -512,17 +572,23 @@ const OneLineDiagram = () => {
     // Update nodes
     setNodes(allNodes);
     
-    // Create edges
+    // Calculate grid direction and power
+    const netGridPower = siteEnergy.gridImport - siteEnergy.gridExport;
+    const gridDirection = netGridPower >= 0 ? 'import' : 'export';
+    const gridPower = Math.abs(netGridPower);
+    
+    // Create edges with power flow arrows showing correct direction and magnitude
     const newEdges: Edge[] = [
       {
         id: 'e-grid-transformer',
-        source: 'grid-1',
-        target: 'transformer-1',
+        source: gridDirection === 'import' ? 'grid-1' : 'transformer-1',
+        target: gridDirection === 'import' ? 'transformer-1' : 'grid-1',
         type: 'powerline',
         data: {
           voltage: '22kV',
-          power: `${siteEnergy.gridImport}kW`,
-          direction: 'import'
+          power: `${gridPower.toFixed(2)}kW`,
+          direction: gridDirection,
+          magnitude: gridPower / 10 // Scale for arrow size
         }
       },
       {
@@ -532,8 +598,9 @@ const OneLineDiagram = () => {
         type: 'powerline',
         data: {
           voltage: '400V',
-          power: `${siteEnergy.gridImport}kW`,
-          direction: 'import'
+          power: `${(siteEnergy.solarProduction + siteEnergy.batteryDischarging + siteEnergy.gridImport).toFixed(2)}kW`,
+          direction: 'import',
+          magnitude: (siteEnergy.solarProduction + siteEnergy.batteryDischarging + siteEnergy.gridImport) / 10
         }
       },
       {
@@ -543,8 +610,9 @@ const OneLineDiagram = () => {
         type: 'powerline',
         data: {
           voltage: '400V',
-          power: `${siteEnergy.gridImport}kW`,
-          direction: 'import'
+          power: `${(siteEnergy.solarProduction + siteEnergy.batteryDischarging + siteEnergy.gridImport).toFixed(2)}kW`,
+          direction: 'import',
+          magnitude: (siteEnergy.solarProduction + siteEnergy.batteryDischarging + siteEnergy.gridImport) / 10
         }
       },
       {
@@ -554,8 +622,9 @@ const OneLineDiagram = () => {
         type: 'powerline',
         data: {
           voltage: '400V',
-          power: `${siteEnergy.gridImport}kW`,
-          direction: 'import'
+          power: `${(siteEnergy.solarProduction + siteEnergy.batteryDischarging + siteEnergy.gridImport).toFixed(2)}kW`,
+          direction: 'import',
+          magnitude: (siteEnergy.solarProduction + siteEnergy.batteryDischarging + siteEnergy.gridImport) / 10
         }
       },
       {
@@ -565,15 +634,19 @@ const OneLineDiagram = () => {
         type: 'powerline',
         data: {
           voltage: '400V',
-          power: `${siteEnergy.buildingConsumption}kW`,
-          direction: 'import'
+          power: `${siteEnergy.buildingConsumption.toFixed(2)}kW`,
+          direction: 'import',
+          magnitude: siteEnergy.buildingConsumption / 10
         }
       }
     ];
     
-    // Add edges for each device
+    // Add edges for each device showing real power flows
     deviceNodes.forEach(node => {
       if (node.type === 'solar') {
+        // Solar always exports to the bus
+        const power = parseFloat(node.data.generation);
+        
         newEdges.push({
           id: `e-${node.id}-bus`,
           source: node.id,
@@ -581,13 +654,15 @@ const OneLineDiagram = () => {
           type: 'powerline',
           data: {
             voltage: '400V',
-            power: `${siteEnergy.solarProduction}kW`,
-            direction: 'export'
+            power: `${power.toFixed(2)}kW`,
+            direction: 'export',
+            magnitude: power / 10 // Scale for visualization
           }
         });
       } else if (node.type === 'battery') {
-        const power = Math.max(siteEnergy.batteryCharging, siteEnergy.batteryDischarging);
-        const direction = siteEnergy.batteryDischarging > siteEnergy.batteryCharging ? 'export' : 'import';
+        // Battery can either charge (import) or discharge (export)
+        const power = parseFloat(node.data.power);
+        const direction = node.data.status === 'charging' ? 'import' : 'export';
         
         newEdges.push({
           id: `e-${direction === 'export' ? node.id + '-bus' : 'bus-' + node.id}`,
@@ -596,11 +671,15 @@ const OneLineDiagram = () => {
           type: 'powerline',
           data: {
             voltage: '400V',
-            power: `${power}kW`,
-            direction
+            power: `${power.toFixed(2)}kW`,
+            direction,
+            magnitude: power / 10
           }
         });
       } else if (node.type === 'ev_charger') {
+        // EV charger always imports from the bus when charging
+        const power = parseFloat(node.data.power);
+        
         newEdges.push({
           id: `e-bus-${node.id}`,
           source: 'bus-1',
@@ -608,8 +687,9 @@ const OneLineDiagram = () => {
           type: 'powerline',
           data: {
             voltage: '400V',
-            power: `${siteEnergy.evCharging}kW`,
-            direction: 'import'
+            power: `${power.toFixed(2)}kW`,
+            direction: 'import',
+            magnitude: power / 10
           }
         });
       }
@@ -618,7 +698,7 @@ const OneLineDiagram = () => {
     // Update edges
     setEdges(newEdges);
     
-  }, [devices, siteEnergy, setNodes, setEdges, showDefaultDiagram]);
+  }, [devices, siteEnergy, deviceTelemetry, setNodes, setEdges, showDefaultDiagram, initialNodes, initialEdges]);
   
   // Handle node click
   const onNodeClick: NodeMouseHandler = useCallback((event, node) => {

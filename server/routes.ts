@@ -146,6 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/devices', requireManager, deviceController.addDevice);
   app.put('/api/devices/:id', requireManager, deviceController.updateDevice);
   app.delete('/api/devices/:id', requireAdmin, deviceController.deleteDevice);
+  app.get('/api/sites/:siteId/telemetry', deviceController.getSiteDevicesTelemetry);
   
   // Device catalog routes
   app.get('/api/device-catalog', async (req, res) => {
