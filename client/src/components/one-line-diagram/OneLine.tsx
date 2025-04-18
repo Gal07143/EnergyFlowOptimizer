@@ -393,11 +393,11 @@ const OneLineDiagram = () => {
     let evChargerDevice = devices.find(d => d.type === 'ev_charger');
     let smartMeterDevice = devices.find(d => d.type === 'smart_meter');
     
-    // Extract telemetry data if available
-    const solarTelemetry = deviceTelemetry?.[solarDevice?.id];
-    const batteryTelemetry = deviceTelemetry?.[batteryDevice?.id];
-    const evChargerTelemetry = deviceTelemetry?.[evChargerDevice?.id];
-    const meterTelemetry = deviceTelemetry?.[smartMeterDevice?.id];
+    // Extract telemetry data if available - handle null/undefined cases
+    const solarTelemetry = solarDevice && deviceTelemetry ? deviceTelemetry[solarDevice.id] : null;
+    const batteryTelemetry = batteryDevice && deviceTelemetry ? deviceTelemetry[batteryDevice.id] : null;
+    const evChargerTelemetry = evChargerDevice && deviceTelemetry ? deviceTelemetry[evChargerDevice.id] : null;
+    const meterTelemetry = smartMeterDevice && deviceTelemetry ? deviceTelemetry[smartMeterDevice.id] : null;
     
     // Create necessary infrastructure nodes
     const infraNodes: Node[] = [

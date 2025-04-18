@@ -19,12 +19,13 @@ export async function getAllDevices(req: Request, res: Response) {
       model: device.model,
       manufacturer: device.manufacturer,
       serialNumber: device.serialNumber,
-      firmwareVersion: device.firmwareVersion,
-      protocol: device.protocol,
       status: device.status,
       siteId: device.siteId,
       capabilities: device.capabilities,
-      lastSeenAt: device.lastSeenAt
+      protocol: device.protocol,
+      protocolConfig: device.protocolConfig,
+      createdAt: device.createdAt,
+      updatedAt: device.updatedAt
     }));
     
     res.json(mappedDevices);
@@ -34,7 +35,7 @@ export async function getAllDevices(req: Request, res: Response) {
   }
 }
 
-// Get device details by ID
+// Get device by ID
 export async function getDeviceById(req: Request, res: Response) {
   try {
     const deviceId = parseInt(req.params.id);
@@ -43,41 +44,20 @@ export async function getDeviceById(req: Request, res: Response) {
     }
     
     const deviceService = getDeviceManagementService();
-    const device = deviceService.getDevice(deviceId);
+    const device = deviceService.getDeviceById(deviceId);
     
     if (!device) {
       return res.status(404).json({ error: 'Device not found' });
     }
     
-    // Get protocol-specific data
-    const protocolData = await getProtocolSpecificData(device);
-    
-    // Map device to a more frontend-friendly format with protocol details
-    const deviceDetails = {
-      id: device.id,
-      name: device.name,
-      type: device.type,
-      model: device.model,
-      manufacturer: device.manufacturer,
-      serialNumber: device.serialNumber,
-      firmwareVersion: device.firmwareVersion,
-      protocol: device.protocol,
-      protocolDetails: device.protocol === 'mqtt' ? undefined : protocolData,
-      status: device.status,
-      siteId: device.siteId,
-      capabilities: device.capabilities,
-      lastSeenAt: device.lastSeenAt,
-      location: device.location
-    };
-    
-    res.json(deviceDetails);
+    res.json(device);
   } catch (error) {
-    console.error(`Error getting device details:`, error);
-    res.status(500).json({ error: 'Failed to retrieve device details' });
+    console.error('Error getting device:', error);
+    res.status(500).json({ error: 'Failed to retrieve device' });
   }
 }
 
-// Get devices by site ID
+// Get devices by site
 export async function getDevicesBySite(req: Request, res: Response) {
   try {
     const siteId = parseInt(req.params.siteId);
@@ -88,23 +68,10 @@ export async function getDevicesBySite(req: Request, res: Response) {
     const deviceService = getDeviceManagementService();
     const devices = deviceService.getDevicesBySite(siteId);
     
-    // Map devices to a more frontend-friendly format
-    const mappedDevices = devices.map(device => ({
-      id: device.id,
-      name: device.name,
-      type: device.type,
-      model: device.model,
-      manufacturer: device.manufacturer,
-      protocol: device.protocol,
-      status: device.status,
-      capabilities: device.capabilities,
-      lastSeenAt: device.lastSeenAt
-    }));
-    
-    res.json(mappedDevices);
+    res.json(devices);
   } catch (error) {
-    console.error(`Error getting devices for site:`, error);
-    res.status(500).json({ error: 'Failed to retrieve devices for site' });
+    console.error('Error getting devices by site:', error);
+    res.status(500).json({ error: 'Failed to retrieve devices' });
   }
 }
 
@@ -112,37 +79,28 @@ export async function getDevicesBySite(req: Request, res: Response) {
 export async function getDevicesByType(req: Request, res: Response) {
   try {
     const deviceType = req.params.type;
+    if (!deviceType) {
+      return res.status(400).json({ error: 'Device type is required' });
+    }
     
     const deviceService = getDeviceManagementService();
-    const devices = deviceService.getDevicesByType(deviceType as any);
+    const devices = deviceService.getDevicesByType(deviceType);
     
-    // Map devices to a more frontend-friendly format
-    const mappedDevices = devices.map(device => ({
-      id: device.id,
-      name: device.name,
-      model: device.model,
-      manufacturer: device.manufacturer,
-      protocol: device.protocol,
-      status: device.status,
-      capabilities: device.capabilities,
-      lastSeenAt: device.lastSeenAt
-    }));
-    
-    res.json(mappedDevices);
+    res.json(devices);
   } catch (error) {
-    console.error(`Error getting devices by type:`, error);
-    res.status(500).json({ error: 'Failed to retrieve devices by type' });
+    console.error('Error getting devices by type:', error);
+    res.status(500).json({ error: 'Failed to retrieve devices' });
   }
 }
 
-// Add new device
+// Add a new device
 export async function addDevice(req: Request, res: Response) {
   try {
     const deviceData = req.body;
     
     // Validate required fields
-    if (!deviceData.name || !deviceData.type || !deviceData.protocol) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!deviceData.name || !deviceData.type || !deviceData.siteId) {
+      return res.status(400).json({ error: 'Name, type, and siteId are required' });
     }
     
     const deviceService = getDeviceManagementService();
@@ -155,7 +113,7 @@ export async function addDevice(req: Request, res: Response) {
   }
 }
 
-// Update device
+// Update an existing device
 export async function updateDevice(req: Request, res: Response) {
   try {
     const deviceId = parseInt(req.params.id);
@@ -163,11 +121,16 @@ export async function updateDevice(req: Request, res: Response) {
       return res.status(400).json({ error: 'Invalid device ID' });
     }
     
-    const updates = req.body;
+    const deviceData = req.body;
     
     const deviceService = getDeviceManagementService();
-    const updatedDevice = deviceService.updateDevice(deviceId, updates);
+    const existingDevice = deviceService.getDeviceById(deviceId);
     
+    if (!existingDevice) {
+      return res.status(404).json({ error: 'Device not found' });
+    }
+    
+    const updatedDevice = deviceService.updateDevice(deviceId, deviceData);
     if (!updatedDevice) {
       return res.status(404).json({ error: 'Device not found' });
     }
@@ -357,7 +320,9 @@ export async function getSiteDevicesTelemetry(req: Request, res: Response) {
   }
 }
 
-// Get protocol-specific data for a device
+/**
+ * Get protocol-specific data for a device
+ */
 async function getProtocolSpecificData(device: any): Promise<any> {
   try {
     switch (device.protocol) {

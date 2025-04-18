@@ -84,7 +84,7 @@ export const PowerLineEdge = memo(({
   
   // Calculate arrow positions
   const arrowPositions = useMemo(() => {
-    const positions = [];
+    const positions: Array<{x: number, y: number}> = [];
     
     // Skip if no arrows or very low power
     if (numArrows <= 0) return positions;
