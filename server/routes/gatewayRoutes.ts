@@ -1,6 +1,9 @@
 import express from 'express';
 import * as gatewayController from '../controllers/gatewayController';
-import { requireAdmin, requireManager } from '../middleware/roleAuth';
+import { requireRole } from '../middleware/roleAuth';
+
+const requireAdmin = requireRole(['admin']);
+const requireManager = requireRole(['admin', 'partner_admin', 'manager']);
 
 const router = express.Router();
 

@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
-import { requireAdmin, requireManager, canManageSite } from './middleware/roleAuth';
+import { requireRole, requireAdmin, requireManager, requirePartnerAccess, requireDeviceAccess } from './middleware/roleAuth';
 import { initDeviceManagementService } from './services/deviceManagementService';
 import { initMqttService } from './services/mqttService';
 import { ocppManager } from './adapters/ocppAdapter';
@@ -117,6 +117,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Site routes
   app.get('/api/sites', async (req, res) => {
     try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      // If the user is not an admin, filter sites by their partner ID
+      if (req.user.role !== 'admin' && req.user.partnerId) {
+        const sites = await storage.getSitesByPartner(req.user.partnerId);
+        return res.json(sites);
+      }
+      
+      // Admin users can see all sites
       const sites = await storage.getSites();
       res.json(sites);
     } catch (error) {
@@ -125,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/sites/:id', async (req, res) => {
+  app.get('/api/sites/:id', requirePartnerAccess('id', 'site'), async (req, res) => {
     try {
       const siteId = parseInt(req.params.id);
       const site = await storage.getSite(siteId);
