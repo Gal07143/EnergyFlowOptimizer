@@ -43,6 +43,17 @@ export interface Device {
   };
   metadata?: Record<string, any>;
   capabilities?: string[];
+  specs?: {
+    capacity?: number;       // kWh for batteries
+    maxChargeRate?: number;  // kW for batteries and EV chargers 
+    maxDischargeRate?: number; // kW for batteries
+    efficiency?: number;     // Round-trip efficiency (0-1)
+    maxPower?: number;       // kW for solar, EV chargers
+    nominalVoltage?: number; // V
+    nominalCurrent?: number; // A
+    ratedPower?: number;     // kW
+    [key: string]: any;      // Allow for additional device-specific specs
+  };
   createdAt: string;
   updatedAt: string;
   lastSeenAt?: string;
