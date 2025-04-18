@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EMS Connectivity Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #2563eb;
+      margin-bottom: 10px;
+    }
+    h2 {
+      color: #374151;
+      margin-top: 30px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 8px;
+    }
+    .card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    button:disabled {
+      background-color: #93c5fd;
+      cursor: not-allowed;
+    }
+    button.secondary {
+      background-color: #4b5563;
+    }
+    button.secondary:hover {
+      background-color: #374151;
+    }
+    button.danger {
+      background-color: #ef4444;
+    }
+    button.danger:hover {
+      background-color: #dc2626;
+    }
+    pre {
+      background-color: #f3f4f6;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .success {
+      background-color: #10b981;
+    }
+    .error {
+      background-color: #ef4444;
+    }
+    .warning {
+      background-color: #f59e0b;
+    }
+    .info {
+      background-color: #3b82f6;
+    }
+    .loading {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 50%;
+      border-top-color: #3b82f6;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .status {
+      font-weight: 500;
+      margin-bottom: 15px;
+    }
+    .log-container {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      background-color: #f9fafb;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      border-bottom: 1px solid #f3f4f6;
+      padding-bottom: 4px;
+    }
+    .timestamp {
+      color: #6b7280;
+      margin-right: 6px;
+    }
+    .log-info {
+      color: #3b82f6;
+    }
+    .log-success {
+      color: #10b981;
+    }
+    .log-error {
+      color: #ef4444;
+    }
+    .log-warning {
+      color: #f59e0b;
+    }
+    .small {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .stat-card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 15px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+      color: #2563eb;
+      margin: 10px 0;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .badge.success {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+    .badge.error {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+    .badge.warning {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+    .badge.info {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+  </style>
+</head>
+<body>
+  <h1>EMS Connectivity Test</h1>
+  <p>Use this page to diagnose connectivity issues with the Energy Management System.</p>
+  
+  <div class="card">
+    <h2>1. Browser Information</h2>
+    <pre id="browserInfo"></pre>
+    <div class="small">This information can help diagnose compatibility issues.</div>
+  </div>
+  
+  <div class="card">
+    <h2>2. HTTP API Test</h2>
+    <div class="status" id="apiStatus">Status: Not tested</div>
+    <button id="testApiBtn">Test API Health</button>
+    <button id="testMultipleEndpointsBtn" class="secondary">Test All Endpoints</button>
+    <pre id="apiResponse">Response will appear here</pre>
+    
+    <div id="endpointResults" style="display: none; margin-top: 20px;">
+      <h3>Endpoint Results</h3>
+      <div id="endpointsList"></div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>3. WebSocket Connection Test</h2>
+    <div class="status" id="wsStatus">Status: Not connected</div>
+    <div>
+      <button id="connectWsBtn">Connect WebSocket</button>
+      <button id="disconnectWsBtn" class="danger" disabled>Disconnect</button>
+      <button id="sendPingBtn" class="secondary" disabled>Send Ping</button>
+      <button id="subscribeSiteBtn" class="secondary" disabled>Subscribe to Site</button>
+    </div>
+    <div class="log-container" id="wsLogs"></div>
+  </div>
+  
+  <div class="card">
+    <h2>4. Overall Connectivity</h2>
+    
+    <div class="grid">
+      <div class="stat-card">
+        <div class="stat-label">HTTP API</div>
+        <div class="stat-value" id="httpStatusIcon">-</div>
+        <span class="badge" id="httpStatusBadge">Not Tested</span>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">WebSocket</div>
+        <div class="stat-value" id="wsStatusIcon">-</div>
+        <span class="badge" id="wsStatusBadge">Not Tested</span>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Response Time</div>
+        <div class="stat-value" id="responseTime">-</div>
+        <span class="small">milliseconds</span>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Browser Online</div>
+        <div class="stat-value" id="onlineStatus">-</div>
+        <span id="connectionType" class="small"></span>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Configuration
+    const config = {
+      apiBaseUrl: window.location.origin,
+      wsUrl: `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`,
+      endpoints: [
+        '/api/health',
+        '/api/healthcheck',
+        '/api/devices',
+        '/api/sites'
+      ]
+    };
+    
+    // DOM Elements
+    const elements = {
+      browserInfo: document.getElementById('browserInfo'),
+      apiStatus: document.getElementById('apiStatus'),
+      apiResponse: document.getElementById('apiResponse'),
+      testApiBtn: document.getElementById('testApiBtn'),
+      testMultipleEndpointsBtn: document.getElementById('testMultipleEndpointsBtn'),
+      endpointResults: document.getElementById('endpointResults'),
+      endpointsList: document.getElementById('endpointsList'),
+      wsStatus: document.getElementById('wsStatus'),
+      wsLogs: document.getElementById('wsLogs'),
+      connectWsBtn: document.getElementById('connectWsBtn'),
+      disconnectWsBtn: document.getElementById('disconnectWsBtn'),
+      sendPingBtn: document.getElementById('sendPingBtn'),
+      subscribeSiteBtn: document.getElementById('subscribeSiteBtn'),
+      httpStatusIcon: document.getElementById('httpStatusIcon'),
+      httpStatusBadge: document.getElementById('httpStatusBadge'),
+      wsStatusIcon: document.getElementById('wsStatusIcon'),
+      wsStatusBadge: document.getElementById('wsStatusBadge'),
+      responseTime: document.getElementById('responseTime'),
+      onlineStatus: document.getElementById('onlineStatus'),
+      connectionType: document.getElementById('connectionType')
+    };
+    
+    // WebSocket state
+    let ws = null;
+    let pingCount = 0;
+    let pongCount = 0;
+    
+    // Initialize the page
+    function initialize() {
+      displayBrowserInfo();
+      updateOnlineStatus();
+      
+      // Event listeners
+      elements.testApiBtn.addEventListener('click', testApiHealth);
+      elements.testMultipleEndpointsBtn.addEventListener('click', testAllEndpoints);
+      elements.connectWsBtn.addEventListener('click', connectWebSocket);
+      elements.disconnectWsBtn.addEventListener('click', disconnectWebSocket);
+      elements.sendPingBtn.addEventListener('click', sendPing);
+      elements.subscribeSiteBtn.addEventListener('click', subscribeSite);
+      
+      // Listen for online/offline events
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+    }
+    
+    // Display browser information
+    function displayBrowserInfo() {
+      const info = {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        vendor: navigator.vendor,
+        online: navigator.onLine,
+        url: window.location.href,
+        screenSize: `${window.screen.width}x${window.screen.height}`,
+        cookiesEnabled: navigator.cookieEnabled
+      };
+      
+      elements.browserInfo.textContent = JSON.stringify(info, null, 2);
+    }
+    
+    // Update online status display
+    function updateOnlineStatus() {
+      const online = navigator.onLine;
+      elements.onlineStatus.textContent = online ? '✓' : '✗';
+      elements.onlineStatus.style.color = online ? '#10b981' : '#ef4444';
+      
+      // Try to get connection type if available
+      if ('connection' in navigator) {
+        const conn = navigator.connection;
+        if (conn) {
+          const type = conn.effectiveType || conn.type || 'unknown';
+          elements.connectionType.textContent = `(${type})`;
+        }
+      }
+    }
+    
+    // Test API health
+    async function testApiHealth() {
+      updateStatus(elements.apiStatus, 'Testing...', 'info');
+      elements.testApiBtn.disabled = true;
+      elements.httpStatusIcon.innerHTML = '<div class="loading"></div>';
+      elements.httpStatusBadge.textContent = 'Testing';
+      elements.httpStatusBadge.className = 'badge info';
+      
+      const startTime = Date.now();
+      try {
+        const response = await fetch(`${config.apiBaseUrl}/api/health`);
+        const responseTime = Date.now() - startTime;
+        elements.responseTime.textContent = responseTime;
+        
+        const data = await response.json();
+        elements.apiResponse.textContent = JSON.stringify(data, null, 2);
+        
+        if (response.ok) {
+          updateStatus(elements.apiStatus, `Connected (${response.status})`, 'success');
+          elements.httpStatusIcon.textContent = '✓';
+          elements.httpStatusIcon.style.color = '#10b981';
+          elements.httpStatusBadge.textContent = 'Connected';
+          elements.httpStatusBadge.className = 'badge success';
+        } else {
+          updateStatus(elements.apiStatus, `Error (${response.status})`, 'error');
+          elements.httpStatusIcon.textContent = '✗';
+          elements.httpStatusIcon.style.color = '#ef4444';
+          elements.httpStatusBadge.textContent = `Error ${response.status}`;
+          elements.httpStatusBadge.className = 'badge error';
+        }
+      } catch (error) {
+        elements.apiResponse.textContent = `Error: ${error.message}`;
+        updateStatus(elements.apiStatus, `Failed (${error.message})`, 'error');
+        elements.httpStatusIcon.textContent = '✗';
+        elements.httpStatusIcon.style.color = '#ef4444';
+        elements.httpStatusBadge.textContent = 'Failed';
+        elements.httpStatusBadge.className = 'badge error';
+      } finally {
+        elements.testApiBtn.disabled = false;
+      }
+    }
+    
+    // Test all API endpoints
+    async function testAllEndpoints() {
+      elements.testMultipleEndpointsBtn.disabled = true;
+      elements.endpointResults.style.display = 'block';
+      elements.endpointsList.innerHTML = '';
+      
+      for (const endpoint of config.endpoints) {
+        const endpointEl = document.createElement('div');
+        endpointEl.className = 'card';
+        endpointEl.style.marginBottom = '10px';
+        endpointEl.innerHTML = `
+          <h4 style="margin-top: 0;">${endpoint}</h4>
+          <div class="status">Status: Testing...</div>
+          <pre style="max-height: 100px; overflow: auto;">Testing...</pre>
+        `;
+        elements.endpointsList.appendChild(endpointEl);
+        
+        const statusEl = endpointEl.querySelector('.status');
+        const preEl = endpointEl.querySelector('pre');
+        
+        try {
+          const startTime = Date.now();
+          const response = await fetch(`${config.apiBaseUrl}${endpoint}`);
+          const responseTime = Date.now() - startTime;
+          
+          let data;
+          try {
+            data = await response.json();
+            preEl.textContent = JSON.stringify(data, null, 2);
+          } catch {
+            preEl.textContent = await response.text();
+          }
+          
+          if (response.ok) {
+            updateStatus(statusEl, `Connected (${response.status}) - ${responseTime}ms`, 'success');
+          } else {
+            updateStatus(statusEl, `Error (${response.status}) - ${responseTime}ms`, 'error');
+          }
+        } catch (error) {
+          updateStatus(statusEl, `Failed (${error.message})`, 'error');
+          preEl.textContent = `Error: ${error.message}`;
+        }
+      }
+      
+      elements.testMultipleEndpointsBtn.disabled = false;
+    }
+    
+    // Connect to WebSocket
+    function connectWebSocket() {
+      if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+        addWsLog('Already connecting or connected');
+        return;
+      }
+      
+      updateStatus(elements.wsStatus, 'Connecting...', 'info');
+      elements.connectWsBtn.disabled = true;
+      elements.wsStatusIcon.innerHTML = '<div class="loading"></div>';
+      elements.wsStatusBadge.textContent = 'Connecting';
+      elements.wsStatusBadge.className = 'badge info';
+      
+      clearWsLogs();
+      addWsLog(`Connecting to ${config.wsUrl}`);
+      
+      try {
+        ws = new WebSocket(config.wsUrl);
+        
+        ws.onopen = () => {
+          updateStatus(elements.wsStatus, 'Connected', 'success');
+          addWsLog('Connection established', 'success');
+          elements.disconnectWsBtn.disabled = false;
+          elements.sendPingBtn.disabled = false;
+          elements.subscribeSiteBtn.disabled = false;
+          elements.wsStatusIcon.textContent = '✓';
+          elements.wsStatusIcon.style.color = '#10b981';
+          elements.wsStatusBadge.textContent = 'Connected';
+          elements.wsStatusBadge.className = 'badge success';
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            addWsLog(`Received: ${JSON.stringify(data)}`, 'info');
+            
+            if (data.type === 'pong') {
+              pongCount++;
+            }
+          } catch {
+            addWsLog(`Received non-JSON message: ${event.data}`, 'warning');
+          }
+        };
+        
+        ws.onclose = (event) => {
+          updateStatus(elements.wsStatus, `Disconnected (code: ${event.code})`, 'error');
+          addWsLog(`Connection closed: ${event.code} - ${event.reason || 'No reason provided'}`, 'error');
+          resetWsButtons();
+          elements.wsStatusIcon.textContent = '✗';
+          elements.wsStatusIcon.style.color = '#ef4444';
+          elements.wsStatusBadge.textContent = 'Disconnected';
+          elements.wsStatusBadge.className = 'badge error';
+        };
+        
+        ws.onerror = () => {
+          updateStatus(elements.wsStatus, 'Error', 'error');
+          addWsLog('WebSocket error occurred', 'error');
+          elements.wsStatusIcon.textContent = '✗';
+          elements.wsStatusIcon.style.color = '#ef4444';
+          elements.wsStatusBadge.textContent = 'Error';
+          elements.wsStatusBadge.className = 'badge error';
+        };
+      } catch (error) {
+        updateStatus(elements.wsStatus, `Failed (${error.message})`, 'error');
+        addWsLog(`Error creating WebSocket: ${error.message}`, 'error');
+        resetWsButtons();
+        elements.wsStatusIcon.textContent = '✗';
+        elements.wsStatusIcon.style.color = '#ef4444';
+        elements.wsStatusBadge.textContent = 'Failed';
+        elements.wsStatusBadge.className = 'badge error';
+      }
+    }
+    
+    // Disconnect WebSocket
+    function disconnectWebSocket() {
+      if (!ws) {
+        addWsLog('No WebSocket connection to close');
+        return;
+      }
+      
+      try {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1000, 'User initiated disconnect');
+          addWsLog('Closing WebSocket connection...', 'warning');
+        } else {
+          addWsLog(`Cannot close. WebSocket is in state: ${getReadyStateString(ws.readyState)}`, 'warning');
+        }
+      } catch (error) {
+        addWsLog(`Error closing WebSocket: ${error.message}`, 'error');
+      }
+      
+      resetWsButtons();
+    }
+    
+    // Send ping message
+    function sendPing() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addWsLog('Cannot send ping: WebSocket not connected', 'error');
+        return;
+      }
+      
+      try {
+        const pingMessage = {
+          type: 'ping',
+          timestamp: Date.now()
+        };
+        
+        ws.send(JSON.stringify(pingMessage));
+        addWsLog(`Sent: ${JSON.stringify(pingMessage)}`, 'success');
+        pingCount++;
+      } catch (error) {
+        addWsLog(`Error sending ping: ${error.message}`, 'error');
+      }
+    }
+    
+    // Subscribe to site
+    function subscribeSite() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addWsLog('Cannot subscribe: WebSocket not connected', 'error');
+        return;
+      }
+      
+      try {
+        const subscriptionMessage = {
+          type: 'subscribe',
+          siteId: 1
+        };
+        
+        ws.send(JSON.stringify(subscriptionMessage));
+        addWsLog(`Sent subscription: ${JSON.stringify(subscriptionMessage)}`, 'success');
+      } catch (error) {
+        addWsLog(`Error sending subscription: ${error.message}`, 'error');
+      }
+    }
+    
+    // Helper to get WebSocket ready state as string
+    function getReadyStateString(state) {
+      switch (state) {
+        case WebSocket.CONNECTING: return 'CONNECTING (0)';
+        case WebSocket.OPEN: return 'OPEN (1)';
+        case WebSocket.CLOSING: return 'CLOSING (2)';
+        case WebSocket.CLOSED: return 'CLOSED (3)';
+        default: return `UNKNOWN (${state})`;
+      }
+    }
+    
+    // Reset WebSocket buttons
+    function resetWsButtons() {
+      elements.connectWsBtn.disabled = false;
+      elements.disconnectWsBtn.disabled = true;
+      elements.sendPingBtn.disabled = true;
+      elements.subscribeSiteBtn.disabled = true;
+    }
+    
+    // Add log entry to WebSocket logs
+    function addWsLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry log-${type}`;
+      logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+      elements.wsLogs.appendChild(logEntry);
+      elements.wsLogs.scrollTop = elements.wsLogs.scrollHeight;
+    }
+    
+    // Clear WebSocket logs
+    function clearWsLogs() {
+      elements.wsLogs.innerHTML = '';
+    }
+    
+    // Update status display
+    function updateStatus(element, message, type) {
+      let icon = '';
+      switch (type) {
+        case 'success': icon = '<span class="indicator success"></span>'; break;
+        case 'error': icon = '<span class="indicator error"></span>'; break;
+        case 'warning': icon = '<span class="indicator warning"></span>'; break;
+        case 'info': icon = '<span class="indicator info"></span>'; break;
+        default: icon = '';
+      }
+      
+      element.innerHTML = `${icon}Status: ${message}`;
+      element.className = `status status-${type}`;
+    }
+    
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', initialize);
+  </script>
+</body>
+</html>

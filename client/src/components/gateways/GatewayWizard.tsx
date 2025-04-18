@@ -115,16 +115,25 @@ const httpConfigSchema = z.object({
 });
 
 const modbusConfigSchema = z.object({
-  protocol: z.union([z.literal("modbus_tcp"), z.literal("modbus_rtu")]),
+  protocol: z.literal("modbus_tcp").or(z.literal("modbus_rtu")),
   ipAddress: z.string().min(1, "IP address is required"),
   port: z.number().optional(),
 });
 
-// Union all protocol schemas
+// Union all protocol schemas - fixed discriminated union
 const protocolConfigSchema = z.discriminatedUnion("protocol", [
   mqttConfigSchema,
   httpConfigSchema,
-  modbusConfigSchema,
+  z.object({
+    protocol: z.literal("modbus_tcp"),
+    ipAddress: z.string().min(1),
+    port: z.number().optional(),
+  }),
+  z.object({
+    protocol: z.literal("modbus_rtu"),
+    ipAddress: z.string().min(1),
+    port: z.number().optional(),
+  }),
 ]);
 
 // Combine base schema with protocol-specific schema
