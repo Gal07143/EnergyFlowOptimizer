@@ -9,6 +9,7 @@ import {
   energyForecasts,
   optimizationSettings, 
   tariffs,
+  partners,
   type User, 
   type InsertUser, 
   type Site, 
@@ -24,7 +25,9 @@ import {
   type OptimizationSetting, 
   type InsertOptimizationSetting,
   type Tariff, 
-  type InsertTariff
+  type InsertTariff,
+  type Partner,
+  type InsertPartner
 } from "@shared/schema";
 
 export interface IStorage {
@@ -32,15 +35,23 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUsersByPartner(partnerId: number): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
   setVerificationCode(userId: number, code: string): Promise<boolean>;
   verifyEmail(userId: number, code: string): Promise<boolean>;
   isEmailVerified(userId: number): Promise<boolean>;
 
+  // Partner operations
+  getPartner(id: number): Promise<Partner | undefined>;
+  getPartners(): Promise<Partner[]>;
+  createPartner(partner: InsertPartner): Promise<Partner>;
+  updatePartner(id: number, partner: Partial<Partner>): Promise<Partner | undefined>;
+  
   // Site operations
   getSite(id: number): Promise<Site | undefined>;
   getSites(): Promise<Site[]>;
+  getSitesByPartner(partnerId: number): Promise<Site[]>;
   createSite(site: InsertSite): Promise<Site>;
   updateSite(id: number, site: Partial<Site>): Promise<Site | undefined>;
 
