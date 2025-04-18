@@ -988,7 +988,7 @@ export const storageTierMetrics = pgTable('storage_tier_metrics', {
   storageBytes: integer('storage_bytes').default(0),
   oldestRecord: timestamp('oldest_record'),
   newestRecord: timestamp('newest_record'),
-  avgAccessesPerDay: numeric('avg_accesses_per_day').default(0),
+  avgAccessesPerDay: numeric('avg_accesses_per_day').default('0'),
   lastAccessedAt: timestamp('last_accessed_at'),
   lastUpdatedAt: timestamp('last_updated_at').defaultNow(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -2013,10 +2013,6 @@ export const deviceMaintenanceIssuesRelations = relations(deviceMaintenanceIssue
     fields: [deviceMaintenanceIssues.deviceId],
     references: [devices.id]
   }),
-  relatedIssue: one(deviceMaintenanceIssues, {
-    fields: [deviceMaintenanceIssues.relatedIssueId],
-    references: [deviceMaintenanceIssues.id]
-  }),
   assignedToUser: one(users, {
     fields: [deviceMaintenanceIssues.assignedTo],
     references: [users.id]
@@ -2043,10 +2039,6 @@ export const deviceMaintenanceThresholdsRelations = relations(deviceMaintenanceT
   deviceType: one(deviceCatalog, {
     fields: [deviceMaintenanceThresholds.deviceTypeId],
     references: [deviceCatalog.id]
-  }),
-  parentThreshold: one(deviceMaintenanceThresholds, {
-    fields: [deviceMaintenanceThresholds.parentThresholdId],
-    references: [deviceMaintenanceThresholds.id]
   }),
   createdByUser: one(users, {
     fields: [deviceMaintenanceThresholds.createdBy],
