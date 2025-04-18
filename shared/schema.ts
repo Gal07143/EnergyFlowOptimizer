@@ -52,7 +52,7 @@ export const optimizationModeEnum = pgEnum('optimization_mode', [
 ]);
 
 // Security Enums
-export const userRoles = ['admin', 'manager', 'viewer'] as const;
+export const userRoles = ['admin', 'partner_admin', 'manager', 'viewer'] as const;
 export const UserRoleSchema = z.enum(userRoles);
 
 export const apiKeyAccessLevelEnum = pgEnum('api_key_access_level', [
@@ -93,6 +93,20 @@ export const weatherConditionEnum = pgEnum('weather_condition', [
   'tornado'
 ]);
 
+// Partner Organizations
+export const partners = pgTable('partners', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  contactEmail: text('contact_email'),
+  contactPhone: text('contact_phone'),
+  address: text('address'),
+  logo: text('logo'),
+  status: text('status').default('active'), // active, inactive, suspended
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // Sites
 export const sites = pgTable('sites', {
   id: serial('id').primaryKey(),
@@ -101,6 +115,7 @@ export const sites = pgTable('sites', {
   maxCapacity: numeric('max_capacity'),
   gridConnectionPoint: numeric('grid_connection_point'),
   timezone: text('timezone').default('UTC'),
+  partnerId: integer('partner_id').references(() => partners.id),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -111,8 +126,12 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text('email').unique(),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
   role: text('role').default('viewer'),
   siteId: integer('site_id').references(() => sites.id),
+  partnerId: integer('partner_id').references(() => partners.id),
+  avatarUrl: text('avatar_url'),
   createdAt: timestamp('created_at').defaultNow(),
   isEmailVerified: boolean('is_email_verified').default(false),
   verificationCode: text('verification_code'),
