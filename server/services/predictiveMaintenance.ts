@@ -469,7 +469,7 @@ class PredictiveMaintenanceService {
     }
     
     // Check for high soiling rate
-    if (latestMetrics.soilingLossRate && latestMetrics.soilingLossRate > 5) {
+    if (latestMetrics.soilingLossRate && Number(latestMetrics.soilingLossRate) > 5) {
       issues.push({
         type: 'high_soiling',
         confidence: 70,
@@ -482,7 +482,7 @@ class PredictiveMaintenanceService {
     }
     
     // Check for hot spots
-    if (latestMetrics.hotspotCount && latestMetrics.hotspotCount > 0) {
+    if (latestMetrics.hotspotCount && Number(latestMetrics.hotspotCount) > 0) {
       issues.push({
         type: 'hotspots',
         confidence: 90,
@@ -495,7 +495,7 @@ class PredictiveMaintenanceService {
     }
     
     // Check for connection integrity issues
-    if (latestMetrics.connectionIntegrityScore && latestMetrics.connectionIntegrityScore < 70) {
+    if (latestMetrics.connectionIntegrityScore && Number(latestMetrics.connectionIntegrityScore) < 70) {
       issues.push({
         type: 'connection_issues',
         confidence: 85,
@@ -600,18 +600,18 @@ class PredictiveMaintenanceService {
           
           switch (threshold.direction) {
             case 'above':
-              thresholdTriggered = valueToCheck > (threshold.warningThreshold || 0);
+              thresholdTriggered = Number(valueToCheck) > Number(threshold.warningThreshold || 0);
               break;
             case 'below':
-              thresholdTriggered = valueToCheck < (threshold.warningThreshold || 0);
+              thresholdTriggered = Number(valueToCheck) < Number(threshold.warningThreshold || 0);
               break;
             case 'equal':
-              thresholdTriggered = valueToCheck === threshold.warningThreshold;
+              thresholdTriggered = Number(valueToCheck) === Number(threshold.warningThreshold || 0);
               break;
             case 'between':
               thresholdTriggered = 
-                valueToCheck >= (threshold.warningThreshold || 0) && 
-                valueToCheck <= (threshold.secondaryThreshold || 0);
+                Number(valueToCheck) >= Number(threshold.warningThreshold || 0) && 
+                Number(valueToCheck) <= Number(threshold.secondaryThreshold || 0);
               break;
           }
           
@@ -764,7 +764,7 @@ class PredictiveMaintenanceService {
     frequency: string,
     startDate: Date,
     userId?: number
-  ): Promise<DeviceMaintenanceSchedule> {
+  ): Promise<typeof deviceMaintenanceSchedules.$inferSelect> {
     try {
       // Get device info
       const [device] = await db
@@ -998,7 +998,7 @@ class PredictiveMaintenanceService {
         resolvedAt: new Date(),
         resolution,
         resolutionNotes: notes,
-        maintenanceCost,
+        maintenanceCost: maintenanceCost ? String(maintenanceCost) : null,
       })
       .where(eq(deviceMaintenanceIssues.id, issueId))
       .returning();
@@ -1058,7 +1058,7 @@ class PredictiveMaintenanceService {
       const totalDevices = deviceReports.length;
       const devicesWithIssues = deviceReports.filter(r => r.activeIssues > 0).length;
       const devicesWithAlerts = deviceReports.filter(r => r.activeAlerts > 0).length;
-      const avgHealthScore = deviceReports.reduce((sum, r) => sum + r.healthScore, 0) / totalDevices;
+      const avgHealthScore = deviceReports.reduce((sum, r) => sum + Number(r.healthScore || 0), 0) / totalDevices;
       
       // Prepare the report
       return {

@@ -22,6 +22,7 @@ import OneLineDiagramPage from "@/pages/one-line-diagram/OneLineDiagramPage";
 import GatewayManagementPage from "@/pages/GatewayManagementPage";
 import PredictiveMaintenancePage from "@/pages/predictive-maintenance-page";
 import DiagnosticPage from "@/pages/diagnostic/DiagnosticPage";
+import VPPPage from "@/pages/vpp-page";
 import { WebSocketStatus } from "@/components/ui/websocket-status";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -65,7 +66,7 @@ function Router() {
       <ProtectedPageWithLayout path="/locations" component={LocationsPage} />
       <ProtectedPageWithLayout path="/energy-flow" component={EnergyFlowPage} />
       <ProtectedPageWithLayout path="/optimization" component={OptimizationDashboard} />
-      <ProtectedPageWithLayout path="/vpp" component={OptimizationDashboard} />
+      <ProtectedPageWithLayout path="/vpp" component={VPPPage} />
       <ProtectedPageWithLayout path="/battery-arbitrage" component={BatteryArbitragePage} />
       <ProtectedPageWithLayout path="/predictive-maintenance" component={PredictiveMaintenancePage} />
       <ProtectedPageWithLayout path="/reports" component={ReportsPage} />
