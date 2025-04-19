@@ -62,6 +62,8 @@ function Router() {
       <ProtectedPageWithLayout path="/devices" component={DevicesPage} />
       <ProtectedPageWithLayout path="/devices/:id" component={DeviceDetail} />
       <ProtectedPageWithLayout path="/device-registry" component={DeviceRegistryPage} />
+      <ProtectedPageWithLayout path="/electrical-diagram" component={ElectricalDiagramPage} />
+      <ProtectedPageWithLayout path="/electrical-diagram/:id" component={ElectricalDiagramPage} />
       <ProtectedPageWithLayout path="/electrical-diagrams" component={ElectricalDiagramPage} />
       <ProtectedPageWithLayout path="/electrical-diagrams/:id" component={ElectricalDiagramPage} />
       <ProtectedPageWithLayout path="/one-line-diagram" component={OneLineDiagramPage} />

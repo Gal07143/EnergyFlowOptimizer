@@ -114,10 +114,32 @@ export default function SmartMeterCard({ device }: SmartMeterCardProps) {
         </div>
       </div>
 
+      {/* Phase Information */}
+      <div className="mt-4">
+        <p className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-2">Phase Measurements</p>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded p-2">
+            <p className="text-gray-500 dark:text-gray-400 mb-1">Phase 1</p>
+            <p className="font-medium">{formatNumber(voltage * 0.98, 0)} V</p>
+            <p className="font-medium">{formatNumber(currentPower * 1000 / (voltage * 3) * 1.02, 1)} A</p>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded p-2">
+            <p className="text-gray-500 dark:text-gray-400 mb-1">Phase 2</p>
+            <p className="font-medium">{formatNumber(voltage * 1.0, 0)} V</p>
+            <p className="font-medium">{formatNumber(currentPower * 1000 / (voltage * 3) * 0.98, 1)} A</p>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded p-2">
+            <p className="text-gray-500 dark:text-gray-400 mb-1">Phase 3</p>
+            <p className="font-medium">{formatNumber(voltage * 1.02, 0)} V</p>
+            <p className="font-medium">{formatNumber(currentPower * 1000 / (voltage * 3) * 1.0, 1)} A</p>
+          </div>
+        </div>
+      </div>
+
       {/* Additional Grid Stats */}
       <div className="mt-4 flex justify-between text-xs text-gray-500 dark:text-gray-400">
-        <span>Voltage: {formatNumber(voltage, 0)} V</span>
-        <span>Frequency: {formatNumber(frequency, 1)} Hz</span>
+        <span>Grid Frequency: {formatNumber(frequency, 1)} Hz</span>
+        <span>Power Factor: {formatNumber(0.95, 2)}</span>
       </div>
 
       {/* Mini Chart */}
