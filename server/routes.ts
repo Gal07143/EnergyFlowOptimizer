@@ -32,6 +32,7 @@ import { weatherController } from './controllers/weatherController';
 import * as aiOptimizationController from './controllers/aiOptimizationController';
 import * as reportController from './controllers/reportController';
 import * as analyticsController from './controllers/analyticsController';
+import partnerController from './controllers/partnerController';
 import { VPPController } from './controllers/vppController';
 import { initVPPService } from './services/vppService';
 import { ConsumptionPatternController } from './controllers/consumptionPatternController';
