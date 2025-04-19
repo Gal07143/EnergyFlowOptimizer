@@ -4,11 +4,43 @@
  */
 
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+
+// Set up cookie handling
+const COOKIE_PATH = path.join(process.cwd(), 'cookies.txt');
+let cookies = [];
+
+try {
+  if (fs.existsSync(COOKIE_PATH)) {
+    cookies = fs.readFileSync(COOKIE_PATH, 'utf8').split('\n').filter(Boolean);
+  }
+} catch (error) {
+  console.error('Error reading cookies:', error);
+}
 
 // Create an axios instance with cookie support
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-  withCredentials: true  // Important for session cookies
+  baseURL: 'http://localhost:5000/api'
+});
+
+// Add request interceptor to include cookies in requests
+api.interceptors.request.use(config => {
+  if (cookies.length > 0) {
+    config.headers.Cookie = cookies.join('; ');
+  }
+  return config;
+});
+
+// Add response interceptor to save cookies from responses
+api.interceptors.response.use(response => {
+  const setCookies = response.headers['set-cookie'];
+  if (setCookies) {
+    cookies = setCookies;
+    fs.writeFileSync(COOKIE_PATH, cookies.join('\n'));
+    console.log('Cookies saved to file');
+  }
+  return response;
 });
 
 let siteId = null;
@@ -136,24 +168,6 @@ async function getCurrentTariffRate() {
   }
 }
 
-async function runOptimization() {
-  try {
-    console.log(`Running tariff-based optimization for site ${siteId}...`);
-    const response = await api.post(`/sites/${siteId}/optimize/tariff`, {
-      batteryId: 2, // Assuming battery ID 2 exists
-      optimizationMode: 'cost_saving',
-      timeHorizon: 24
-    });
-    
-    console.log('Optimization results:');
-    console.log(JSON.stringify(response.data, null, 2));
-    return response.data;
-  } catch (error) {
-    console.error('Failed to run optimization:', error.response?.data || error.message);
-    return null;
-  }
-}
-
 async function main() {
   // Step 1: Login
   if (!(await login())) {
@@ -191,16 +205,12 @@ async function main() {
   // Step 6: Get current tariff rate
   const currentRate = await getCurrentTariffRate();
   
-  // Step 7: Test the tariff with optimization
-  const optimization = await runOptimization();
-  
   console.log('\nTest summary:');
-  console.log(`- Israeli tariff created: ${fetchedTariff.name?.includes('Israeli') ? '✅' : '❌'}`);
-  console.log(`- Time-of-Use enabled: ${fetchedTariff.isTimeOfUse ? '✅' : '❌'}`);
-  console.log(`- Schedule data present: ${fetchedTariff.scheduleData ? '✅' : '❌'}`);
+  console.log(`- Israeli tariff created: ${tariff.name?.includes('Israeli') ? '✅' : '❌'}`);
+  console.log(`- Time-of-Use enabled: ${tariff.isTimeOfUse ? '✅' : '❌'}`);
+  console.log(`- Schedule data present: ${tariff.scheduleData ? '✅' : '❌'}`);
   console.log(`- Current rate period: ${currentRate ? '✅ ' + currentRate.period : '❌'}`);
-  console.log(`- Currency set to ILS: ${fetchedTariff.currency === 'ILS' ? '✅' : '❌'}`);
-  console.log(`- Optimization with tariff: ${optimization ? '✅' : '❌'}`);
+  console.log(`- Currency set to ILS: ${tariff.currency === 'ILS' ? '✅' : '❌'}`);
 }
 
 main().catch(error => {
