@@ -1,0 +1,513 @@
+openapi: 3.0.3
+info:
+  title: Energy Management System API
+  description: API documentation for the Energy Management System
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Current server
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Sites
+    description: Site management endpoints
+  - name: Devices
+    description: Device management and monitoring
+  - name: Energy
+    description: Energy data and statistics
+  - name: V2G
+    description: Vehicle-to-Grid system endpoints
+  - name: Reports
+    description: Report generation and management
+  - name: Optimization
+    description: Energy optimization and scheduling
+  - name: Tariffs
+    description: Tariff management and pricing
+  - name: BatteryManagement
+    description: Battery management system endpoints
+
+paths:
+  # Authentication
+  /user:
+    get:
+      tags:
+        - Authentication
+      summary: Get the current authenticated user
+      description: Returns the currently authenticated user or 401 if not authenticated
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  # Sites
+  /sites:
+    get:
+      tags:
+        - Sites
+      summary: Get all sites
+      description: Returns all sites the user has access to
+      responses:
+        '200':
+          description: List of sites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Site'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Sites
+      summary: Create a new site
+      description: Create a new site (requires manager role)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteInput'
+      responses:
+        '201':
+          description: Site created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Devices
+  /sites/{siteId}/devices:
+    get:
+      tags:
+        - Devices
+      summary: Get devices for site
+      description: Returns all devices for a specific site
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Site ID
+      responses:
+        '200':
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # V2G (Vehicle-to-Grid)
+  /v2g/vehicles:
+    get:
+      tags:
+        - V2G
+      summary: Get all EV vehicles
+      description: Returns all electric vehicles registered in the system
+      responses:
+        '200':
+          description: List of EV vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EVVehicle'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+  # Battery Management System
+  /battery/telemetry/{deviceId}:
+    get:
+      tags:
+        - BatteryManagement
+      summary: Get battery telemetry
+      description: Returns real-time telemetry data for a battery device
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Battery device ID
+      responses:
+        '200':
+          description: Battery telemetry data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatteryTelemetry'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Battery device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /battery/health/{deviceId}:
+    get:
+      tags:
+        - BatteryManagement
+      summary: Get battery health data
+      description: Returns health status and analytics for a battery device
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Battery device ID
+      responses:
+        '200':
+          description: Battery health data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatteryHealth'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Battery device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Energy Data
+  /sites/{siteId}/energy/latest:
+    get:
+      tags:
+        - Energy
+      summary: Get latest energy data
+      description: Returns the latest energy data for a specific site
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Site ID
+      responses:
+        '200':
+          description: Latest energy data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnergyData'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Site not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum:
+            - admin
+            - partner_admin
+            - manager
+            - viewer
+        partnerId:
+          type: integer
+          nullable: true
+
+    Site:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        location:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+        timezone:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - maintenance
+
+    SiteInput:
+      type: object
+      required:
+        - name
+        - address
+        - city
+        - country
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        timezone:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - inactive
+            - maintenance
+          default: active
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - solar_pv
+            - battery_storage
+            - ev_charger
+            - smart_meter
+            - heat_pump
+            - inverter
+            - load_controller
+            - energy_gateway
+            - edge_node
+            - bidirectional_ev_charger
+        manufacturer:
+          type: string
+        model:
+          type: string
+        capacity:
+          type: number
+        status:
+          type: string
+          enum:
+            - online
+            - offline
+            - error
+            - maintenance
+
+    EVVehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        make:
+          type: string
+        model:
+          type: string
+        batteryCapacity:
+          type: number
+        maxChargingPower:
+          type: number
+        v2gCapable:
+          type: boolean
+
+    BatteryTelemetry:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        voltage:
+          type: number
+        current:
+          type: number
+        temperature:
+          type: number
+        stateOfCharge:
+          type: number
+        power:
+          type: number
+        frequency:
+          type: number
+        cellVoltages:
+          type: array
+          items:
+            type: number
+        cellTemperatures:
+          type: array
+          items:
+            type: number
+
+    BatteryHealth:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        stateOfHealth:
+          type: number
+        cycleCount:
+          type: integer
+        remainingCapacity:
+          type: number
+        originalCapacity:
+          type: number
+        internalResistance:
+          type: number
+        estimatedRemainingLife:
+          type: number
+        degradationRate:
+          type: number
+        balancingStatus:
+          type: string
+          enum:
+            - balanced
+            - unbalanced
+            - in_progress
+            - required
+        anomalyDetected:
+          type: boolean
+        anomalyType:
+          type: string
+          nullable: true
+
+    EnergyData:
+      type: object
+      properties:
+        siteId:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        production:
+          type: number
+        consumption:
+          type: number
+        gridImport:
+          type: number
+        gridExport:
+          type: number
+        batteryCharging:
+          type: number
+        batteryDischarging:
+          type: number
+        evCharging:
+          type: number
+        evDischarging:
+          type: number
+        selfConsumptionRate:
+          type: number
+        autarkyRate:
+          type: number
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
