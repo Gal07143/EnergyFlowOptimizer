@@ -33,6 +33,7 @@ import {
   DollarSign,
   Lightbulb
 } from 'lucide-react';
+import DemandResponseSummaryCard from '@/components/demand-response/DemandResponseSummaryCard';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { format, subDays } from 'date-fns';
 import { useSiteContext } from '@/hooks/use-site-context';
@@ -692,7 +693,7 @@ export default function DashboardPage() {
         </div>
         
         {/* Bottom row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Device status */}
           <Card className="overflow-hidden border-none shadow-lg">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-400 to-purple-500"></div>
