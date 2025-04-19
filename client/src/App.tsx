@@ -7,6 +7,7 @@ import DevicesPage from "@/pages/DevicesPage";
 import DeviceDetail from "@/pages/DeviceDetail";
 import LocationsPage from "@/pages/LocationsPage";
 import EnergyFlowPage from "@/pages/EnergyFlowPage";
+import EnergyFlowHeatmapPage from "@/pages/EnergyFlowHeatmapPage";
 import OptimizationDashboard from "@/pages/OptimizationDashboard";
 import BatteryArbitragePage from "@/pages/BatteryArbitragePage";
 import ReportsPage from "@/pages/ReportsPage";
@@ -67,6 +68,7 @@ function Router() {
       <ProtectedPageWithLayout path="/gateways" component={GatewayManagementPage} />
       <ProtectedPageWithLayout path="/locations" component={LocationsPage} />
       <ProtectedPageWithLayout path="/energy-flow" component={EnergyFlowPage} />
+      <ProtectedPageWithLayout path="/energy-flow-heatmap" component={EnergyFlowHeatmapPage} />
       <ProtectedPageWithLayout path="/optimization" component={OptimizationDashboard} />
       <ProtectedPageWithLayout path="/vpp" component={VPPPage} />
       <ProtectedPageWithLayout path="/battery-arbitrage" component={BatteryArbitragePage} />

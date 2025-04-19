@@ -23,7 +23,7 @@ import {
   ArrowRight,
   ArrowLeft,
 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useSiteContext } from '@/hooks/use-site-context';
 import { useLocation } from 'wouter';
@@ -792,10 +792,9 @@ const EnergyFlowHeatmap: React.FC<EnergyFlowHeatmapProps> = ({
                         {
                           'border-yellow-500': cell.device === 'solar',
                           'border-orange-500': cell.device === 'battery',
-                          'border-blue-500': cell.device === 'grid' && flowData.grid.direction === 'import',
+                          'border-blue-500': cell.device === 'grid' && flowData.grid.direction === 'import' || cell.device === 'ev',
                           'border-green-500': cell.device === 'grid' && flowData.grid.direction === 'export',
                           'border-purple-500': cell.device === 'home',
-                          'border-blue-500': cell.device === 'ev',
                           'border-red-500': cell.device === 'heatpump',
                         }
                       )}
@@ -815,10 +814,9 @@ const EnergyFlowHeatmap: React.FC<EnergyFlowHeatmapProps> = ({
                           {
                             'text-yellow-500': cell.device === 'solar',
                             'text-orange-500': cell.device === 'battery',
-                            'text-blue-500': cell.device === 'grid' && flowData.grid.direction === 'import',
+                            'text-blue-500': (cell.device === 'grid' && flowData.grid.direction === 'import') || (cell.device === 'ev'),
                             'text-green-500': cell.device === 'grid' && flowData.grid.direction === 'export',
                             'text-purple-500': cell.device === 'home',
-                            'text-blue-500': cell.device === 'ev',
                             'text-red-500': cell.device === 'heatpump',
                           }
                         )} />
@@ -939,7 +937,8 @@ const EnergyFlowHeatmap: React.FC<EnergyFlowHeatmapProps> = ({
   );
 };
 
-// Add bounce-slow animation to tailwind
+// Animation extension (commented out since these are already in tailwind.config.ts)
+/* 
 const tailwindExtension = {
   keyframes: {
     'bounce-slow': {
@@ -951,5 +950,6 @@ const tailwindExtension = {
     'bounce-slow': 'bounce-slow 2s ease-in-out infinite',
   },
 };
+*/
 
 export default EnergyFlowHeatmap;
