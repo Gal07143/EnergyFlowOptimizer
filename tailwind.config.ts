@@ -79,10 +79,46 @@ export default {
             height: "0",
           },
         },
+        "pulse-slow": {
+          "0%, 100%": { opacity: "0.4" },
+          "50%": { opacity: "0.7" },
+        },
+        "pulse-medium": {
+          "0%, 100%": { opacity: "0.5" },
+          "50%": { opacity: "0.9" },
+        },
+        "pulse-fast": {
+          "0%, 100%": { opacity: "0.6" },
+          "50%": { opacity: "1" },
+        },
+        "flow-low": {
+          "0%": { strokeDashoffset: "20" },
+          "100%": { strokeDashoffset: "0" },
+        },
+        "flow-medium": {
+          "0%": { strokeDashoffset: "15" },
+          "100%": { strokeDashoffset: "0" },
+        },
+        "flow-high": {
+          "0%": { strokeDashoffset: "10" },
+          "100%": { strokeDashoffset: "0" },
+        },
+        "heatmap-pulse": {
+          "0%": { opacity: "0.7", filter: "saturate(0.8)" },
+          "50%": { opacity: "1", filter: "saturate(1.2)" },
+          "100%": { opacity: "0.7", filter: "saturate(0.8)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-slow": "pulse-slow 2s ease-in-out infinite",
+        "pulse-medium": "pulse-medium 1.5s ease-in-out infinite",
+        "pulse-fast": "pulse-fast 1s ease-in-out infinite",
+        "flow-low": "flow-low 4s linear infinite",
+        "flow-medium": "flow-medium 3s linear infinite",
+        "flow-high": "flow-high 2s linear infinite",
+        "heatmap-pulse": "heatmap-pulse 2s ease-in-out infinite",
       },
     },
   },
