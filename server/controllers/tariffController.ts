@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { storage } from '../storage';
 import { db } from '../db';
-import { tariffs } from '@shared/schema';
+import { tariffs, devices } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 // Get all tariffs for a site

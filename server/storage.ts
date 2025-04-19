@@ -445,11 +445,85 @@ export class DatabaseStorage implements IStorage {
   }
   
   async deleteTariff(id: number): Promise<boolean> {
+    // First, remove any device references to this tariff
+    await db
+      .update(devices)
+      .set({ tariffId: null })
+      .where(eq(devices.tariffId, id));
+      
+    // Then delete the tariff
     const deletedTariffs = await db
       .delete(tariffs)
       .where(eq(tariffs.id, id))
       .returning();
     return deletedTariffs.length > 0;
+  }
+  
+  // Device-specific tariff operations
+  async getDeviceTariff(deviceId: number): Promise<Tariff | undefined> {
+    // First, get the device to check if it has a specific tariff assigned
+    const [device] = await db
+      .select()
+      .from(devices)
+      .where(eq(devices.id, deviceId));
+      
+    if (!device) {
+      return undefined;
+    }
+    
+    // If device has a tariffId, return that specific tariff
+    if (device.tariffId) {
+      return this.getTariff(device.tariffId);
+    }
+    
+    // Otherwise, fall back to the site tariff (first tariff for the site)
+    const siteTariffs = await this.getTariffs(device.siteId);
+    return siteTariffs.length > 0 ? siteTariffs[0] : undefined;
+  }
+  
+  async setDeviceTariff(deviceId: number, tariffId: number): Promise<boolean> {
+    try {
+      // Verify both device and tariff exist
+      const device = await this.getDevice(deviceId);
+      const tariff = await this.getTariff(tariffId);
+      
+      if (!device || !tariff) {
+        return false;
+      }
+      
+      // Update the device with the tariff ID
+      await db
+        .update(devices)
+        .set({ tariffId, updatedAt: new Date() })
+        .where(eq(devices.id, deviceId));
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to set device-specific tariff:', error);
+      return false;
+    }
+  }
+  
+  async removeDeviceTariff(deviceId: number): Promise<boolean> {
+    try {
+      // Verify device exists
+      const device = await this.getDevice(deviceId);
+      
+      if (!device) {
+        return false;
+      }
+      
+      // Clear the tariffId field
+      await db
+        .update(devices)
+        .set({ tariffId: null, updatedAt: new Date() })
+        .where(eq(devices.id, deviceId));
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to remove device-specific tariff:', error);
+      return false;
+    }
   }
 }
 
