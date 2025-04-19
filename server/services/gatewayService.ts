@@ -121,9 +121,47 @@ export class GatewayService {
    */
   async findAllGateways(siteId?: number) {
     const query = siteId 
-      ? db.select().from(devices)
+      ? db.select({
+          id: devices.id,
+          name: devices.name,
+          status: devices.status,
+          siteId: devices.siteId,
+          type: devices.type,
+          model: devices.model,
+          manufacturer: devices.manufacturer,
+          serialNumber: devices.serialNumber,
+          firmwareVersion: devices.firmwareVersion,
+          ipAddress: devices.ipAddress,
+          location: devices.location,
+          installDate: devices.installDate,
+          lastCommunication: devices.lastCommunication,
+          icon: devices.icon,
+          description: devices.description,
+          customSettings: devices.customSettings,
+          createdAt: devices.createdAt,
+          updatedAt: devices.updatedAt
+        }).from(devices)
           .where(and(eq(devices.type, 'energy_gateway'), eq(devices.siteId, siteId)))
-      : db.select().from(devices)
+      : db.select({
+          id: devices.id,
+          name: devices.name,
+          status: devices.status,
+          siteId: devices.siteId,
+          type: devices.type,
+          model: devices.model,
+          manufacturer: devices.manufacturer,
+          serialNumber: devices.serialNumber,
+          firmwareVersion: devices.firmwareVersion,
+          ipAddress: devices.ipAddress,
+          location: devices.location,
+          installDate: devices.installDate,
+          lastCommunication: devices.lastCommunication,
+          icon: devices.icon,
+          description: devices.description,
+          customSettings: devices.customSettings,
+          createdAt: devices.createdAt,
+          updatedAt: devices.updatedAt
+        }).from(devices)
           .where(eq(devices.type, 'energy_gateway'));
           
     return await query;
@@ -421,7 +459,15 @@ export class GatewayService {
     // Simulate heartbeats for development
     setInterval(async () => {
       try {
-        const gateways = await this.findAllGateways();
+        // Query only needed fields to avoid issues with new schema fields
+        const gateways = await db
+          .select({
+            id: devices.id,
+            name: devices.name,
+            status: devices.status
+          })
+          .from(devices)
+          .where(eq(devices.type, 'energy_gateway'));
         
         for (const gateway of gateways) {
           // Randomly set gateways online/offline for simulation
