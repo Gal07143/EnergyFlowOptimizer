@@ -17,6 +17,8 @@ export type V2GOptimizationMode =
   'peak_shaving' | 
   'carbon_reduction' | 
   'v2g_revenue' |
+  'v2h_priority' |
+  'bidirectional_smart' |
   'reactive_power';
 
 // Timeslot interval in minutes
@@ -530,6 +532,23 @@ export class V2GOptimizationService {
           vehicleId, 
           deviceId,
           constraints
+        );
+      } else if (mode === 'v2h_priority') {
+        // Optimize for home consumption priority
+        result = await this.optimizeForV2HPriority(
+          vehicleId,
+          deviceId,
+          constraints,
+          siteData.id
+        );
+      } else if (mode === 'bidirectional_smart') {
+        // Smart bidirectional charging using advanced algorithms
+        result = await this.optimizeSmartBidirectional(
+          vehicleId,
+          deviceId,
+          constraints,
+          siteData.id,
+          v2gServices
         );
       } else {
         // Default optimization using AI
