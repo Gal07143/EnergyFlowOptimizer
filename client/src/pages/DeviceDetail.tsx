@@ -34,6 +34,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import useDeviceWebSocket, { DeviceReading } from '@/hooks/useDeviceWebSocket';
 import { queryClient } from '@/lib/queryClient';
+import BatteryManagementPanel from '@/components/battery/BatteryManagementPanel';
 
 // Component to display the device icon based on the device type
 const DeviceIcon = ({ type, className = "h-6 w-6" }: { type: string, className?: string }) => {

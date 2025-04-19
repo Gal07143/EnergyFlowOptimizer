@@ -703,6 +703,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Gateway routes
   app.use('/api/gateways', gatewayRoutes);
   
+  // Battery Management System (BMS) routes
+  app.get('/api/devices/:deviceId/battery/telemetry/latest', batteryController.getLatestBatteryTelemetry);
+  app.get('/api/devices/:deviceId/battery/telemetry/history', batteryController.getBatteryTelemetryHistory);
+  app.get('/api/devices/:deviceId/battery/capacity-tests', batteryController.getBatteryCapacityTests);
+  app.get('/api/devices/:deviceId/battery/lifecycle-events', batteryController.getBatteryLifecycleEvents);
+  app.get('/api/devices/:deviceId/battery/thermal-events', batteryController.getBatteryThermalEvents);
+  app.post('/api/devices/:deviceId/battery/capacity-test', requireManager, batteryController.scheduleCapacityTest);
+  
   // Development endpoint without auth for testing ML models
   app.post('/api/test/consumption-patterns/:id/train', ConsumptionPatternController.trainPatternModel);
   
