@@ -448,7 +448,7 @@ async function seedDeviceCatalog(manufacturers) {
       manufacturerId: manufacturerMap.get('Tesla Energy'),
       name: 'Powerwall 2',
       modelNumber: 'PW2',
-      type: 'battery',
+      type: 'battery_storage', // Changed from 'battery' to match enum
       releaseYear: 2023,
       imageUrl: 'https://www.tesla.com/sites/default/files/powerwall/PW2_Standalone_Foreground.png',
       capacity: 13.5,
@@ -468,7 +468,7 @@ async function seedDeviceCatalog(manufacturers) {
       manufacturerId: manufacturerMap.get('Tesla Energy'),
       name: 'Powerwall+',
       modelNumber: 'PWP',
-      type: 'battery',
+      type: 'battery_storage', // Changed from 'battery' to match enum
       releaseYear: 2023,
       imageUrl: 'https://www.tesla.com/sites/default/files/powerwall/PW2_Inverter_Foreground.png',
       capacity: 13.5,
@@ -616,7 +616,7 @@ async function seedDeviceCatalog(manufacturers) {
       manufacturerId: manufacturerMap.get('Cisco Systems'),
       name: 'IR1101',
       modelNumber: 'IR1101-K9',
-      type: 'gateway',
+      type: 'energy_gateway', // Changed from 'gateway' to match enum
       releaseYear: 2023,
       imageUrl: 'https://www.cisco.com/c/en/us/products/routers/1101-industrial-integrated-services-router/index/_jcr_content/Grid/category_atl_9d27/layout-category-atl/anchor_info_d18b/image.img.jpg/1588789863750.jpg',
       capacity: null,
@@ -636,7 +636,7 @@ async function seedDeviceCatalog(manufacturers) {
       manufacturerId: manufacturerMap.get('Cisco Systems'),
       name: 'IC3000',
       modelNumber: 'IC3000-2C2D-K9',
-      type: 'gateway',
+      type: 'energy_gateway', // Changed from 'gateway' to match enum
       releaseYear: 2022,
       imageUrl: 'https://www.cisco.com/c/en/us/products/collateral/switches/catalyst-micro-switches/catalyst-micro-switches-datasheet/_jcr_content/Grid/subcategory_atl/layout-subcategory-atl/anchor_info/image.img.jpg/1588790522559.jpg',
       capacity: null,

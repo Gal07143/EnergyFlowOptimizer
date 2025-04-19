@@ -383,6 +383,36 @@ export const deviceSecuritySettings = pgTable('device_security_settings', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// Device Connection Templates
+export const deviceConnectionTemplates = pgTable('device_connection_templates', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  protocol: text('protocol').notNull(),
+  // Templates can be associated with a specific manufacturer, device, both, or neither (generic)
+  manufacturerId: integer('manufacturer_id').references(() => deviceManufacturers.id),
+  deviceCatalogId: integer('device_catalog_id').references(() => deviceCatalog.id),
+  // Connection settings stored as JSON
+  settings: json('settings').notNull(),
+  isDefault: boolean('is_default').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Device Connection Settings - stores the active connection settings for each device
+export const deviceConnectionSettings = pgTable('device_connection_settings', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  protocol: text('protocol').notNull(),
+  settings: json('settings').notNull(),
+  connectionTemplateId: integer('connection_template_id').references(() => deviceConnectionTemplates.id),
+  connectionStatus: text('connection_status').default('disconnected'),
+  lastConnected: timestamp('last_connected'),
+  lastConnectionError: text('last_connection_error'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // Security Audit Log
 export const securityAuditLog = pgTable('security_audit_log', {
   id: serial('id').primaryKey(),
@@ -2582,3 +2612,47 @@ export const insertPartnerSchema = createInsertSchema(partners).omit({
 });
 export type Partner = typeof partners.$inferSelect;
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
+
+// Device Connection Templates types
+export const insertDeviceConnectionTemplateSchema = createInsertSchema(deviceConnectionTemplates).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+export type DeviceConnectionTemplate = typeof deviceConnectionTemplates.$inferSelect;
+export type InsertDeviceConnectionTemplate = z.infer<typeof insertDeviceConnectionTemplateSchema>;
+
+// Device Connection Settings types
+export const insertDeviceConnectionSettingsSchema = createInsertSchema(deviceConnectionSettings).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true,
+  lastConnected: true,
+  lastConnectionError: true
+});
+export type DeviceConnectionSetting = typeof deviceConnectionSettings.$inferSelect;
+export type InsertDeviceConnectionSetting = z.infer<typeof insertDeviceConnectionSettingsSchema>;
+
+// Define relations for connection templates and settings
+export const deviceConnectionTemplatesRelations = relations(deviceConnectionTemplates, ({ one, many }) => ({
+  manufacturer: one(deviceManufacturers, {
+    fields: [deviceConnectionTemplates.manufacturerId],
+    references: [deviceManufacturers.id]
+  }),
+  deviceCatalog: one(deviceCatalog, {
+    fields: [deviceConnectionTemplates.deviceCatalogId],
+    references: [deviceCatalog.id]
+  }),
+  deviceConnections: many(deviceConnectionSettings)
+}));
+
+export const deviceConnectionSettingsRelations = relations(deviceConnectionSettings, ({ one }) => ({
+  device: one(devices, {
+    fields: [deviceConnectionSettings.deviceId],
+    references: [devices.id]
+  }),
+  connectionTemplate: one(deviceConnectionTemplates, {
+    fields: [deviceConnectionSettings.connectionTemplateId],
+    references: [deviceConnectionTemplates.id]
+  })
+}));

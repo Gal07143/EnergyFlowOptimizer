@@ -48,6 +48,7 @@ import { predictiveMaintenanceRoutes } from './routes/predictiveMaintenanceRoute
 import gatewayRoutes from './routes/gatewayRoutes';
 import alarmsRoutes from './routes/alarms';
 import * as gatewayController from './controllers/gatewayController';
+import * as connectionTemplateController from './controllers/connectionTemplateController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -202,6 +203,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch device catalog' });
     }
   });
+  
+  // Connection templates routes
+  app.get('/api/connection-templates', connectionTemplateController.getConnectionTemplates);
+  app.post('/api/connection-templates', requireManager, connectionTemplateController.createConnectionTemplate);
+  app.put('/api/connection-templates/:id', requireManager, connectionTemplateController.updateConnectionTemplate);
+  app.delete('/api/connection-templates/:id', requireAdmin, connectionTemplateController.deleteConnectionTemplate);
   
   // Device technical specifications routes - Allow unauthenticated access for GET
   app.get('/api/device-catalog/:id/technical-specs', async (req, res) => {
@@ -452,6 +459,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/devices/:deviceId/tariff', tariffController.getDeviceTariff);
   app.post('/api/devices/:deviceId/tariff/:tariffId', requireManager, tariffController.setDeviceTariff);
   app.delete('/api/devices/:deviceId/tariff', requireManager, tariffController.removeDeviceTariff);
+  
+  // Device connection settings routes
+  app.get('/api/devices/:deviceId/connection', async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.deviceId);
+      
+      if (isNaN(deviceId)) {
+        return res.status(400).json({ message: 'Invalid device ID' });
+      }
+      
+      // Get device connection settings
+      const [connectionSettings] = await db
+        .select()
+        .from(deviceConnectionSettings)
+        .where(eq(deviceConnectionSettings.deviceId, deviceId));
+      
+      if (!connectionSettings) {
+        return res.status(404).json({ message: 'Connection settings not found for this device' });
+      }
+      
+      // Get the connection template if available
+      if (connectionSettings.connectionTemplateId) {
+        const [template] = await db
+          .select()
+          .from(deviceConnectionTemplates)
+          .where(eq(deviceConnectionTemplates.id, connectionSettings.connectionTemplateId));
+          
+        if (template) {
+          return res.json({
+            ...connectionSettings,
+            template
+          });
+        }
+      }
+      
+      return res.json(connectionSettings);
+    } catch (error) {
+      console.error('Error fetching device connection settings:', error);
+      return res.status(500).json({ message: 'Failed to fetch connection settings' });
+    }
+  });
+  
+  app.post('/api/devices/:deviceId/connection', requireManager, async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.deviceId);
+      
+      if (isNaN(deviceId)) {
+        return res.status(400).json({ message: 'Invalid device ID' });
+      }
+      
+      const { connectionTemplateId, protocol, settings, status } = req.body;
+      
+      // Check if the device exists
+      const [device] = await db
+        .select()
+        .from(devices)
+        .where(eq(devices.id, deviceId));
+      
+      if (!device) {
+        return res.status(404).json({ message: 'Device not found' });
+      }
+      
+      // Check if connection settings already exist for this device
+      const [existingSettings] = await db
+        .select()
+        .from(deviceConnectionSettings)
+        .where(eq(deviceConnectionSettings.deviceId, deviceId));
+      
+      let result;
+      
+      if (existingSettings) {
+        // Update existing connection settings
+        [result] = await db
+          .update(deviceConnectionSettings)
+          .set({
+            connectionTemplateId,
+            protocol: protocol || existingSettings.protocol,
+            settings: settings || existingSettings.settings,
+            status: status || existingSettings.status,
+            updatedAt: new Date()
+          })
+          .where(eq(deviceConnectionSettings.id, existingSettings.id))
+          .returning();
+        
+        return res.json(result);
+      } else {
+        // Create new connection settings
+        [result] = await db
+          .insert(deviceConnectionSettings)
+          .values({
+            deviceId,
+            connectionTemplateId,
+            protocol,
+            settings,
+            status: status || 'disconnected',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+        
+        return res.status(201).json(result);
+      }
+    } catch (error) {
+      console.error('Error saving device connection settings:', error);
+      return res.status(500).json({ message: 'Failed to save connection settings' });
+    }
+  });
   
   // Tariff Optimization routes
   app.post('/api/sites/:siteId/optimize/tariff', tariffOptimizationController.optimizeBySiteTariff);
