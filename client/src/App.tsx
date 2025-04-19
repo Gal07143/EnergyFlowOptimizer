@@ -23,6 +23,8 @@ import GatewayManagementPage from "@/pages/GatewayManagementPage";
 import PredictiveMaintenancePage from "@/pages/predictive-maintenance-page";
 import DiagnosticPage from "@/pages/diagnostic/DiagnosticPage";
 import VPPPage from "@/pages/vpp-page";
+import PartnersPage from "@/pages/PartnersPage";
+import PartnerDetailPage from "@/pages/PartnerDetailPage";
 import { WebSocketStatus } from "@/components/ui/websocket-status";
 import { useEffect } from "react";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -74,6 +76,9 @@ function Router() {
       <ProtectedPageWithLayout path="/demand-response" component={DemandResponse} />
       <ProtectedPageWithLayout path="/settings" component={Settings} />
       <ProtectedPageWithLayout path="/profile" component={ProfilePage} />
+      {/* Partner management routes */}
+      <ProtectedPageWithLayout path="/partners" component={PartnersPage} />
+      <ProtectedPageWithLayout path="/partners/:id" component={PartnerDetailPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/verify-email" component={EmailVerificationPage} />
       {/* Add diagnostic route without auth protection */}

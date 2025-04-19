@@ -74,9 +74,9 @@ const navItems = [
     badge: null as BadgeType
   },
   {
-    title: 'Users',
+    title: 'Partners',
     icon: <Users className="h-5 w-5" />,
-    href: '/users',
+    href: '/partners',
     badge: null as BadgeType
   }
 ];
