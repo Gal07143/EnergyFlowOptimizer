@@ -12,7 +12,8 @@ export const deviceTypeEnum = pgEnum('device_type', [
   'heat_pump',
   'inverter',
   'load_controller',
-  'energy_gateway'
+  'energy_gateway',
+  'edge_node'  // Added for edge computing nodes
 ]);
 
 export const gatewayProtocolEnum = pgEnum('gateway_protocol', [
@@ -23,7 +24,34 @@ export const gatewayProtocolEnum = pgEnum('gateway_protocol', [
   'bacnet',
   'canbus',
   'zigbee',
-  'zwave'
+  'zwave',
+  '5g',        // Added for 5G connectivity
+  'lte',
+  'nb_iot'     // Narrowband IoT
+]);
+
+// Edge Computing Enums
+export const edgeNodeTypeEnum = pgEnum('edge_node_type', [
+  'primary',
+  'secondary',
+  'failover',
+  'specialized'
+]);
+
+export const edgeNodeStatusEnum = pgEnum('edge_node_status', [
+  'active',
+  'standby',
+  'offline',
+  'maintenance',
+  'provisioning'
+]);
+
+export const edgeComputeCapabilityEnum = pgEnum('edge_compute_capability', [
+  'basic_telemetry',
+  'local_control',
+  'ml_inference',
+  'full_autonomous',
+  'data_preprocessing'
 ]);
 
 export const deviceStatusEnum = pgEnum('device_status', [
@@ -1406,6 +1434,136 @@ export const demandResponseActionsRelations = relations(demandResponseActions, (
     references: [devices.id],
   }),
 }));
+
+// Reserve this space for edge computing relations - we'll define them after the tables
+
+// 5G Edge Computing Tables
+export const edgeComputingNodes = pgTable('edge_computing_nodes', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  siteId: integer('site_id').references(() => sites.id).notNull(),
+  nodeType: edgeNodeTypeEnum('node_type').default('primary'),
+  status: edgeNodeStatusEnum('status').default('active'),
+  ipAddress: text('ip_address'),
+  macAddress: text('mac_address'),
+  capabilities: edgeComputeCapabilityEnum('capabilities').array(),
+  processor: text('processor'),
+  memory: integer('memory_mb'),
+  storage: integer('storage_gb'),
+  operatingSystem: text('operating_system'),
+  firmwareVersion: text('firmware_version'),
+  location: text('location'),
+  installationDate: timestamp('installation_date'),
+  lastMaintenance: timestamp('last_maintenance'),
+  lastHeartbeat: timestamp('last_heartbeat'),
+  powerConsumptionWatts: numeric('power_consumption_watts'),
+  maxDeviceConnections: integer('max_device_connections'),
+  currentDeviceConnections: integer('current_device_connections').default(0),
+  securityLevel: text('security_level').default('standard'),
+  encryptionEnabled: boolean('encryption_enabled').default(true),
+  hasFallbackConnection: boolean('has_fallback_connection').default(false),
+  isVirtualNode: boolean('is_virtual_node').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  metadata: json('metadata')
+});
+
+// 5G/IoT Connectivity
+export const edgeConnectivity = pgTable('edge_connectivity', {
+  id: serial('id').primaryKey(),
+  edgeNodeId: integer('edge_node_id').references(() => edgeComputingNodes.id).notNull(),
+  connectivityType: gatewayProtocolEnum('connectivity_type').default('5g'),
+  provider: text('provider'),
+  signalStrength: integer('signal_strength'),
+  bandwidth: numeric('bandwidth_mbps'),
+  latencyMs: numeric('latency_ms'),
+  jitterMs: numeric('jitter_ms'),
+  packetLoss: numeric('packet_loss_percent'),
+  dataUsage: numeric('data_usage_mb'),
+  ipAddress: text('ip_address'),
+  subnet: text('subnet'),
+  gateway: text('gateway'),
+  dns: text('dns'),
+  simCardId: text('sim_card_id'),
+  imei: text('imei'),
+  apn: text('apn'),
+  lastConnected: timestamp('last_connected'),
+  isFallback: boolean('is_fallback').default(false),
+  isPrimary: boolean('is_primary').default(true),
+  status: text('status').default('active'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  metadata: json('metadata')
+});
+
+// Edge Node Applications (software running on edge nodes)
+export const edgeNodeApplications = pgTable('edge_node_applications', {
+  id: serial('id').primaryKey(),
+  edgeNodeId: integer('edge_node_id').references(() => edgeComputingNodes.id).notNull(),
+  name: text('name').notNull(),
+  version: text('version'),
+  status: text('status').default('running'),
+  description: text('description'),
+  installDate: timestamp('install_date').defaultNow(),
+  lastUpdated: timestamp('last_updated').defaultNow(),
+  applicationType: text('application_type').default('control'),
+  memoryUsageMb: numeric('memory_usage_mb'),
+  cpuUsagePercent: numeric('cpu_usage_percent'),
+  storageUsageMb: numeric('storage_usage_mb'),
+  autoStart: boolean('auto_start').default(true),
+  restartPolicy: text('restart_policy').default('always'),
+  healthCheckEndpoint: text('health_check_endpoint'),
+  healthStatus: text('health_status').default('healthy'),
+  lastHealthCheck: timestamp('last_health_check'),
+  containerized: boolean('containerized').default(true),
+  deploymentMethod: text('deployment_method').default('container'),
+  repositoryUrl: text('repository_url'),
+  configJson: json('config_json'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+// Edge Node Device Control (devices controlled by edge nodes)
+export const edgeNodeDeviceControl = pgTable('edge_node_device_control', {
+  id: serial('id').primaryKey(),
+  edgeNodeId: integer('edge_node_id').references(() => edgeComputingNodes.id).notNull(),
+  deviceId: integer('device_id').references(() => devices.id).notNull(),
+  controlEnabled: boolean('control_enabled').default(true),
+  controlMode: text('control_mode').default('full'),
+  priorityLevel: integer('priority_level').default(5),
+  maxLatencyAllowedMs: integer('max_latency_allowed_ms'),
+  authToken: text('auth_token'),
+  connectionStatus: text('connection_status').default('connected'),
+  lastControlAction: timestamp('last_control_action'),
+  lastResponseTime: numeric('last_response_time_ms'),
+  fallbackBehavior: text('fallback_behavior').default('maintain_last_state'),
+  localCachingEnabled: boolean('local_caching_enabled').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  controlMappingJson: json('control_mapping_json')
+});
+
+// Edge Node Metrics
+export const edgeNodeMetrics = pgTable('edge_node_metrics', {
+  id: serial('id').primaryKey(),
+  edgeNodeId: integer('edge_node_id').references(() => edgeComputingNodes.id).notNull(),
+  timestamp: timestamp('timestamp').defaultNow(),
+  cpuUsagePercent: numeric('cpu_usage_percent'),
+  memoryUsageMb: numeric('memory_usage_mb'),
+  networkInKbps: numeric('network_in_kbps'),
+  networkOutKbps: numeric('network_out_kbps'),
+  diskReadKbps: numeric('disk_read_kbps'),
+  diskWriteKbps: numeric('disk_write_kbps'),
+  storageUsagePercent: numeric('storage_usage_percent'),
+  temperature: numeric('temperature_celsius'),
+  uptimeSeconds: numeric('uptime_seconds'),
+  activeConnections: integer('active_connections'),
+  errorCount: integer('error_count'),
+  batteryLevel: numeric('battery_level_percent'),
+  powerStatus: text('power_status'),
+  signalStrength: integer('signal_strength'),
+  latencyMs: numeric('latency_ms')
+});
 
 // Insert Schemas
 export const insertSiteSchema = createInsertSchema(sites, {
