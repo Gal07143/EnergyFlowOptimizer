@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { 
   Tabs, 
   TabsContent, 
@@ -28,7 +29,9 @@ import {
   Activity,
   ExternalLink,
   GanttChart,
-  Scale
+  Scale,
+  DollarSign,
+  Lightbulb
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { format, subDays } from 'date-fns';
@@ -658,7 +661,10 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full rounded-full bg-gradient-to-r from-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100 border-sky-200 text-sky-700 dark:text-sky-400 dark:border-sky-800 dark:from-sky-900/20 dark:to-blue-900/20 dark:hover:from-sky-900/30 dark:hover:to-blue-900/30"
+                >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   View Full Forecast
                 </Button>
@@ -675,7 +681,7 @@ export default function DashboardPage() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="text-xs"
+                className="text-xs rounded-full bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 border-primary/20 text-primary dark:border-primary/30 shadow-sm"
                 onClick={() => navigate('/energy-flow-heatmap')}
               >
                 <Activity className="h-4 w-4 mr-1" />
@@ -732,7 +738,10 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full rounded-full bg-gradient-to-r from-violet-50 to-purple-50 hover:from-violet-100 hover:to-purple-100 border-violet-200 text-violet-700 dark:text-violet-400 dark:border-violet-800 dark:from-violet-900/20 dark:to-purple-900/20 dark:hover:from-violet-900/30 dark:hover:to-purple-900/30"
+                >
                   <ArrowRight className="h-4 w-4 mr-2" />
                   View All Devices
                 </Button>
@@ -798,7 +807,10 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full rounded-full bg-gradient-to-r from-orange-50 to-rose-50 hover:from-orange-100 hover:to-rose-100 border-orange-200 text-orange-700 dark:text-orange-400 dark:border-orange-800 dark:from-orange-900/20 dark:to-rose-900/20 dark:hover:from-orange-900/30 dark:hover:to-rose-900/30"
+                >
                   <ArrowRight className="h-4 w-4 mr-2" />
                   View All Events
                 </Button>
@@ -807,64 +819,106 @@ export default function DashboardPage() {
           </Card>
           
           {/* Optimization recommendations */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Zap className="h-5 w-5 mr-2 text-primary" />
-                Optimization Insights
+          <Card className="overflow-hidden border-none shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+            <CardHeader className="pb-2 pt-6">
+              <CardTitle className="text-xl flex items-center font-bold">
+                <Lightbulb className="h-5 w-5 mr-2 text-emerald-500" />
+                <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                  Optimization Insights
+                </span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 AI-powered energy optimization recommendations
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="rounded-lg bg-muted/50 p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="mt-0.5">
-                      <Battery className="h-5 w-5 text-green-500" />
+              <div className="space-y-5">
+                <div className="rounded-xl bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/10 dark:to-green-900/5 p-4 shadow-sm">
+                  <div className="flex items-start space-x-4">
+                    <div className="mt-1 flex-shrink-0">
+                      <div className="bg-emerald-100 dark:bg-emerald-800/40 h-10 w-10 rounded-full flex items-center justify-center">
+                        <Battery className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium">Battery Charging Optimization</div>
-                      <div className="text-sm mt-1">
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-800 dark:text-white">Battery Charging Optimization</div>
+                      <div className="text-sm mt-1 text-slate-600 dark:text-slate-300">
                         Charge your battery during off-peak hours (12AM-5AM) to save $2.50/day.
                       </div>
-                      <Button size="sm" className="mt-2">Apply</Button>
+                      <div className="mt-3 flex items-center">
+                        <Button 
+                          size="sm" 
+                          className="bg-emerald-600 hover:bg-emerald-700 shadow-sm text-white rounded-full"
+                        >
+                          Apply Strategy
+                        </Button>
+                        <Badge className="ml-3 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400">
+                          <DollarSign className="h-3 w-3 mr-1" /> $75/month savings
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <div className="rounded-lg bg-muted/50 p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="mt-0.5">
-                      <PlugZap className="h-5 w-5 text-blue-500" />
+                <div className="rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/5 p-4 shadow-sm">
+                  <div className="flex items-start space-x-4">
+                    <div className="mt-1 flex-shrink-0">
+                      <div className="bg-blue-100 dark:bg-blue-800/40 h-10 w-10 rounded-full flex items-center justify-center">
+                        <PlugZap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium">EV Charging Schedule</div>
-                      <div className="text-sm mt-1">
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-800 dark:text-white">EV Charging Schedule</div>
+                      <div className="text-sm mt-1 text-slate-600 dark:text-slate-300">
                         Schedule EV charging from 1AM-5AM to utilize excess solar stored in battery.
                       </div>
-                      <Button size="sm" className="mt-2">Apply</Button>
+                      <div className="mt-3 flex items-center">
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700 shadow-sm text-white rounded-full"
+                        >
+                          Apply Schedule
+                        </Button>
+                        <Badge className="ml-3 bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400">
+                          <Battery className="h-3 w-3 mr-1" /> 35% better efficiency
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <div className="rounded-lg bg-muted/50 p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="mt-0.5">
-                      <SunIcon className="h-5 w-5 text-yellow-500" />
+                <div className="rounded-xl bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/5 p-4 shadow-sm">
+                  <div className="flex items-start space-x-4">
+                    <div className="mt-1 flex-shrink-0">
+                      <div className="bg-amber-100 dark:bg-amber-800/40 h-10 w-10 rounded-full flex items-center justify-center">
+                        <SunIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-medium">Solar Export Limit</div>
-                      <div className="text-sm mt-1">
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-800 dark:text-white">Solar Export Limit</div>
+                      <div className="text-sm mt-1 text-slate-600 dark:text-slate-300">
                         Adjust solar export limit to 3.5kW to optimize grid feed-in tariff.
                       </div>
-                      <Button size="sm" className="mt-2">Apply</Button>
+                      <div className="mt-3 flex items-center">
+                        <Button 
+                          size="sm" 
+                          className="bg-amber-600 hover:bg-amber-700 shadow-sm text-white rounded-full"
+                        >
+                          Apply Setting
+                        </Button>
+                        <Badge className="ml-3 bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400">
+                          <DollarSign className="h-3 w-3 mr-1" /> $28/month additional
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100 border-emerald-200 text-emerald-700 dark:text-emerald-400 dark:border-emerald-800 dark:from-emerald-900/20 dark:to-teal-900/20 dark:hover:from-emerald-900/30 dark:hover:to-teal-900/30"
+                >
                   <ArrowRight className="h-4 w-4 mr-2" />
                   View All Insights
                 </Button>
