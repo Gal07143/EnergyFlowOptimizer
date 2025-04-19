@@ -3,6 +3,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { getMqttService, formatDeviceTopic, formatTopic } from './mqttService';
 import { TOPIC_PATTERNS } from '@shared/messageSchema';
 import { getModbusManager, ModbusDevice } from '../adapters/modbusAdapter';
+import { enhancedModbusManager } from '../adapters/enhancedModbusAdapter';
 import { ocppManager, OcppChargePointConfig as OCPPDevice } from '../adapters/ocppAdapter';
 import { getEEBusManager, EEBusDevice } from '../adapters/eebusAdapter';
 import { sunspecManager, SunSpecDeviceConfig as SunSpecDevice } from '../adapters/sunspecAdapter';
@@ -1157,17 +1158,57 @@ export class DeviceManagementService {
       return;
     }
     
-    const modbusManager = getModbusManager();
+    // Create enhanced Modbus device configuration
     const modbusDevice: ModbusDevice = {
       id: device.id,
-      address: device.protocolConfig.address,
-      connection: device.protocolConfig.connection,
-      registers: device.protocolConfig.registers,
+      name: device.name,
+      deviceType: device.type,
+      connection: {
+        host: device.protocolConfig.connection.host,
+        port: device.protocolConfig.connection.port,
+        serialPort: device.protocolConfig.connection.path,
+        baudRate: device.protocolConfig.connection.baudRate,
+        unitId: device.protocolConfig.address,
+        protocol: device.protocolConfig.connection.type,
+        timeout: device.protocolConfig.connection.timeout || 5000,
+        mockMode: this.inDevelopment || device.protocolConfig.connection.type === 'mock'
+      },
+      registers: device.protocolConfig.registers.map(reg => ({
+        name: reg.name,
+        address: reg.address,
+        type: reg.dataType,
+        length: reg.length,
+        scaling: reg.scale,
+        unit: reg.unit,
+        description: reg.description || reg.name
+      })),
       scanInterval: device.protocolConfig.scanInterval || 5000
     };
     
-    await modbusManager.addDevice(modbusDevice);
-    console.log(`Initialized Modbus device ${device.id}`);
+    try {
+      // Use the enhanced Modbus manager for better reliability
+      await enhancedModbusManager.addDevice(modbusDevice);
+      console.log(`Initialized Enhanced Modbus device ${device.id} with resilient connection`);
+    } catch (error) {
+      console.error(`Error initializing Enhanced Modbus device ${device.id}:`, error);
+      
+      // Fallback to legacy Modbus adapter if enhanced one fails
+      try {
+        const legacyModbusManager = getModbusManager();
+        const legacyModbusDevice = {
+          id: device.id,
+          address: device.protocolConfig.address,
+          connection: device.protocolConfig.connection,
+          registers: device.protocolConfig.registers,
+          scanInterval: device.protocolConfig.scanInterval || 5000
+        };
+        
+        await legacyModbusManager.addDevice(legacyModbusDevice);
+        console.log(`Initialized Modbus device ${device.id} with legacy adapter`);
+      } catch (fallbackError) {
+        console.error(`Failed to initialize Modbus device ${device.id} with both adapters:`, fallbackError);
+      }
+    }
   }
   
   // Initialize an OCPP device (EV charger)

@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
-import { getMqttService } from '../services/mqttService';
-import { QoSLevel, TOPIC_PATTERNS, formatTopic } from '@shared/messageSchema';
+import { getMqttService, formatDeviceTopic, formatTopic } from '../services/mqttService';
+import { QoSLevel, TOPIC_PATTERNS } from '@shared/messageSchema';
 
 /**
  * Protocol Bridge Adapter - For converting between protocols like Modbus/OCPP/EEBus/SunSpec
@@ -56,7 +56,7 @@ export class ProtocolBridgeAdapter {
     const formattedData = this.formatTelemetryByDeviceType(data);
     
     // Publish to the appropriate MQTT topic with QoS
-    const topic = formatTopic(TOPIC_PATTERNS.TELEMETRY, { deviceId: this.deviceId });
+    const topic = formatDeviceTopic(TOPIC_PATTERNS.TELEMETRY, this.deviceId);
     
     await this.mqttService.publish(topic, formattedData, {
       qos: this.config.qosLevel,
@@ -85,7 +85,7 @@ export class ProtocolBridgeAdapter {
     };
     
     // Publish to the device status topic
-    const topic = formatTopic(TOPIC_PATTERNS.STATUS, { deviceId: this.deviceId });
+    const topic = formatDeviceTopic(TOPIC_PATTERNS.STATUS, this.deviceId);
     
     await this.mqttService.publish(topic, statusData, {
       qos: this.config.qosLevel,
@@ -125,7 +125,7 @@ export class ProtocolBridgeAdapter {
     };
     
     // Publish to the device command response topic
-    const topic = formatTopic(TOPIC_PATTERNS.COMMAND_RESPONSE, { deviceId: this.deviceId });
+    const topic = formatDeviceTopic(TOPIC_PATTERNS.COMMAND_RESPONSE, this.deviceId);
     
     await this.mqttService.publish(topic, responseData, {
       qos: this.config.qosLevel,
@@ -209,16 +209,15 @@ export class ProtocolBridgeAdapter {
   private getTypeSpecificStatusTopic(): string | null {
     switch(this.deviceType) {
       case 'ev_charger':
-        return formatTopic(TOPIC_PATTERNS.EV_CHARGER_STATUS, { 
-          deviceId: this.deviceId,
+        return formatDeviceTopic(TOPIC_PATTERNS.EV_CHARGER_STATUS, this.deviceId, {
           connectorId: 1 // Default to first connector
         });
       case 'battery':
-        return formatTopic(TOPIC_PATTERNS.BATTERY_STATUS, { deviceId: this.deviceId });
+        return formatDeviceTopic(TOPIC_PATTERNS.BATTERY_STATUS, this.deviceId);
       case 'solar':
-        return formatTopic(TOPIC_PATTERNS.SOLAR_STATUS, { deviceId: this.deviceId });
+        return formatDeviceTopic(TOPIC_PATTERNS.SOLAR_STATUS, this.deviceId);
       case 'heat_pump':
-        return formatTopic(TOPIC_PATTERNS.HEAT_PUMP_STATUS, { deviceId: this.deviceId });
+        return formatDeviceTopic(TOPIC_PATTERNS.HEAT_PUMP_STATUS, this.deviceId);
       case 'meter':
         return null; // Meters don't have a specific status topic in our schema
       default:
@@ -241,8 +240,7 @@ export class ProtocolBridgeAdapter {
             sessionStatus: readings.status
           };
           
-          const topic = formatTopic(TOPIC_PATTERNS.EV_CHARGER_SESSION, { 
-            deviceId: this.deviceId,
+          const topic = formatDeviceTopic(TOPIC_PATTERNS.EV_CHARGER_SESSION, this.deviceId, {
             connectorId: readings.connectorId || 1
           });
           
