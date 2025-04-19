@@ -13,12 +13,16 @@ import {
   InfoIcon, 
   BarChart3, 
   Wrench,
-  Activity 
+  Activity,
+  DollarSign,
+  ThermometerSun
 } from "lucide-react";
 import BatteryHealthPanel from "./BatteryHealthPanel";
 import BatteryTelemetryPanel from "./BatteryTelemetryPanel";
 import BatteryAnalyticsPanel from "./BatteryAnalyticsPanel";
 import BatteryPredictiveMaintenancePanel from "./BatteryPredictiveMaintenancePanel";
+import BatteryEconomicsPanel from "./BatteryEconomicsPanel";
+import BatteryThermalManagementPanel from "./BatteryThermalManagementPanel";
 
 interface BatteryManagementPanelProps {
   deviceId: number;
@@ -87,7 +91,7 @@ const BatteryManagementPanel: React.FC<BatteryManagementPanelProps> = ({ deviceI
       </Card>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="flex flex-wrap">
           <TabsTrigger value="health">
             <Battery className="h-4 w-4 mr-2" />
             Health & Status
@@ -103,6 +107,14 @@ const BatteryManagementPanel: React.FC<BatteryManagementPanelProps> = ({ deviceI
           <TabsTrigger value="maintenance">
             <Wrench className="h-4 w-4 mr-2" />
             Maintenance
+          </TabsTrigger>
+          <TabsTrigger value="economics">
+            <DollarSign className="h-4 w-4 mr-2" />
+            Economics
+          </TabsTrigger>
+          <TabsTrigger value="thermal">
+            <ThermometerSun className="h-4 w-4 mr-2" />
+            Thermal
           </TabsTrigger>
         </TabsList>
         
@@ -120,6 +132,14 @@ const BatteryManagementPanel: React.FC<BatteryManagementPanelProps> = ({ deviceI
         
         <TabsContent value="maintenance" className="space-y-4">
           <BatteryPredictiveMaintenancePanel deviceId={deviceId} />
+        </TabsContent>
+        
+        <TabsContent value="economics" className="space-y-4">
+          <BatteryEconomicsPanel deviceId={deviceId} />
+        </TabsContent>
+        
+        <TabsContent value="thermal" className="space-y-4">
+          <BatteryThermalManagementPanel deviceId={deviceId} />
         </TabsContent>
       </Tabs>
     </div>
