@@ -9,6 +9,7 @@
  */
 
 import { db } from './server/db.ts';
+import { sql } from 'drizzle-orm';
 import { 
   deviceManufacturers, 
   deviceCatalog, 
@@ -48,6 +49,12 @@ async function seedDeviceData() {
  */
 async function seedManufacturers() {
   console.log('Seeding manufacturers...');
+  
+  // First, get existing manufacturers to avoid duplication
+  const existingManufacturers = await db.select().from(deviceManufacturers);
+  const existingManufacturerNames = new Set(existingManufacturers.map(m => m.name));
+  
+  console.log(`Found ${existingManufacturers.length} existing manufacturers in the database`);
   
   const manufacturers = [
     // Solar Inverter Manufacturers
@@ -334,13 +341,42 @@ async function seedManufacturers() {
   ];
   
   const insertedManufacturers = [];
+  const updatedManufacturers = [];
   
-  for (const manufacturer of manufacturers) {
-    const [insertedManufacturer] = await db.insert(deviceManufacturers).values(manufacturer).returning();
-    insertedManufacturers.push(insertedManufacturer);
+  // Filter out manufacturers that already exist
+  const newManufacturers = manufacturers.filter(m => !existingManufacturerNames.has(m.name));
+  const manufacturersToUpdate = manufacturers.filter(m => existingManufacturerNames.has(m.name));
+  
+  console.log(`Inserting ${newManufacturers.length} new manufacturers and updating ${manufacturersToUpdate.length} existing ones`);
+  
+  // Insert new manufacturers
+  if (newManufacturers.length > 0) {
+    const inserted = await db.insert(deviceManufacturers).values(newManufacturers).returning();
+    insertedManufacturers.push(...inserted);
   }
   
-  return insertedManufacturers;
+  // Update existing manufacturers
+  for (const manufacturer of manufacturersToUpdate) {
+    const existingManufacturer = existingManufacturers.find(m => m.name === manufacturer.name);
+    
+    if (existingManufacturer) {
+      const [updated] = await db
+        .update(deviceManufacturers)
+        .set({
+          ...manufacturer,
+          updatedAt: new Date()
+        })
+        .where(sql`${deviceManufacturers.id} = ${existingManufacturer.id}`)
+        .returning();
+      
+      updatedManufacturers.push(updated);
+    }
+  }
+  
+  console.log(`Inserted ${insertedManufacturers.length} new manufacturers, updated ${updatedManufacturers.length} existing ones`);
+  
+  // Return all manufacturers (both inserted and updated)
+  return [...insertedManufacturers, ...updatedManufacturers];
 }
 
 /**
@@ -356,6 +392,12 @@ async function seedDeviceCatalog(manufacturers) {
   for (const manufacturer of manufacturers) {
     manufacturerMap.set(manufacturer.name, manufacturer.id);
   }
+  
+  // First, get existing device catalog entries to avoid duplication
+  const existingDevices = await db.select().from(deviceCatalog);
+  const existingModelNumbers = new Set(existingDevices.map(d => d.modelNumber));
+  
+  console.log(`Found ${existingDevices.length} existing device models in the database`);
   
   // Define device catalog entries
   const devices = [
@@ -613,13 +655,42 @@ async function seedDeviceCatalog(manufacturers) {
   ];
   
   const insertedDevices = [];
+  const updatedDevices = [];
   
-  for (const device of devices) {
-    const [insertedDevice] = await db.insert(deviceCatalog).values(device).returning();
-    insertedDevices.push(insertedDevice);
+  // Filter out devices that already exist
+  const newDevices = devices.filter(d => !existingModelNumbers.has(d.modelNumber));
+  const devicesToUpdate = devices.filter(d => existingModelNumbers.has(d.modelNumber));
+  
+  console.log(`Inserting ${newDevices.length} new devices and updating ${devicesToUpdate.length} existing ones`);
+  
+  // Insert new devices
+  if (newDevices.length > 0) {
+    const inserted = await db.insert(deviceCatalog).values(newDevices).returning();
+    insertedDevices.push(...inserted);
   }
   
-  return insertedDevices;
+  // Update existing devices
+  for (const device of devicesToUpdate) {
+    const existingDevice = existingDevices.find(d => d.modelNumber === device.modelNumber);
+    
+    if (existingDevice) {
+      const [updated] = await db
+        .update(deviceCatalog)
+        .set({
+          ...device,
+          updatedAt: new Date()
+        })
+        .where(sql`${deviceCatalog.id} = ${existingDevice.id}`)
+        .returning();
+      
+      updatedDevices.push(updated);
+    }
+  }
+  
+  console.log(`Inserted ${insertedDevices.length} new devices, updated ${updatedDevices.length} existing ones`);
+  
+  // Return all devices (both inserted and updated)
+  return [...insertedDevices, ...updatedDevices];
 }
 
 /**
@@ -635,6 +706,12 @@ async function seedTechnicalSpecs(deviceCatalogData) {
   for (const device of deviceCatalogData) {
     deviceMap.set(device.modelNumber, device.id);
   }
+  
+  // First, get existing tech specs to avoid duplication
+  const existingTechSpecs = await db.select().from(deviceTechnicalSpecs);
+  const existingTechSpecsDeviceIds = new Set(existingTechSpecs.map(t => t.deviceCatalogId));
+  
+  console.log(`Found ${existingTechSpecs.length} existing technical specifications in the database`);
   
   // Define technical specifications
   const techSpecs = [
