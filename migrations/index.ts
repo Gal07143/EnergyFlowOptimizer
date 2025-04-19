@@ -8,6 +8,7 @@
 import pkg from 'pg';
 const { Pool, Client } = pkg;
 import { runMigration as runMultiUserArchitectureMigration } from './multiUserArchitecture';
+import { runMigration as runDeviceTariffConnectionMigration } from './deviceTariffConnection';
 // Import device registry as CommonJS module since it's a .js file
 const deviceRegistryMigration = require('./deviceRegistry');
 
@@ -46,6 +47,11 @@ export async function runAllMigrations() {
       try {
         await runMultiUserArchitectureMigration(pgClient);
         console.log('Multi-user architecture migration completed');
+        
+        // Run the device-tariff connection migration
+        console.log('Running device-tariff connection migration...');
+        await runDeviceTariffConnectionMigration(pgClient);
+        console.log('Device-tariff connection migration completed');
       } finally {
         await pgClient.end();
       }

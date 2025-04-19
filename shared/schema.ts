@@ -453,6 +453,7 @@ export const devices = pgTable('devices', {
   siteId: integer('site_id').notNull().references(() => sites.id),
   gatewayId: integer('gateway_id').references(() => sites.id), // Changed temporarily to break circular reference
   devicePath: text('device_path'), // Path/address on the gateway (e.g. Modbus address, MQTT topic suffix)
+  tariffId: integer('tariff_id').references(() => tariffs.id), // Device-specific tariff, overrides site tariff when present
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
