@@ -89,9 +89,16 @@ export default function GatewayCard({ device }: GatewayCardProps) {
           </div>
           <span className="text-xs font-medium">{formatNumber(signalStrength, 0)} dBm ({getSignalQualityLabel()})</span>
         </div>
-        <Progress value={signalQualityPercent} className="h-2" style={{ 
-          '--progress-fill': getSignalColor().replace('bg-', ''),
-        }} />
+        <Progress 
+          value={signalQualityPercent} 
+          className={`h-2 ${
+            signalQualityPercent >= 80 ? 'bg-green-100 [&>div]:bg-green-500' :
+            signalQualityPercent >= 60 ? 'bg-blue-100 [&>div]:bg-blue-500' :
+            signalQualityPercent >= 40 ? 'bg-yellow-100 [&>div]:bg-yellow-500' :
+            signalQualityPercent >= 20 ? 'bg-orange-100 [&>div]:bg-orange-500' :
+            'bg-red-100 [&>div]:bg-red-500'
+          }`}
+        />
       </div>
 
       {/* Connection Stats */}

@@ -6,6 +6,19 @@ import { formatNumber } from '@/lib/utils/data-utils';
 import { Progress } from '@/components/ui/progress';
 import { Battery, BatteryCharging, BatteryWarning, Zap, Clock } from 'lucide-react';
 
+// Extend DeviceReading type with battery-specific fields
+declare module '@/types/devices' {
+  interface DeviceReading {
+    batteryHealth?: number;
+    batteryCycles?: number;
+    temperature?: number;
+  }
+  
+  interface Device {
+    capacity?: number;
+  }
+}
+
 interface BatteryCardProps {
   device: Device;
 }
@@ -48,14 +61,13 @@ export default function BatteryCard({ device }: BatteryCardProps) {
           </div>
           <Progress 
             value={stateOfCharge} 
-            className="h-3" 
-            style={{ 
-              background: 'rgba(0,0,0,0.1)',
-              // Apply gradient based on SOC value
-              '--tw-gradient-from': stateOfCharge < 20 ? '#ef4444' : 
-                                   stateOfCharge < 50 ? '#f59e0b' : '#10b981',
-              '--tw-gradient-stops': 'var(--tw-gradient-from)',
-            }}
+            className={`h-3 ${
+              stateOfCharge < 20 
+                ? 'bg-red-100 [&>div]:bg-red-500' 
+                : stateOfCharge < 50 
+                  ? 'bg-amber-100 [&>div]:bg-amber-500' 
+                  : 'bg-green-100 [&>div]:bg-green-500'
+            }`}
           />
         </div>
       </div>
@@ -79,8 +91,8 @@ export default function BatteryCard({ device }: BatteryCardProps) {
           </div>
           <p className="text-lg font-semibold text-gray-900 dark:text-white">
             {isCharging 
-              ? `${formatNumber((100 - stateOfCharge) / 100 * device.capacity / Math.abs(powerFlow), 1)}h` 
-              : `${formatNumber(stateOfCharge / 100 * device.capacity / Math.abs(powerFlow), 1)}h`}
+              ? `${formatNumber((100 - stateOfCharge) / 100 * (device.capacity || 10) / Math.abs(powerFlow), 1)}h` 
+              : `${formatNumber(stateOfCharge / 100 * (device.capacity || 10) / Math.abs(powerFlow), 1)}h`}
           </p>
         </div>
       </div>
