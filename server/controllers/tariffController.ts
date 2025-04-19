@@ -385,3 +385,131 @@ export const deleteTariff = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to delete tariff', error: error?.message || 'Unknown error' });
   }
 };
+
+// Device-specific tariff operations
+
+// Get the tariff for a specific device
+export const getDeviceTariff = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.deviceId);
+    
+    if (isNaN(deviceId)) {
+      return res.status(400).json({ message: 'Invalid device ID' });
+    }
+    
+    // Check if device exists
+    const device = await storage.getDevice(deviceId);
+    
+    if (!device) {
+      return res.status(404).json({ message: 'Device not found' });
+    }
+    
+    // Get the device's tariff (will fallback to site tariff if no device-specific tariff)
+    const tariff = await storage.getDeviceTariff(deviceId);
+    
+    if (!tariff) {
+      return res.status(404).json({ message: 'No tariff found for this device or its site' });
+    }
+    
+    // Add info about whether this is a device-specific tariff or site default
+    const result = {
+      ...tariff,
+      isDeviceSpecific: device.tariffId === tariff.id,
+      source: device.tariffId === tariff.id ? 'device' : 'site'
+    };
+    
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error fetching device tariff:', error);
+    res.status(500).json({ message: 'Failed to fetch device tariff', error: error?.message || 'Unknown error' });
+  }
+};
+
+// Assign a specific tariff to a device
+export const setDeviceTariff = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.deviceId);
+    const tariffId = parseInt(req.params.tariffId);
+    
+    if (isNaN(deviceId) || isNaN(tariffId)) {
+      return res.status(400).json({ message: 'Invalid device ID or tariff ID' });
+    }
+    
+    // Check if device exists
+    const device = await storage.getDevice(deviceId);
+    
+    if (!device) {
+      return res.status(404).json({ message: 'Device not found' });
+    }
+    
+    // Check if tariff exists
+    const tariff = await storage.getTariff(tariffId);
+    
+    if (!tariff) {
+      return res.status(404).json({ message: 'Tariff not found' });
+    }
+    
+    // Set the device-specific tariff
+    const success = await storage.setDeviceTariff(deviceId, tariffId);
+    
+    if (success) {
+      res.status(200).json({ 
+        message: 'Device tariff set successfully',
+        deviceId,
+        tariffId,
+        tariffName: tariff.name,
+        deviceName: device.name
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to set device tariff' });
+    }
+  } catch (error: any) {
+    console.error('Error setting device tariff:', error);
+    res.status(500).json({ message: 'Failed to set device tariff', error: error?.message || 'Unknown error' });
+  }
+};
+
+// Remove device-specific tariff (revert to site tariff)
+export const removeDeviceTariff = async (req: Request, res: Response) => {
+  try {
+    const deviceId = parseInt(req.params.deviceId);
+    
+    if (isNaN(deviceId)) {
+      return res.status(400).json({ message: 'Invalid device ID' });
+    }
+    
+    // Check if device exists
+    const device = await storage.getDevice(deviceId);
+    
+    if (!device) {
+      return res.status(404).json({ message: 'Device not found' });
+    }
+    
+    // Check if device actually has a specific tariff
+    if (!device.tariffId) {
+      return res.status(400).json({ message: 'Device is already using the site default tariff' });
+    }
+    
+    // Remove the device-specific tariff
+    const success = await storage.removeDeviceTariff(deviceId);
+    
+    if (success) {
+      // Get the site tariff that will now be used
+      const siteTariffs = await storage.getTariffs(device.siteId);
+      const siteTariff = siteTariffs.length > 0 ? siteTariffs[0] : null;
+      
+      res.status(200).json({ 
+        message: 'Device-specific tariff removed successfully, now using site tariff',
+        deviceId,
+        deviceName: device.name,
+        siteTariffId: siteTariff?.id,
+        siteTariffName: siteTariff?.name
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to remove device-specific tariff' });
+    }
+  } catch (error: any) {
+    console.error('Error removing device tariff:', error);
+    res.status(500).json({ message: 'Failed to remove device tariff', error: error?.message || 'Unknown error' });
+  }
+};

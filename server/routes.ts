@@ -447,6 +447,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/tariffs/:id', requireAdmin, tariffController.deleteTariff);
   app.post('/api/sites/:siteId/tariff/israeli', requireManager, tariffController.createIsraeliTariff);
   
+  // Device-specific tariff routes
+  app.get('/api/devices/:deviceId/tariff', tariffController.getDeviceTariff);
+  app.post('/api/devices/:deviceId/tariff/:tariffId', requireManager, tariffController.setDeviceTariff);
+  app.delete('/api/devices/:deviceId/tariff', requireManager, tariffController.removeDeviceTariff);
+  
   // Tariff Optimization routes
   app.post('/api/sites/:siteId/optimize/tariff', tariffOptimizationController.optimizeBySiteTariff);
   app.post('/api/sites/:siteId/optimize/ai-tariff', tariffOptimizationController.runAIOptimizationWithTariff);
