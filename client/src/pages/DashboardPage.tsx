@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -162,6 +163,7 @@ const energyStats = {
 
 export default function DashboardPage() {
   const { currentSiteId } = useSiteContext();
+  const [, navigate] = useLocation();
   const energyConsumptionData = generateEnergyConsumptionData();
   const forecastData = generateForecastData();
   
@@ -580,7 +582,20 @@ export default function DashboardPage() {
         
         {/* Real-time energy flow visualization */}
         <div className="w-full lg:px-2">
-          <RealTimeEnergyFlow />
+          <div className="flex flex-col gap-2">
+            <RealTimeEnergyFlow />
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs"
+                onClick={() => navigate('/energy-flow-heatmap')}
+              >
+                <Activity className="h-4 w-4 mr-1" />
+                View Interactive Energy Flow Heatmap
+              </Button>
+            </div>
+          </div>
         </div>
         
         {/* Bottom row */}
