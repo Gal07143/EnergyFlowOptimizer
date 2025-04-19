@@ -4,9 +4,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
-import { Battery, BatteryCharging, ThermometerIcon, HistoryIcon, AlertTriangleIcon, InfoIcon } from "lucide-react";
+import { 
+  Battery, 
+  BatteryCharging, 
+  ThermometerIcon, 
+  HistoryIcon, 
+  AlertTriangleIcon, 
+  InfoIcon, 
+  BarChart3, 
+  Wrench,
+  Activity 
+} from "lucide-react";
 import BatteryHealthPanel from "./BatteryHealthPanel";
 import BatteryTelemetryPanel from "./BatteryTelemetryPanel";
+import BatteryAnalyticsPanel from "./BatteryAnalyticsPanel";
+import BatteryPredictiveMaintenancePanel from "./BatteryPredictiveMaintenancePanel";
 
 interface BatteryManagementPanelProps {
   deviceId: number;
@@ -84,6 +96,14 @@ const BatteryManagementPanel: React.FC<BatteryManagementPanelProps> = ({ deviceI
             <BatteryCharging className="h-4 w-4 mr-2" />
             Telemetry
           </TabsTrigger>
+          <TabsTrigger value="analytics">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="maintenance">
+            <Wrench className="h-4 w-4 mr-2" />
+            Maintenance
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="health" className="space-y-4">
@@ -92,6 +112,14 @@ const BatteryManagementPanel: React.FC<BatteryManagementPanelProps> = ({ deviceI
         
         <TabsContent value="telemetry" className="space-y-4">
           <BatteryTelemetryPanel deviceId={deviceId} />
+        </TabsContent>
+        
+        <TabsContent value="analytics" className="space-y-4">
+          <BatteryAnalyticsPanel deviceId={deviceId} />
+        </TabsContent>
+        
+        <TabsContent value="maintenance" className="space-y-4">
+          <BatteryPredictiveMaintenancePanel deviceId={deviceId} />
         </TabsContent>
       </Tabs>
     </div>
