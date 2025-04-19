@@ -331,12 +331,12 @@ export default function RealTimeEnergyFlow() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="relative h-[min(420px,70vh)] md:h-[420px] bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg mb-4 overflow-hidden">
+        <div className="relative h-[min(460px,75vh)] md:h-[520px] bg-gradient-to-b from-muted/20 to-muted/40 rounded-lg mb-4 overflow-hidden">
           {/* Real energy diagram with realistic icons */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center scale-[0.95] md:scale-100">
+          <div className="absolute inset-0 flex flex-col items-center justify-center scale-[0.9] sm:scale-[0.95] md:scale-100 lg:scale-100">
             
             {/* Top row - Generation sources */}
-            <div className="w-full px-8 pt-6 grid grid-cols-2">
+            <div className="w-full px-8 pt-8 grid grid-cols-2">
               {/* Solar Panel Group */}
               <div className="flex flex-col">
                 <div className="flex items-center mb-2">
@@ -421,7 +421,7 @@ export default function RealTimeEnergyFlow() {
             </div>
             
             {/* Middle row - Storage and Metering */}
-            <div className="w-full px-8 pt-12 grid grid-cols-3">
+            <div className="w-full px-8 pt-16 grid grid-cols-3">
               {/* Battery Storage Group */}
               <div className="flex flex-col">
                 <div className="flex items-center mb-2">
@@ -678,7 +678,7 @@ export default function RealTimeEnergyFlow() {
             </div>
             
             {/* Flow lines */}
-            <svg className="absolute inset-0 pointer-events-none scale-[0.95] md:scale-100 origin-center" width="100%" height="100%">
+            <svg className="absolute inset-0 pointer-events-none scale-[0.9] sm:scale-[0.95] md:scale-100 lg:scale-100 origin-center" width="100%" height="100%">
               <defs>
                 <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="7" refY="3.5" orient="auto">
                   <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e" />
@@ -697,7 +697,7 @@ export default function RealTimeEnergyFlow() {
               {/* Solar to Battery */}
               {arrows.solarToBattery.active && (
                 <path 
-                  d="M120,100 L120,180" 
+                  d="M120,120 L120,220" 
                   stroke="#22c55e" 
                   strokeWidth="2.5" 
                   fill="none"
@@ -710,7 +710,7 @@ export default function RealTimeEnergyFlow() {
               {/* Solar to Home via Smart Meter */}
               {arrows.solarToHome.active && (
                 <path 
-                  d="M180,100 C240,140 240,140 300,180" 
+                  d="M180,120 C240,170 240,170 300,220" 
                   stroke="#22c55e" 
                   strokeWidth="2.5" 
                   fill="none"
@@ -723,7 +723,7 @@ export default function RealTimeEnergyFlow() {
               {/* Battery to Home */}
               {arrows.batteryToHome.active && (
                 <path 
-                  d="M160,180 C220,180 220,180 280,180" 
+                  d="M160,220 C220,220 220,220 280,220" 
                   stroke="#f97316" 
                   strokeWidth="2.5" 
                   fill="none"
@@ -736,7 +736,7 @@ export default function RealTimeEnergyFlow() {
               {/* Grid to Home */}
               {arrows.gridToHome.active && (
                 <path 
-                  d="M420,100 C360,140 360,140 320,180" 
+                  d="M420,120 C360,170 360,170 320,220" 
                   stroke="#6366f1" 
                   strokeWidth="2.5" 
                   fill="none"
@@ -749,7 +749,7 @@ export default function RealTimeEnergyFlow() {
               {/* Home to Grid (export) */}
               {arrows.homeToGrid.active && (
                 <path 
-                  d="M320,160 C360,120 360,120 420,80" 
+                  d="M320,200 C360,150 360,150 420,100" 
                   stroke="#22c55e" 
                   strokeWidth="2.5" 
                   fill="none"
@@ -762,7 +762,7 @@ export default function RealTimeEnergyFlow() {
               {/* Home to EV Charger */}
               {arrows.homeToEv.active && (
                 <path 
-                  d="M280,200 C220,260 220,260 160,320" 
+                  d="M280,240 C220,300 220,300 160,360" 
                   stroke="#3b82f6" 
                   strokeWidth="2.5" 
                   fill="none"
@@ -775,7 +775,7 @@ export default function RealTimeEnergyFlow() {
               {/* Home to Heat Pump */}
               {arrows.homeToPump.active && (
                 <path 
-                  d="M320,200 C380,260 380,260 440,320" 
+                  d="M320,240 C380,300 380,300 440,360" 
                   stroke="#f97316" 
                   strokeWidth="2.5" 
                   fill="none"
