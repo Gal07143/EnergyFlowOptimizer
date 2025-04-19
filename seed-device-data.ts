@@ -406,7 +406,7 @@ async function seedDeviceCatalog(manufacturers) {
       manufacturerId: manufacturerMap.get('SMA Solar Technology'),
       name: 'Sunny Boy 3.0',
       modelNumber: 'SB3.0-1AV-41',
-      type: 'solar_inverter',
+      type: 'inverter', // Changed from 'solar_inverter' to match enum
       releaseYear: 2022,
       imageUrl: 'https://files.sma.de/downloads/SB30-50-1AV-41_front_W400px.png',
       capacity: 3.0,
@@ -426,7 +426,7 @@ async function seedDeviceCatalog(manufacturers) {
       manufacturerId: manufacturerMap.get('SMA Solar Technology'),
       name: 'Sunny Tripower 10.0',
       modelNumber: 'STP10.0-3AV-40',
-      type: 'solar_inverter',
+      type: 'inverter', // Changed from 'solar_inverter' to match enum
       releaseYear: 2023,
       imageUrl: 'https://files.sma.de/downloads/STP3-10-3AV-40_front_W400px.png',
       capacity: 10.0,
@@ -709,16 +709,8 @@ async function seedTechnicalSpecs(deviceCatalogData) {
   
   // Get existing technical specs to avoid duplication
   const existingTechSpecs = await db.select().from(deviceTechnicalSpecs);
-  console.log(`Found ${existingTechSpecs.length} existing technical specifications in the database`);
   
   // Create a set of device IDs that already have tech specs
-  const existingTechSpecsDeviceIds = new Set();
-  for (const spec of existingTechSpecs) {
-    existingTechSpecsDeviceIds.add(spec.deviceCatalogId);
-  }
-  
-  // First, get existing tech specs to avoid duplication
-  const existingTechSpecs = await db.select().from(deviceTechnicalSpecs);
   const existingTechSpecsDeviceIds = new Set(existingTechSpecs.map(t => t.deviceCatalogId));
   
   console.log(`Found ${existingTechSpecs.length} existing technical specifications in the database`);
