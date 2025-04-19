@@ -926,6 +926,9 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+          
+          {/* Demand Response Program */}
+          <DemandResponseSummaryCard className="border-none shadow-lg" />
         </div>
       </div>
     </div>
