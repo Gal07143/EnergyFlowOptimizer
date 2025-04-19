@@ -77,6 +77,7 @@ function Router() {
       <ProtectedPageWithLayout path="/battery-arbitrage" component={BatteryArbitragePage} />
       <ProtectedPageWithLayout path="/predictive-maintenance" component={PredictiveMaintenancePage} />
       <ProtectedPageWithLayout path="/reports" component={ReportsPage} />
+      <ProtectedPageWithLayout path="/alarms" component={AlarmsPage} />
       <ProtectedPageWithLayout path="/weather" component={Weather} />
       <ProtectedPageWithLayout path="/demand-response" component={DemandResponse} />
       <ProtectedPageWithLayout path="/settings" component={Settings} />

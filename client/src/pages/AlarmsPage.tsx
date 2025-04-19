@@ -415,18 +415,13 @@ const AlarmsPage: React.FC = () => {
                 </div>
                 <Progress 
                   value={alarmStats?.critical || alarmStats?.high 
-                    ? 60 - (alarmStats.critical * 20) - (alarmStats.high * 10)
+                    ? 60 - ((alarmStats?.critical || 0) * 20) - ((alarmStats?.high || 0) * 10)
                     : 90
                   } 
                   className={
                     alarmStats?.critical ? "bg-red-200" : 
                     alarmStats?.high ? "bg-orange-200" : 
                     "bg-green-200"
-                  }
-                  indicatorClassName={
-                    alarmStats?.critical ? "bg-red-500" : 
-                    alarmStats?.high ? "bg-orange-500" : 
-                    "bg-green-500"
                   }
                 />
               </div>
