@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSiteContext } from '@/hooks/use-site-context';
 import { useToast } from '@/hooks/use-toast';
@@ -9,9 +9,41 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileText, FileSpreadsheetIcon, Calendar, BarChart3, Save, Download, RotateCw } from "lucide-react";
+import { FileText, FileSpreadsheetIcon, Calendar, BarChart3, Save, Download, RotateCw, 
+         Activity, DownloadCloud, AreaChart, LineChart, PieChart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement, 
+  BarElement,
+  ArcElement,
+  Title, 
+  Tooltip, 
+  Legend, 
+  Filler,
+  TimeScale
+} from 'chart.js';
+import { Line, Bar, Pie, Doughnut } from 'react-chartjs-2';
+import 'chartjs-adapter-date-fns';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+  TimeScale
+);
 
 // Report types from the API
 interface ReportType {
