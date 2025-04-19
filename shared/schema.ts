@@ -13,7 +13,8 @@ export const deviceTypeEnum = pgEnum('device_type', [
   'inverter',
   'load_controller',
   'energy_gateway',
-  'edge_node'  // Added for edge computing nodes
+  'edge_node',  // Added for edge computing nodes
+  'bidirectional_ev_charger' // Added for V2G/V2H functionality
 ]);
 
 export const gatewayProtocolEnum = pgEnum('gateway_protocol', [
@@ -67,7 +68,11 @@ export const evChargingModeEnum = pgEnum('ev_charging_mode', [
   'balanced', 
   'fast', 
   'scheduled', 
-  'v2g'
+  'v2g',
+  'v2h',
+  'v2g_scheduled',
+  'v2h_scheduled',
+  'bidirectional_optimized'
 ]);
 
 export const optimizationModeEnum = pgEnum('optimization_mode', [
@@ -76,7 +81,20 @@ export const optimizationModeEnum = pgEnum('optimization_mode', [
   'peak_shaving', 
   'carbon_reduction', 
   'grid_relief',
-  'battery_life'
+  'battery_life',
+  'v2g_revenue'
+]);
+
+// V2G/V2H specific enums
+export const v2gServiceTypeEnum = pgEnum('v2g_service_type', [
+  'frequency_regulation',
+  'demand_response',
+  'peak_shaving',
+  'backup_power',
+  'energy_arbitrage',
+  'reactive_power',
+  'load_balancing',
+  'home_backup'
 ]);
 
 // Maintenance Enums
@@ -1435,7 +1453,7 @@ export const demandResponseActionsRelations = relations(demandResponseActions, (
   }),
 }));
 
-// Reserve this space for edge computing relations - we'll define them after the tables
+// Edge Computing Relations will be defined after table definitions
 
 // 5G Edge Computing Tables
 export const edgeComputingNodes = pgTable('edge_computing_nodes', {
@@ -1699,6 +1717,78 @@ export const insertDemandResponseEventSchema = createInsertSchema(demandResponse
   incentiveModifier: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
 }).omit({ id: true, createdAt: true, updatedAt: true });
 
+// Edge Computing Insert Schemas
+export const insertEdgeComputingNodeSchema = createInsertSchema(edgeComputingNodes, {
+  memory: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  storage: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  powerConsumptionWatts: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  maxDeviceConnections: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  currentDeviceConnections: z.string().or(z.number()).optional().transform(val => val ? Number(val) : 0)
+}).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true,
+  lastHeartbeat: true
+});
+
+export const insertEdgeConnectivitySchema = createInsertSchema(edgeConnectivity, {
+  signalStrength: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  bandwidth: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  latencyMs: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  jitterMs: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  packetLoss: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  dataUsage: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined)
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastConnected: true
+});
+
+export const insertEdgeNodeApplicationSchema = createInsertSchema(edgeNodeApplications, {
+  memoryUsageMb: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  cpuUsagePercent: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  storageUsageMb: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined)
+}).omit({
+  id: true,
+  installDate: true,
+  lastUpdated: true,
+  lastHealthCheck: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertEdgeNodeDeviceControlSchema = createInsertSchema(edgeNodeDeviceControl, {
+  priorityLevel: z.string().or(z.number()).optional().transform(val => val ? Number(val) : 5),
+  maxLatencyAllowedMs: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  lastResponseTime: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined)
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastControlAction: true
+});
+
+export const insertEdgeNodeMetricsSchema = createInsertSchema(edgeNodeMetrics, {
+  cpuUsagePercent: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  memoryUsageMb: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  networkInKbps: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  networkOutKbps: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  diskReadKbps: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  diskWriteKbps: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  storageUsagePercent: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  temperature: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  uptimeSeconds: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  activeConnections: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  errorCount: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  batteryLevel: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  signalStrength: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
+  latencyMs: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined)
+}).omit({
+  id: true,
+  timestamp: true
+});
+
 export const insertSiteDemandResponseSettingsSchema = createInsertSchema(siteDemandResponseSettings, {
   maxReductionCapacity: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
   minimumIncentiveThreshold: z.string().or(z.number()).optional().transform(val => val ? Number(val) : undefined),
@@ -1831,6 +1921,194 @@ export type InsertDeviceCatalogPreset = z.infer<typeof insertDeviceCatalogPreset
 export type DeviceTechnicalSpec = typeof deviceTechnicalSpecs.$inferSelect;
 export type InsertDeviceTechnicalSpec = z.infer<typeof insertDeviceTechnicalSpecsSchema>;
 
+// Edge Computing types
+export type EdgeComputingNode = typeof edgeComputingNodes.$inferSelect;
+export type InsertEdgeComputingNode = z.infer<typeof insertEdgeComputingNodeSchema>;
+
+export type EdgeConnectivity = typeof edgeConnectivity.$inferSelect;
+export type InsertEdgeConnectivity = z.infer<typeof insertEdgeConnectivitySchema>;
+
+export type EdgeNodeApplication = typeof edgeNodeApplications.$inferSelect;
+export type InsertEdgeNodeApplication = z.infer<typeof insertEdgeNodeApplicationSchema>;
+
+export type EdgeNodeDeviceControl = typeof edgeNodeDeviceControl.$inferSelect;
+export type InsertEdgeNodeDeviceControl = z.infer<typeof insertEdgeNodeDeviceControlSchema>;
+
+export type EdgeNodeMetrics = typeof edgeNodeMetrics.$inferSelect;
+export type InsertEdgeNodeMetrics = z.infer<typeof insertEdgeNodeMetricsSchema>;
+
+// Now we can define the edge computing relations
+export const edgeComputingNodesRelations = relations(edgeComputingNodes, ({ one, many }) => ({
+  site: one(sites, {
+    fields: [edgeComputingNodes.siteId],
+    references: [sites.id],
+  }),
+  connectivity: many(edgeConnectivity),
+  applications: many(edgeNodeApplications),
+  deviceControls: many(edgeNodeDeviceControl),
+  metrics: many(edgeNodeMetrics),
+}));
+
+export const edgeConnectivityRelations = relations(edgeConnectivity, ({ one }) => ({
+  edgeNode: one(edgeComputingNodes, {
+    fields: [edgeConnectivity.edgeNodeId],
+    references: [edgeComputingNodes.id],
+  }),
+}));
+
+export const edgeNodeApplicationsRelations = relations(edgeNodeApplications, ({ one }) => ({
+  edgeNode: one(edgeComputingNodes, {
+    fields: [edgeNodeApplications.edgeNodeId],
+    references: [edgeComputingNodes.id],
+  }),
+}));
+
+export const edgeNodeDeviceControlRelations = relations(edgeNodeDeviceControl, ({ one }) => ({
+  edgeNode: one(edgeComputingNodes, {
+    fields: [edgeNodeDeviceControl.edgeNodeId],
+    references: [edgeComputingNodes.id],
+  }),
+  device: one(devices, {
+    fields: [edgeNodeDeviceControl.deviceId],
+    references: [devices.id],
+  }),
+}));
+
+export const edgeNodeMetricsRelations = relations(edgeNodeMetrics, ({ one }) => ({
+  edgeNode: one(edgeComputingNodes, {
+    fields: [edgeNodeMetrics.edgeNodeId],
+    references: [edgeComputingNodes.id],
+  }),
+}));
+
+// V2G/V2H Bidirectional EV Charging Tables
+export const evVehicles = pgTable('ev_vehicles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
+  name: text('name').notNull(),
+  manufacturer: text('manufacturer'),
+  model: text('model'),
+  licensePlate: text('license_plate'),
+  vinNumber: text('vin_number').unique(),
+  batteryCapacityKwh: numeric('battery_capacity_kwh').notNull(),
+  maxChargingRateKw: numeric('max_charging_rate_kw').notNull(),
+  maxDischargingRateKw: numeric('max_discharging_rate_kw'),
+  bidirectionalCapable: boolean('bidirectional_capable').default(false),
+  minSocLimit: numeric('min_soc_limit').default('20'), // Minimum state of charge to maintain (%)
+  maxSocLimit: numeric('max_soc_limit').default('90'), // Maximum state of charge to allow (%)
+  currentSoc: numeric('current_soc'), // Current state of charge (%)
+  estimatedRange: numeric('estimated_range'), // Estimated range in kilometers
+  estimatedConsumption: numeric('estimated_consumption'), // kWh/100km
+  availableForV2g: boolean('available_for_v2g').default(false),
+  v2gPriority: integer('v2g_priority').default(1), // Priority for V2G service (1-10)
+  homeDistance: numeric('home_distance'), // Distance from home in km
+  batteryCycles: integer('battery_cycles'), // Number of complete battery charge/discharge cycles
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  metadata: json('metadata'),
+});
+
+export const evChargingSessions = pgTable('ev_charging_sessions', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  vehicleId: integer('vehicle_id').references(() => evVehicles.id),
+  userId: integer('user_id').references(() => users.id),
+  startTime: timestamp('start_time').notNull().defaultNow(),
+  endTime: timestamp('end_time'),
+  startSoc: numeric('start_soc'), // State of charge at start (%)
+  endSoc: numeric('end_soc'), // State of charge at end (%)
+  totalEnergyKwh: numeric('total_energy_kwh'), // Total energy transferred
+  chargingMode: evChargingModeEnum('charging_mode').default('balanced'),
+  bidirectionalEnabled: boolean('bidirectional_enabled').default(false),
+  energyToGridKwh: numeric('energy_to_grid_kwh').default(0), // Energy discharged to grid
+  energyToHomeKwh: numeric('energy_to_home_kwh').default(0), // Energy discharged to home
+  energyFromGridKwh: numeric('energy_from_grid_kwh').default(0), // Energy drawn from grid
+  peakChargingRateKw: numeric('peak_charging_rate_kw'), // Maximum charging rate reached
+  peakDischargingRateKw: numeric('peak_discharging_rate_kw'), // Maximum discharging rate reached
+  costSavings: numeric('cost_savings'), // Estimated cost savings from session
+  revenue: numeric('revenue'), // Estimated revenue from V2G
+  carbonSavingsKg: numeric('carbon_savings_kg'), // Estimated carbon savings
+  sessionStatus: text('session_status').default('active'), // active, completed, error, interrupted
+  errorMessage: text('error_message'), 
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  metadata: json('metadata'),
+});
+
+export const v2gServiceProviders = pgTable('v2g_service_providers', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  apiEndpoint: text('api_endpoint'),
+  apiKey: text('api_key'),
+  serviceType: v2gServiceTypeEnum('service_type').notNull(),
+  pricePerKwh: numeric('price_per_kwh'), // Price paid per kWh
+  minPowerKw: numeric('min_power_kw'), // Minimum power required
+  availableTimeStart: text('available_time_start').default('00:00'), // Time of day service starts (24h format)
+  availableTimeEnd: text('available_time_end').default('23:59'), // Time of day service ends (24h format)
+  contractStartDate: date('contract_start_date'),
+  contractEndDate: date('contract_end_date'),
+  paymentTermsDays: integer('payment_terms_days').default(30),
+  isActive: boolean('is_active').default(true),
+  requiresPreRegistration: boolean('requires_pre_registration').default(false),
+  contactEmail: text('contact_email'),
+  contactPhone: text('contact_phone'),
+  website: text('website'),
+  country: text('country'),
+  supportedVehicles: json('supported_vehicles'), // List of supported vehicle models
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  metadata: json('metadata'),
+});
+
+export const v2gServiceEnrollments = pgTable('v2g_service_enrollments', {
+  id: serial('id').primaryKey(),
+  vehicleId: integer('vehicle_id').notNull().references(() => evVehicles.id),
+  serviceProviderId: integer('service_provider_id').notNull().references(() => v2gServiceProviders.id),
+  userId: integer('user_id').notNull().references(() => users.id),
+  enrollmentDate: timestamp('enrollment_date').defaultNow(),
+  status: text('status').default('pending'), // pending, active, suspended, terminated
+  contractId: text('contract_id'), // Reference ID from the service provider
+  minSocLimit: numeric('min_soc_limit'), // Override per enrollment
+  availableHoursJson: json('available_hours_json'), // JSON object with availability schedule
+  maxPowerKw: numeric('max_power_kw'), // Maximum power for this enrollment
+  priorityOrder: integer('priority_order').default(1), // Priority when multiple enrollments
+  terminationDate: timestamp('termination_date'),
+  terminationReason: text('termination_reason'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  metadata: json('metadata'),
+});
+
+export const v2gDischargeEvents = pgTable('v2g_discharge_events', {
+  id: serial('id').primaryKey(),
+  enrollmentId: integer('enrollment_id').notNull().references(() => v2gServiceEnrollments.id),
+  vehicleId: integer('vehicle_id').notNull().references(() => evVehicles.id),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  startTime: timestamp('start_time').notNull().defaultNow(),
+  endTime: timestamp('end_time'),
+  serviceType: v2gServiceTypeEnum('service_type').notNull(),
+  requestedPowerKw: numeric('requested_power_kw').notNull(),
+  deliveredPowerKw: numeric('delivered_power_kw'),
+  totalEnergyKwh: numeric('total_energy_kwh'),
+  startSoc: numeric('start_soc'), // State of charge at start (%)
+  endSoc: numeric('end_soc'), // State of charge at end (%)
+  eventSource: text('event_source').default('service_provider'), // service_provider, user, automated
+  eventStatus: text('event_status').default('in_progress'), // scheduled, in_progress, completed, cancelled, failed
+  completionStatus: text('completion_status'), // success, partial, failure
+  failureReason: text('failure_reason'),
+  revenue: numeric('revenue'), // Revenue earned from this event
+  pricePerkWh: numeric('price_per_kwh'), // Price per kWh for this specific event
+  carbonOffset: numeric('carbon_offset'), // Carbon emission reduction
+  peakDemandReduction: numeric('peak_demand_reduction'), // Peak demand reduction
+  paymentStatus: text('payment_status').default('pending'), // pending, paid, disputed
+  paymentDate: timestamp('payment_date'),
+  invoiceId: text('invoice_id'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  metadata: json('metadata'),
+});
+
 export type GridConnection = typeof gridConnections.$inferSelect;
 export type InsertGridConnection = z.infer<typeof insertGridConnectionSchema>;
 
@@ -1855,6 +2133,27 @@ export type InsertSiteEventParticipation = z.infer<typeof insertSiteEventPartici
 
 export type DemandResponseAction = typeof demandResponseActions.$inferSelect;
 export type InsertDemandResponseAction = z.infer<typeof insertDemandResponseActionSchema>;
+
+// V2G/V2H types
+export type EVVehicle = typeof evVehicles.$inferSelect;
+export const insertEVVehicleSchema = createInsertSchema(evVehicles).omit({ id: true });
+export type InsertEVVehicle = z.infer<typeof insertEVVehicleSchema>;
+
+export type EVChargingSession = typeof evChargingSessions.$inferSelect;
+export const insertEVChargingSessionSchema = createInsertSchema(evChargingSessions).omit({ id: true });
+export type InsertEVChargingSession = z.infer<typeof insertEVChargingSessionSchema>;
+
+export type V2GServiceProvider = typeof v2gServiceProviders.$inferSelect;
+export const insertV2GServiceProviderSchema = createInsertSchema(v2gServiceProviders).omit({ id: true });
+export type InsertV2GServiceProvider = z.infer<typeof insertV2GServiceProviderSchema>;
+
+export type V2GServiceEnrollment = typeof v2gServiceEnrollments.$inferSelect;
+export const insertV2GServiceEnrollmentSchema = createInsertSchema(v2gServiceEnrollments).omit({ id: true });
+export type InsertV2GServiceEnrollment = z.infer<typeof insertV2GServiceEnrollmentSchema>;
+
+export type V2GDischargeEvent = typeof v2gDischargeEvents.$inferSelect;
+export const insertV2GDischargeEventSchema = createInsertSchema(v2gDischargeEvents).omit({ id: true });
+export type InsertV2GDischargeEvent = z.infer<typeof insertV2GDischargeEventSchema>;
 
 // Predictive Maintenance Tables
 export const deviceMaintenanceIssues = pgTable('device_maintenance_issues', {

@@ -28,6 +28,7 @@ import * as tariffController from './controllers/tariffController';
 import * as authController from './controllers/authController';
 import * as profileController from './controllers/profileController';
 import * as setupController from './controllers/setupController';
+import * as edgeComputingController from './controllers/edgeComputingController';
 import * as initController from './controllers/initController';
 import { weatherController } from './controllers/weatherController';
 import * as aiOptimizationController from './controllers/aiOptimizationController';
@@ -607,6 +608,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Predictive Maintenance Routes
   app.use('/api/maintenance', predictiveMaintenanceRoutes);
+
+  // Edge Computing Routes
+  app.get('/api/edge/nodes', isAuthenticated, edgeComputingController.getEdgeNodes);
+  app.get('/api/edge/nodes/:id', isAuthenticated, edgeComputingController.getEdgeNodeById);
+  app.post('/api/edge/nodes', requireManager, edgeComputingController.createEdgeNode);
+  app.put('/api/edge/nodes/:id', requireManager, edgeComputingController.updateEdgeNode);
+  app.delete('/api/edge/nodes/:id', requireAdmin, edgeComputingController.deleteEdgeNode);
+  
+  // Edge Node Connectivity
+  app.get('/api/edge/nodes/:nodeId/connectivity', isAuthenticated, edgeComputingController.getNodeConnectivity);
+  app.post('/api/edge/nodes/:nodeId/connectivity', requireManager, edgeComputingController.createNodeConnectivity);
+  
+  // Edge Node Applications
+  app.get('/api/edge/nodes/:nodeId/applications', isAuthenticated, edgeComputingController.getNodeApplications);
+  app.post('/api/edge/nodes/:nodeId/applications', requireManager, edgeComputingController.createNodeApplication);
+  
+  // Edge Node Device Controls
+  app.get('/api/edge/nodes/:nodeId/device-controls', isAuthenticated, edgeComputingController.getNodeDeviceControls);
+  app.post('/api/edge/nodes/:nodeId/device-controls', requireManager, edgeComputingController.createNodeDeviceControl);
+  
+  // Edge Node Metrics
+  app.get('/api/edge/nodes/:nodeId/metrics', isAuthenticated, edgeComputingController.getNodeMetrics);
+  app.post('/api/edge/nodes/:nodeId/metrics', requireManager, edgeComputingController.createNodeMetrics);
+  
+  // Low-Latency Control Operations
+  app.post('/api/edge/nodes/:nodeId/devices/:deviceId/control', requireManager, edgeComputingController.sendControlCommand);
+  
+  // Edge Node Status
+  app.get('/api/edge/nodes/:nodeId/status', isAuthenticated, edgeComputingController.getNodeStatus);
 
   return httpServer;
 }

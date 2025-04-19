@@ -7,6 +7,19 @@
 import { Request, Response, NextFunction } from 'express';
 
 /**
+ * Extends the Express Request interface to include authenticated user information
+ */
+export interface AuthenticatedRequest extends Request {
+  user: {
+    id: number;
+    username: string;
+    role: string;
+    partnerId?: number;
+    [key: string]: any;
+  };
+}
+
+/**
  * Middleware to check if the user is authenticated
  */
 export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
