@@ -8,13 +8,13 @@
  * - Configuration presets for devices
  */
 
-import { db } from './server/db.js';
+import { db } from './server/db.ts';
 import { 
   deviceManufacturers, 
   deviceCatalog, 
   deviceTechnicalSpecs,
   deviceCatalogPresets
-} from './shared/schema.js';
+} from './shared/schema.ts';
 
 async function seedDeviceData() {
   console.log('Starting device data seeding...');
@@ -373,7 +373,7 @@ async function seedDeviceCatalog(manufacturers) {
       dimensions: '435 x 470 x 176 mm',
       weight: 16,
       shortDescription: 'Residential string inverter with SMA Smart Connected service',
-      fullDescription: 'The Sunny Boy 3.0 is ideal for homes with small PV systems. It's highly flexible with a range of module configurations. Integrated SMA Smart Connected service ensures lowest operating costs.',
+      fullDescription: 'The Sunny Boy 3.0 is ideal for homes with small PV systems. It is highly flexible with a range of module configurations. Integrated SMA Smart Connected service ensures lowest operating costs.',
       features: ['Integrated WLAN', 'SMA Smart Connected', 'Shade management with OptiTrac Global Peak', 'Secure Power Supply function'],
       supportedProtocols: ['Modbus RTU', 'Modbus TCP', 'SunSpec', 'Ethernet', 'Speedwire'],
       warranty: '5 years standard, extendable to 10/15/20 years',
@@ -583,7 +583,7 @@ async function seedDeviceCatalog(manufacturers) {
       dimensions: '48 x 135 x 115 mm',
       weight: 0.75,
       shortDescription: 'Industrial IoT Gateway Router',
-      fullDescription: 'The Cisco IR1101 is a modular, industrial, integrated services router that provides secure connectivity for critical infrastructure in harsh environments. It's designed for the Internet of Things (IoT) and supports multiple network protocols.',
+      fullDescription: 'The Cisco IR1101 is a modular, industrial, integrated services router that provides secure connectivity for critical infrastructure in harsh environments. It is designed for the Internet of Things (IoT) and supports multiple network protocols.',
       features: ['Modular design', 'Dual WAN connectivity', 'Industrial certifications', 'Advanced security'],
       supportedProtocols: ['Ethernet', 'Serial', '4G LTE', 'Wi-Fi', 'BLE', 'Zigbee', 'LoRaWAN'],
       warranty: '5 years',
