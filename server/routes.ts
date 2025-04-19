@@ -23,6 +23,7 @@ import * as arbitrageController from './controllers/arbitrageController';
 import * as energyController from './controllers/energyController';
 import * as forecastController from './controllers/forecastController';
 import * as optimizationController from './controllers/optimizationController';
+import * as tariffOptimizationController from './controllers/tariffOptimizationController';
 import * as demandResponseController from './controllers/demandResponseController';
 import * as tariffController from './controllers/tariffController';
 import * as authController from './controllers/authController';
@@ -445,6 +446,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/tariffs/:id', requireManager, tariffController.updateTariff);
   app.delete('/api/tariffs/:id', requireAdmin, tariffController.deleteTariff);
   app.post('/api/sites/:siteId/tariff/israeli', requireManager, tariffController.createIsraeliTariff);
+  
+  // Tariff Optimization routes
+  app.post('/api/sites/:siteId/optimize/tariff', tariffOptimizationController.optimizeBySiteTariff);
+  app.post('/api/sites/:siteId/optimize/ai-tariff', tariffOptimizationController.runAIOptimizationWithTariff);
+  app.get('/api/sites/:siteId/optimize/tariff-summary', tariffOptimizationController.getTariffOptimizationSummary);
+  app.post('/api/sites/:siteId/optimize/strategy/:strategy', tariffOptimizationController.applyTariffStrategy);
   
   // Additional specialized Israeli tariff types
   app.post('/api/sites/:siteId/tariff/israeli/lv', requireManager, (req, res) => {
