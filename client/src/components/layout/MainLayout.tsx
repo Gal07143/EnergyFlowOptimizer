@@ -223,17 +223,20 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Sidebar header */}
         <div className="flex h-16 items-center justify-between px-4 py-4">
           <div className="flex items-center">
-            <div className="rounded-md bg-primary/10 p-1">
-              <Zap className="h-7 w-7 text-primary" />
+            <div className="rounded-md bg-gradient-to-r from-primary/80 to-primary p-1.5 shadow-md">
+              <Zap className="h-7 w-7 text-white" />
             </div>
             {!collapsed && (
-              <span className="ml-2 text-xl font-semibold">EnergyEMS</span>
+              <div className="ml-3 flex flex-col">
+                <span className="text-xl font-bold tracking-tight">EnergyEMS</span>
+                <span className="text-xs text-muted-foreground">Smart Energy Management</span>
+              </div>
             )}
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="hidden md:flex" 
+            className="hidden md:flex hover:bg-primary/10 transition-colors" 
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -285,10 +288,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Link href={item.href}>
                     <a 
                       className={cn(
-                        "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                        "flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200",
                         isActive 
-                          ? "bg-primary/10 text-primary" 
-                          : "text-muted-foreground",
+                          ? "bg-gradient-to-r from-primary/90 to-primary text-white shadow-md" 
+                          : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
                         collapsed && "justify-center px-2"
                       )}
                     >
@@ -296,19 +299,32 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span>{item.icon}</span>
+                              <div className={cn(
+                                "flex h-8 w-8 items-center justify-center rounded-md",
+                                isActive ? "bg-white/20" : "bg-transparent"
+                              )}>
+                                {item.icon}
+                              </div>
                             </TooltipTrigger>
                             <TooltipContent side="right">{item.title}</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
                         <>
-                          {item.icon}
-                          <span className="ml-3">{item.title}</span>
+                          <div className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-md",
+                            isActive ? "bg-white/20" : "bg-primary/10"
+                          )}>
+                            {item.icon}
+                          </div>
+                          <span className="ml-3 font-medium">{item.title}</span>
                           {item.badge && (
                             <Badge
-                              variant={item.badge.variant}
-                              className="ml-auto"
+                              variant={isActive ? "outline" : item.badge.variant}
+                              className={cn(
+                                "ml-auto",
+                                isActive && "bg-white/20 text-white hover:bg-white/30"
+                              )}
                             >
                               {item.badge.text}
                             </Badge>
@@ -341,10 +357,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Link href={item.href}>
                     <a 
                       className={cn(
-                        "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                        "flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200",
                         isActive 
-                          ? "bg-primary/10 text-primary" 
-                          : "text-muted-foreground",
+                          ? "bg-gradient-to-r from-primary/90 to-primary text-white shadow-md" 
+                          : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
                         collapsed && "justify-center px-2"
                       )}
                     >
@@ -352,19 +368,32 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span>{item.icon}</span>
+                              <div className={cn(
+                                "flex h-8 w-8 items-center justify-center rounded-md",
+                                isActive ? "bg-white/20" : "bg-transparent"
+                              )}>
+                                {item.icon}
+                              </div>
                             </TooltipTrigger>
                             <TooltipContent side="right">{item.title}</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
                         <>
-                          {item.icon}
-                          <span className="ml-3">{item.title}</span>
+                          <div className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-md",
+                            isActive ? "bg-white/20" : "bg-primary/10"
+                          )}>
+                            {item.icon}
+                          </div>
+                          <span className="ml-3 font-medium">{item.title}</span>
                           {item.badge && (
                             <Badge
-                              variant={item.badge.variant}
-                              className="ml-auto"
+                              variant={isActive ? "outline" : item.badge.variant}
+                              className={cn(
+                                "ml-auto",
+                                isActive && "bg-white/20 text-white hover:bg-white/30"
+                              )}
                             >
                               {item.badge.text}
                             </Badge>
@@ -395,10 +424,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Link href={item.href}>
                     <a 
                       className={cn(
-                        "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                        "flex items-center rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200",
                         isActive 
-                          ? "bg-primary/10 text-primary" 
-                          : "text-muted-foreground",
+                          ? "bg-gradient-to-r from-primary/90 to-primary text-white shadow-md" 
+                          : "text-muted-foreground hover:bg-primary/10 hover:text-primary",
                         collapsed && "justify-center px-2"
                       )}
                     >
@@ -406,19 +435,32 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span>{item.icon}</span>
+                              <div className={cn(
+                                "flex h-8 w-8 items-center justify-center rounded-md",
+                                isActive ? "bg-white/20" : "bg-transparent"
+                              )}>
+                                {item.icon}
+                              </div>
                             </TooltipTrigger>
                             <TooltipContent side="right">{item.title}</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
                         <>
-                          {item.icon}
-                          <span className="ml-3">{item.title}</span>
+                          <div className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-md",
+                            isActive ? "bg-white/20" : "bg-primary/10"
+                          )}>
+                            {item.icon}
+                          </div>
+                          <span className="ml-3 font-medium">{item.title}</span>
                           {item.badge && (
                             <Badge
-                              variant={item.badge.variant}
-                              className="ml-auto"
+                              variant={isActive ? "outline" : item.badge.variant}
+                              className={cn(
+                                "ml-auto",
+                                isActive && "bg-white/20 text-white hover:bg-white/30"
+                              )}
                             >
                               {item.badge.text}
                             </Badge>
