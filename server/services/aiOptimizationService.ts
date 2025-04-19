@@ -2,7 +2,8 @@ import { MqttService } from './mqttService';
 import { DeviceManagementService } from './deviceManagementService';
 import OpenAI from 'openai';
 import { db } from '../db';
-import { Device } from '@shared/schema';
+import { Device, tariffs } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const OPENAI_MODEL = 'gpt-4o';
@@ -98,7 +99,7 @@ export function initAIOptimizationService(): AIOptimizationService {
 }
 
 export class AIOptimizationService {
-  private openai: OpenAI;
+  private openai: OpenAI | null = null;
   private mqttService: MqttService;
   private deviceService: DeviceManagementService;
   private optimizationConfigs: Map<number, OptimizationConfig> = new Map();
@@ -364,8 +365,8 @@ export class AIOptimizationService {
     // Get available devices
     const devices = await this.getDevicesForSite(siteId);
     
-    // Create prompt for the AI model
-    const prompt = this.createOptimizationPrompt(siteId, config, siteState, forecasts, devices);
+    // Create prompt for the AI model - await the result to get the string
+    const prompt = await this.createOptimizationPrompt(siteId, config, siteState, forecasts, devices);
     
     // Call OpenAI API for optimization
     const response = await this.openai.chat.completions.create({
@@ -624,15 +625,85 @@ export class AIOptimizationService {
     }
   }
 
-  private createOptimizationPrompt(
+  private async getTariffInfo(siteId: number): Promise<any> {
+    try {
+      // Get tariffs for the site
+      const siteSpecificTariffs = await db.select().from(tariffs).where(eq(tariffs.siteId, siteId));
+      
+      if (siteSpecificTariffs.length === 0) {
+        return null;
+      }
+      
+      // For now, just use the first tariff found
+      const tariff = siteSpecificTariffs[0];
+      
+      // Get current rate based on time of day if it's a Time of Use tariff
+      let currentRate = Number(tariff.importRate);
+      let currentPeriod = 'Standard Rate';
+      
+      if (tariff.isTimeOfUse && tariff.scheduleData) {
+        const now = new Date();
+        const hours = now.getHours();
+        const schedule = tariff.scheduleData as Record<string, Record<string, number>>;
+        
+        // Determine current season
+        const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+        
+        let currentSeason;
+        if (month >= 6 && month <= 9) {
+          currentSeason = 'summer'; // June-September
+        } else if (month >= 10 && month <= 11) {
+          currentSeason = 'autumn'; // October-November
+        } else if (month >= 3 && month <= 5) {
+          currentSeason = 'spring'; // March-May
+        } else {
+          currentSeason = 'winter'; // December-February
+        }
+        
+        const seasonSchedule = schedule[currentSeason];
+        
+        if (seasonSchedule) {
+          if (hours >= 17 && hours < 22) {
+            currentRate = seasonSchedule.peak;
+            currentPeriod = 'Peak';
+          } else if ((hours >= 7 && hours < 17) || (hours >= 22 && hours < 23)) {
+            currentRate = seasonSchedule.shoulder;
+            currentPeriod = 'Shoulder';
+          } else {
+            currentRate = seasonSchedule.offPeak;
+            currentPeriod = 'Off-Peak';
+          }
+        }
+      }
+      
+      return {
+        name: tariff.name,
+        provider: tariff.provider,
+        importRate: currentRate,
+        exportRate: Number(tariff.exportRate),
+        currency: tariff.currency,
+        isTimeOfUse: tariff.isTimeOfUse,
+        currentPeriod: currentPeriod,
+        isIsraeliTariff: tariff.name.includes('Israeli'),
+      };
+    } catch (error) {
+      console.error('Error fetching tariff info:', error);
+      return null;
+    }
+  }
+
+  private async createOptimizationPrompt(
     siteId: number,
     config: OptimizationConfig,
     siteState: SiteState,
     forecasts: ForecastData[],
     devices: Device[]
-  ): string {
+  ): Promise<string> {
+    // Get tariff information to include in the optimization
+    const tariffInfo = await this.getTariffInfo(siteId);
+    
     // Create a detailed prompt for the AI model with all the context it needs
-    return `
+    let prompt = `
 Please analyze the current state of energy site ${siteId} and provide optimization recommendations.
 
 Optimization objective: ${config.mode}
@@ -644,7 +715,35 @@ Current site state:
 - Grid import: ${siteState.gridImport} kW
 - Grid export: ${siteState.gridExport} kW
 - Battery state of charge: ${siteState.batteryStateOfCharge !== undefined ? `${siteState.batteryStateOfCharge}%` : 'N/A'}
+`;
 
+    // Add tariff information if available
+    if (tariffInfo) {
+      prompt += `
+Electricity Tariff Information:
+- Tariff: ${tariffInfo.name} (${tariffInfo.provider})
+- Current Import Rate: ${tariffInfo.importRate} ${tariffInfo.currency}/kWh
+- Export Rate: ${tariffInfo.exportRate} ${tariffInfo.currency}/kWh
+- Type: ${tariffInfo.isTimeOfUse ? 'Time of Use' : 'Fixed Rate'}
+${tariffInfo.isTimeOfUse ? `- Current Period: ${tariffInfo.currentPeriod}` : ''}
+`;
+
+      // Add special instructions for Israeli tariffs
+      if (tariffInfo.isIsraeliTariff) {
+        prompt += `
+IMPORTANT: This site uses the Israeli Electricity Tariff system. Consider these specifics for optimization:
+- Israeli tariffs have distinct seasonal variations (summer, winter, spring, autumn)
+- Peak hours (17:00-22:00) have significantly higher rates, especially in summer
+- The Israeli grid often experiences capacity constraints during peak hours
+- Solar export compensation is fixed at ${tariffInfo.exportRate} ILS/kWh regardless of time
+- For cost optimization, prioritize grid import during off-peak hours (23:00-7:00)
+- For peak shaving, ensure battery discharge during evening peak (17:00-22:00)
+- Using battery storage for arbitrage shows excellent profitability due to wide price differential
+`;
+      }
+    }
+
+    prompt += `
 Devices:
 ${devices.map(device => `- Device ${device.id}: ${device.name} (${device.type}), Status: ${device.status}`).join('\n')}
 
@@ -663,9 +762,9 @@ ${forecasts.map(forecast => {
   ${relevantValues.map((v, i) => `Hour ${i+1}: ${v.value} (confidence: ${v.confidence || 'N/A'})`).join('\n  ')}`;
 }).join('\n')}
 
-Based on the ${config.mode} optimization objective, please provide:
+Based on the ${config.mode} optimization objective and the tariff structure, please provide:
 1. A list of recommended device commands with parameters
-2. The expected savings or benefits
+2. The expected savings or benefits (in ${tariffInfo ? tariffInfo.currency : 'USD'})
 3. A confidence score for your recommendations
 4. Your reasoning for these recommendations
 
@@ -685,6 +784,7 @@ Please respond in the following JSON format:
   "reasoning": string
 }
 `;
+    return prompt;
   }
 
   private applyReinforcementLearning(
