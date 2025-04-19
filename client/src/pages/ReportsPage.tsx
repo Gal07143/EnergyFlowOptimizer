@@ -456,68 +456,575 @@ const ReportsPage: React.FC = () => {
     }
   };
 
+  // Interface for energy data visualization
+  interface EnergyData {
+    timestamp: string;
+    consumption: number;
+    production: number;
+    gridImport: number;
+    gridExport: number;
+    batterySoc?: number;
+  }
+
+  // Interface for tariff data visualization
+  interface TariffData {
+    timestamp: string;
+    rate: number;
+    periodType: string;
+  }
+
+  // Interface for carbon intensity data visualization
+  interface CarbonData {
+    timestamp: string;
+    carbonIntensity: number;
+    renewablePercentage: number;
+  }
+
+  // Interface for device consumption data
+  interface DeviceConsumption {
+    deviceId: string;
+    deviceName: string;
+    deviceType: string;
+    consumption: number;
+    percentage: number;
+  }
+
+  // Enhanced analytics result interface
+  interface EnhancedAnalyticsResult {
+    insights: any[];
+    summary?: string;
+    findings?: string[];
+    recommendations?: string[];
+    energyData?: EnergyData[];
+    tariffData?: TariffData[];
+    carbonData?: CarbonData[];
+    deviceConsumption?: DeviceConsumption[];
+    chartType?: string;
+    savingsAmount?: number;
+    optimizationPotential?: number;
+    peakDemand?: number;
+    averageDemand?: number;
+    selfConsumptionRate?: number;
+    selfSufficiencyRate?: number;
+    totalConsumption?: number;
+    totalProduction?: number;
+    totalCost?: number;
+  }
+
+  // Render chart based on analytics type and data
+  const renderChart = () => {
+    if (!analyticsResult) return null;
+    
+    // Default chart options with responsive design
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top' as const,
+        },
+        tooltip: {
+          mode: 'index' as const,
+          intersect: false,
+        },
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false,
+          },
+        },
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(200, 200, 200, 0.1)',
+          }
+        }
+      }
+    };
+
+    // Energy consumption/production chart
+    if (analyticsResult.energyData && analyticsResult.energyData.length > 0) {
+      const labels = analyticsResult.energyData.map(d => new Date(d.timestamp).toLocaleString());
+      
+      // Energy data visualization (consumption vs production)
+      const energyChartData = {
+        labels,
+        datasets: [
+          {
+            label: 'Consumption (kWh)',
+            data: analyticsResult.energyData.map(d => d.consumption),
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            borderWidth: 2,
+            tension: 0.3,
+          },
+          {
+            label: 'Production (kWh)',
+            data: analyticsResult.energyData.map(d => d.production),
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            borderWidth: 2,
+            tension: 0.3,
+          },
+          {
+            label: 'Grid Import (kWh)',
+            data: analyticsResult.energyData.map(d => d.gridImport),
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderWidth: 2,
+            tension: 0.3,
+          },
+          {
+            label: 'Grid Export (kWh)',
+            data: analyticsResult.energyData.map(d => d.gridExport),
+            borderColor: 'rgb(153, 102, 255)',
+            backgroundColor: 'rgba(153, 102, 255, 0.5)',
+            borderWidth: 2,
+            tension: 0.3,
+          }
+        ]
+      };
+
+      // Battery SOC chart if available
+      if (analyticsResult.energyData.some(d => d.batterySoc !== undefined)) {
+        const batteryChartData = {
+          labels,
+          datasets: [
+            {
+              label: 'Battery SOC (%)',
+              data: analyticsResult.energyData.map(d => d.batterySoc || 0),
+              borderColor: 'rgb(255, 159, 64)',
+              backgroundColor: 'rgba(255, 159, 64, 0.5)',
+              fill: true,
+              borderWidth: 2,
+              tension: 0.4,
+            }
+          ]
+        };
+
+        return (
+          <div className="space-y-6">
+            <div className="h-[300px]">
+              <Line data={energyChartData} options={chartOptions} />
+            </div>
+            <div className="h-[200px]">
+              <Line data={batteryChartData} options={chartOptions} />
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="h-[350px]">
+          <Line data={energyChartData} options={chartOptions} />
+        </div>
+      );
+    }
+
+    // Tariff data visualization
+    if (analyticsResult.tariffData && analyticsResult.tariffData.length > 0) {
+      const labels = analyticsResult.tariffData.map(d => new Date(d.timestamp).toLocaleString());
+      
+      // Map period types to colors
+      const periodColors: {[key: string]: string} = {
+        'peak': 'rgba(255, 99, 132, 0.5)',
+        'shoulder': 'rgba(255, 159, 64, 0.5)',
+        'off-peak': 'rgba(75, 192, 192, 0.5)',
+        'default': 'rgba(153, 102, 255, 0.5)'
+      };
+      
+      // Colorize background based on period type
+      const backgroundColor = analyticsResult.tariffData.map(d => {
+        const periodType = d.periodType?.toLowerCase() || 'default';
+        return periodColors[periodType] || periodColors.default;
+      });
+      
+      const tariffChartData = {
+        labels,
+        datasets: [
+          {
+            label: 'Electricity Rate ($/kWh)',
+            data: analyticsResult.tariffData.map(d => d.rate),
+            backgroundColor,
+            borderWidth: 1,
+          }
+        ]
+      };
+      
+      return (
+        <div className="h-[350px]">
+          <Bar data={tariffChartData} options={chartOptions} />
+        </div>
+      );
+    }
+
+    // Carbon intensity visualization
+    if (analyticsResult.carbonData && analyticsResult.carbonData.length > 0) {
+      const labels = analyticsResult.carbonData.map(d => new Date(d.timestamp).toLocaleString());
+      
+      const carbonChartData = {
+        labels,
+        datasets: [
+          {
+            label: 'Carbon Intensity (gCO₂/kWh)',
+            data: analyticsResult.carbonData.map(d => d.carbonIntensity),
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            borderWidth: 2,
+            tension: 0.3,
+            yAxisID: 'y',
+          },
+          {
+            label: 'Renewable Percentage (%)',
+            data: analyticsResult.carbonData.map(d => d.renewablePercentage),
+            borderColor: 'rgb(153, 102, 255)',
+            backgroundColor: 'rgba(153, 102, 255, 0.5)',
+            borderWidth: 2,
+            tension: 0.3,
+            yAxisID: 'y1',
+          }
+        ]
+      };
+      
+      const carbonChartOptions = {
+        ...chartOptions,
+        scales: {
+          ...chartOptions.scales,
+          y: {
+            type: 'linear' as const,
+            display: true,
+            position: 'left' as const,
+            title: {
+              display: true,
+              text: 'Carbon Intensity (gCO₂/kWh)'
+            }
+          },
+          y1: {
+            type: 'linear' as const,
+            display: true,
+            position: 'right' as const,
+            grid: {
+              drawOnChartArea: false,
+            },
+            title: {
+              display: true,
+              text: 'Renewable Percentage (%)'
+            },
+            min: 0,
+            max: 100
+          }
+        }
+      };
+      
+      return (
+        <div className="h-[350px]">
+          <Line data={carbonChartData} options={carbonChartOptions} />
+        </div>
+      );
+    }
+    
+    // Device consumption breakdown
+    if (analyticsResult.deviceConsumption && analyticsResult.deviceConsumption.length > 0) {
+      const labels = analyticsResult.deviceConsumption.map(d => d.deviceName || d.deviceType);
+      
+      const colors = [
+        'rgba(255, 99, 132, 0.7)',
+        'rgba(54, 162, 235, 0.7)',
+        'rgba(255, 206, 86, 0.7)',
+        'rgba(75, 192, 192, 0.7)',
+        'rgba(153, 102, 255, 0.7)',
+        'rgba(255, 159, 64, 0.7)',
+        'rgba(199, 199, 199, 0.7)',
+      ];
+      
+      const deviceChartData = {
+        labels,
+        datasets: [
+          {
+            label: 'Device Consumption (%)',
+            data: analyticsResult.deviceConsumption.map(d => d.percentage),
+            backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+            borderColor: labels.map((_, i) => colors[i % colors.length].replace('0.7', '1')),
+            borderWidth: 1,
+          }
+        ]
+      };
+      
+      return (
+        <div className="h-[350px]">
+          <div className="flex justify-center items-center h-full">
+            <div className="w-[300px] h-[300px]">
+              <Pie data={deviceChartData} options={chartOptions} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Summary metrics chart for general analytics
+    if (analyticsResult.savingsAmount !== undefined || 
+        analyticsResult.optimizationPotential !== undefined || 
+        analyticsResult.selfConsumptionRate !== undefined || 
+        analyticsResult.selfSufficiencyRate !== undefined) {
+      
+      const labels = ['Current Performance', 'Optimization Potential'];
+      
+      const summaryChartData = {
+        labels,
+        datasets: [
+          {
+            label: 'Self-Consumption Rate (%)',
+            data: [
+              analyticsResult.selfConsumptionRate || 0, 
+              (analyticsResult.selfConsumptionRate || 0) + (analyticsResult.optimizationPotential || 0)
+            ],
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+          },
+          {
+            label: 'Self-Sufficiency Rate (%)',
+            data: [
+              analyticsResult.selfSufficiencyRate || 0, 
+              (analyticsResult.selfSufficiencyRate || 0) + (analyticsResult.optimizationPotential || 0)
+            ],
+            backgroundColor: 'rgba(153, 102, 255, 0.5)',
+          }
+        ]
+      };
+      
+      return (
+        <div className="h-[350px]">
+          <Bar data={summaryChartData} options={chartOptions} />
+        </div>
+      );
+    }
+    
+    // Simplified pie chart for general distribution
+    if (analyticsResult.chartType === 'pie' && analyticsResult.totalConsumption && analyticsResult.totalProduction) {
+      const pieChartData = {
+        labels: ['Consumption', 'Production', 'Grid Import', 'Grid Export'],
+        datasets: [
+          {
+            data: [
+              analyticsResult.totalConsumption || 0,
+              analyticsResult.totalProduction || 0,
+              analyticsResult.totalConsumption - (analyticsResult.totalProduction || 0) > 0 ? 
+                analyticsResult.totalConsumption - (analyticsResult.totalProduction || 0) : 0,
+              analyticsResult.totalProduction - (analyticsResult.totalConsumption || 0) > 0 ? 
+                analyticsResult.totalProduction - (analyticsResult.totalConsumption || 0) : 0
+            ],
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.6)',
+              'rgba(75, 192, 192, 0.6)',
+              'rgba(54, 162, 235, 0.6)',
+              'rgba(153, 102, 255, 0.6)'
+            ],
+            borderColor: [
+              'rgb(255, 99, 132)',
+              'rgb(75, 192, 192)',
+              'rgb(54, 162, 235)',
+              'rgb(153, 102, 255)'
+            ],
+            borderWidth: 1,
+          }
+        ]
+      };
+      
+      return (
+        <div className="h-[350px]">
+          <div className="h-full w-full flex justify-center">
+            <div style={{ width: '80%', maxWidth: '350px' }}>
+              <Doughnut data={pieChartData} options={chartOptions} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    // Default visualization when no specific chart data is available
+    return null;
+  };
+
   // Display insights from analytics results
   const renderInsights = () => {
-    if (!analyticsResult || !analyticsResult.insights || analyticsResult.insights.length === 0) {
+    if (!analyticsResult) {
       return (
         <Alert>
-          <AlertTitle>No insights available</AlertTitle>
+          <AlertTitle>No data available</AlertTitle>
           <AlertDescription>
-            No insights could be derived from the current data. Try a different date range or analytics type.
+            No analytics results available. Try running an analysis first.
           </AlertDescription>
         </Alert>
       );
     }
 
+    // Get the enhanced result with appropriate type safety
+    const enhancedResult = analyticsResult as EnhancedAnalyticsResult;
+
+    // Render the chart if data is available
+    const chart = renderChart();
+
     return (
-      <div className="space-y-4">
-        {analyticsResult.insights.map((insight: any, index: number) => (
-          <Card key={index}>
+      <div className="space-y-6">
+        {/* Render chart visualization if available */}
+        {chart && (
+          <Card>
             <CardHeader>
-              <CardTitle className="text-lg">{insight.description}</CardTitle>
+              <CardTitle>Energy Data Visualization</CardTitle>
+              <CardDescription>Visual representation of your energy analytics</CardDescription>
+            </CardHeader>
+            <CardContent>{chart}</CardContent>
+          </Card>
+        )}
+
+        {/* Key metrics display */}
+        {(enhancedResult.totalConsumption !== undefined || 
+          enhancedResult.totalProduction !== undefined || 
+          enhancedResult.totalCost !== undefined ||
+          enhancedResult.peakDemand !== undefined) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Key Metrics</CardTitle>
             </CardHeader>
             <CardContent>
-              {insight.type === 'device_peak_contribution' && (
-                <div className="space-y-2">
-                  {insight.deviceContributions && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Device Contributions:</h4>
-                      {insight.deviceContributions.map((device: any, i: number) => (
-                        <div key={i} className="flex justify-between py-1 border-b">
-                          <span>{device.deviceType}</span>
-                          <span className="font-medium">{device.percentage.toFixed(1)}%</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {enhancedResult.totalConsumption !== undefined && (
+                  <div className="text-center p-2 border rounded-md">
+                    <p className="text-xs text-muted-foreground">Total Consumption</p>
+                    <p className="text-2xl font-semibold">{enhancedResult.totalConsumption} kWh</p>
+                  </div>
+                )}
+                
+                {enhancedResult.totalProduction !== undefined && (
+                  <div className="text-center p-2 border rounded-md">
+                    <p className="text-xs text-muted-foreground">Total Production</p>
+                    <p className="text-2xl font-semibold">{enhancedResult.totalProduction} kWh</p>
+                  </div>
+                )}
+                
+                {enhancedResult.totalCost !== undefined && (
+                  <div className="text-center p-2 border rounded-md">
+                    <p className="text-xs text-muted-foreground">Total Cost</p>
+                    <p className="text-2xl font-semibold">${enhancedResult.totalCost.toFixed(2)}</p>
+                  </div>
+                )}
+                
+                {enhancedResult.peakDemand !== undefined && (
+                  <div className="text-center p-2 border rounded-md">
+                    <p className="text-xs text-muted-foreground">Peak Demand</p>
+                    <p className="text-2xl font-semibold">{enhancedResult.peakDemand} kW</p>
+                  </div>
+                )}
+                
+                {enhancedResult.selfConsumptionRate !== undefined && (
+                  <div className="text-center p-2 border rounded-md">
+                    <p className="text-xs text-muted-foreground">Self-Consumption</p>
+                    <p className="text-2xl font-semibold">{enhancedResult.selfConsumptionRate}%</p>
+                  </div>
+                )}
+                
+                {enhancedResult.savingsAmount !== undefined && (
+                  <div className="text-center p-2 border rounded-md">
+                    <p className="text-xs text-muted-foreground">Potential Savings</p>
+                    <p className="text-2xl font-semibold">${enhancedResult.savingsAmount.toFixed(2)}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Detailed insights section */}
+        {enhancedResult.insights && enhancedResult.insights.length > 0 ? (
+          <div className="space-y-4">
+            {enhancedResult.insights.map((insight: any, index: number) => (
+              <Card key={index}>
+                <CardHeader>
+                  <CardTitle className="text-lg">{insight.description}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {insight.type === 'device_peak_contribution' && (
+                    <div className="space-y-2">
+                      {insight.deviceContributions && (
+                        <div>
+                          <h4 className="font-semibold mb-2">Device Contributions:</h4>
+                          {insight.deviceContributions.map((device: any, i: number) => (
+                            <div key={i} className="flex justify-between py-1 border-b">
+                              <span>{device.deviceType}</span>
+                              <span className="font-medium">{device.percentage.toFixed(1)}%</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
+                  
+                  {insight.type === 'optimization_recommendations' && (
+                    <div className="space-y-2">
+                      {insight.recommendations && (
+                        <div>
+                          <h4 className="font-semibold mb-2">Recommendations:</h4>
+                          {insight.recommendations.map((rec: any, i: number) => (
+                            <div key={i} className="p-2 mb-2 bg-muted rounded-md">
+                              <div className="font-medium">{rec.description}</div>
+                              <div className="text-sm text-muted-foreground">{rec.details}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Default renderer for other insight types */}
+                  {!['device_peak_contribution', 'optimization_recommendations'].includes(insight.type) && (
+                    <pre className="bg-muted p-2 rounded-md overflow-auto text-xs">
+                      {JSON.stringify(insight, null, 2)}
+                    </pre>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Alert>
+            <AlertTitle>Analysis Summary</AlertTitle>
+            <AlertDescription>
+              {enhancedResult.summary || 'No detailed insights could be derived from the current data.'}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* Findings and recommendations */}
+        {(enhancedResult.findings || enhancedResult.recommendations) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Analysis Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {enhancedResult.findings && enhancedResult.findings.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Key Findings:</h3>
+                  <ul className="space-y-2 pl-5 list-disc">
+                    {enhancedResult.findings.map((finding, index) => (
+                      <li key={index}>{finding}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
               
-              {insight.type === 'optimization_recommendations' && (
-                <div className="space-y-2">
-                  {insight.recommendations && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Recommendations:</h4>
-                      {insight.recommendations.map((rec: any, i: number) => (
-                        <div key={i} className="p-2 mb-2 bg-muted rounded-md">
-                          <div className="font-medium">{rec.description}</div>
-                          <div className="text-sm text-muted-foreground">{rec.details}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              {enhancedResult.recommendations && enhancedResult.recommendations.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Recommendations:</h3>
+                  <ul className="space-y-2 pl-5 list-disc">
+                    {enhancedResult.recommendations.map((recommendation, index) => (
+                      <li key={index}>{recommendation}</li>
+                    ))}
+                  </ul>
                 </div>
-              )}
-              
-              {/* Default renderer for other insight types */}
-              {!['device_peak_contribution', 'optimization_recommendations'].includes(insight.type) && (
-                <pre className="bg-muted p-2 rounded-md overflow-auto text-xs">
-                  {JSON.stringify(insight, null, 2)}
-                </pre>
               )}
             </CardContent>
           </Card>
-        ))}
+        )}
       </div>
     );
   };
