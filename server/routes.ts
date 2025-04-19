@@ -11,6 +11,7 @@ import { db } from "./db";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { requireRole, requireAdmin, requireManager, requirePartnerAccess, requireDeviceAccess } from './middleware/roleAuth';
+import { isAuthenticated } from './middleware/auth';
 import { initDeviceManagementService } from './services/deviceManagementService';
 import { initMqttService } from './services/mqttService';
 import { ocppManager } from './adapters/ocppAdapter';
@@ -594,6 +595,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/analytics/run', analyticsController.runAnalytics);
   app.get('/api/analytics/types', analyticsController.getAnalyticsTypes);
   app.get('/api/analytics/granularities', analyticsController.getTimeGranularities);
+
+  // Partner Organization Routes
+  app.get('/api/partners', requireAdmin, partnerController.getAllPartners);
+  app.get('/api/partners/current', isAuthenticated, partnerController.getCurrentPartner);
+  app.get('/api/partners/:id', requirePartnerAccess('id', 'partner'), partnerController.getPartnerById);
+  app.post('/api/partners', requireAdmin, partnerController.createPartner);
+  app.put('/api/partners/:id', requirePartnerAccess('id', 'partner'), partnerController.updatePartner);
+  app.get('/api/partners/:id/users', requirePartnerAccess('id', 'partner'), partnerController.getPartnerUsers);
+  app.get('/api/partners/:id/sites', requirePartnerAccess('id', 'partner'), partnerController.getPartnerSites);
 
   // Predictive Maintenance Routes
   app.use('/api/maintenance', predictiveMaintenanceRoutes);
