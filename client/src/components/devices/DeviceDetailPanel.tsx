@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient, apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -16,7 +19,8 @@ import {
   Activity, 
   XIcon, 
   RefreshCw, 
-  Save, 
+  Save,
+  Loader2,
   PowerIcon,
   ChevronLeft,
   Settings,
@@ -30,9 +34,6 @@ import {
   Wifi,
   Network
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@/lib/queryClient';
 import { ManufacturerConnectionSettings } from './ManufacturerConnectionSettings';
 
 interface DeviceDetailPanelProps {
@@ -614,30 +615,38 @@ export default function DeviceDetailPanel({ deviceId, onClose }: DeviceDetailPan
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="manufacturer">Manufacturer</Label>
-                      <Select defaultValue={device.manufacturer || ''}>
+                      <Select 
+                        value={selectedManufacturerId?.toString() || ''} 
+                        onValueChange={(value) => setSelectedManufacturerId(parseInt(value) || null)}
+                      >
                         <SelectTrigger id="manufacturer">
                           <SelectValue placeholder="Select manufacturer" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="SolarEdge">SolarEdge</SelectItem>
-                          <SelectItem value="Tesla">Tesla</SelectItem>
-                          <SelectItem value="Schneider Electric">Schneider Electric</SelectItem>
-                          <SelectItem value="ABB">ABB</SelectItem>
-                          <SelectItem value="LG Energy Solution">LG Energy Solution</SelectItem>
+                          <SelectItem value="1">SolarEdge</SelectItem>
+                          <SelectItem value="2">Tesla</SelectItem>
+                          <SelectItem value="3">Schneider Electric</SelectItem>
+                          <SelectItem value="4">ABB</SelectItem>
+                          <SelectItem value="5">LG Energy Solution</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="device-model">Device Model</Label>
-                      <Select defaultValue={device.model || ''}>
+                      <Select 
+                        value={selectedDeviceCatalogId?.toString() || ''} 
+                        onValueChange={(value) => setSelectedDeviceCatalogId(parseInt(value) || null)}
+                      >
                         <SelectTrigger id="device-model">
                           <SelectValue placeholder="Select model" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Model X1">Model X1</SelectItem>
-                          <SelectItem value="Model X2">Model X2</SelectItem>
-                          <SelectItem value="Model X3">Model X3</SelectItem>
+                          <SelectItem value="1">PowerWall 2</SelectItem>
+                          <SelectItem value="2">SolarEdge SE3000H</SelectItem>
+                          <SelectItem value="3">Schneider EV Link</SelectItem>
+                          <SelectItem value="4">ABB Terra AC</SelectItem>
+                          <SelectItem value="5">LG RESU10H</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -653,7 +662,10 @@ export default function DeviceDetailPanel({ deviceId, onClose }: DeviceDetailPan
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div className="space-y-2">
                       <Label htmlFor="connection-protocol">Connection Protocol</Label>
-                      <Select defaultValue="modbus">
+                      <Select 
+                        value={selectedProtocol} 
+                        onValueChange={setSelectedProtocol}
+                      >
                         <SelectTrigger id="connection-protocol">
                           <SelectValue placeholder="Select protocol" />
                         </SelectTrigger>
@@ -668,7 +680,10 @@ export default function DeviceDetailPanel({ deviceId, onClose }: DeviceDetailPan
                     
                     <div className="space-y-2">
                       <Label htmlFor="connection-method">Connection Method</Label>
-                      <Select defaultValue="direct">
+                      <Select 
+                        value={selectedConnectionMethod} 
+                        onValueChange={setSelectedConnectionMethod}
+                      >
                         <SelectTrigger id="connection-method">
                           <SelectValue placeholder="Select method" />
                         </SelectTrigger>
@@ -681,31 +696,48 @@ export default function DeviceDetailPanel({ deviceId, onClose }: DeviceDetailPan
                     </div>
                   </div>
                   
-                  <ManufacturerConnectionSettings 
-                    manufacturerId={1} 
-                    deviceCatalogId={1}
-                    deviceType={device.type}
-                    protocol="modbus"
-                    onSettingsChange={(settings) => console.log('Connection settings updated:', settings)}
-                    initialSettings={{
-                      connection: 'tcp',
-                      ipAddress: device.ipAddress,
-                      port: 502,
-                      slaveId: 1
-                    }}
-                  />
+                  {selectedManufacturerId && selectedDeviceCatalogId && (
+                    <ManufacturerConnectionSettings 
+                      manufacturerId={selectedManufacturerId} 
+                      deviceCatalogId={selectedDeviceCatalogId}
+                      deviceType={device.type}
+                      protocol={selectedProtocol}
+                      onSettingsChange={(settings) => setConnectionSettings(settings)}
+                      initialSettings={connectionSettings || {
+                        connection: 'tcp',
+                        ipAddress: device.ipAddress,
+                        port: 502,
+                        slaveId: 1
+                      }}
+                    />
+                  )}
                 </div>
                 
                 <div className="flex justify-end">
-                  <Button onClick={() => {
-                    toast({
-                      title: 'Connection Settings Saved',
-                      description: 'Device connection settings have been updated successfully',
-                    });
-                  }}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Connection Settings
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {isLoadingSettings && (
+                      <div className="flex items-center">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span className="text-sm text-muted-foreground">Loading settings...</span>
+                      </div>
+                    )}
+                    <Button 
+                      onClick={() => saveConnectionSettingsMutation.mutate()}
+                      disabled={saveConnectionSettingsMutation.isPending || !selectedManufacturerId || !selectedDeviceCatalogId}
+                    >
+                      {saveConnectionSettingsMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Connection Settings
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
