@@ -91,6 +91,11 @@ export interface IStorage {
   createTariff(tariff: InsertTariff): Promise<Tariff>;
   updateTariff(id: number, tariff: Partial<Tariff>): Promise<Tariff | undefined>;
   deleteTariff(id: number): Promise<boolean>;
+  
+  // Device-specific tariff operations
+  getDeviceTariff(deviceId: number): Promise<Tariff | undefined>;
+  setDeviceTariff(deviceId: number, tariffId: number): Promise<boolean>;
+  removeDeviceTariff(deviceId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
