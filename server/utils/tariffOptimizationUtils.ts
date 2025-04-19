@@ -6,7 +6,7 @@
  */
 
 import { db } from '../db';
-import { tariffs, type Device } from '@shared/schema';
+import { tariffs, devices, type Device } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
 // Types for tariff data
@@ -40,6 +40,53 @@ interface TariffInfo {
 }
 
 /**
+ * Get the current tariff rate and period based on a tariff and current time
+ */
+function getCurrentTariffRateAndPeriod(tariff: any): { currentRate: number, currentPeriod: string } {
+  // Default values
+  let currentRate = Number(tariff.importRate);
+  let currentPeriod = 'Standard Rate';
+  
+  // If it's a Time of Use tariff, determine the current rate based on time of day
+  if (tariff.isTimeOfUse && tariff.scheduleData) {
+    const now = new Date();
+    const hours = now.getHours();
+    const schedule = tariff.scheduleData as TariffSchedule;
+    
+    // Determine current season
+    const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+    
+    let currentSeason;
+    if (month >= 6 && month <= 9) {
+      currentSeason = 'summer'; // June-September
+    } else if (month >= 10 && month <= 11) {
+      currentSeason = 'autumn'; // October-November
+    } else if (month >= 3 && month <= 5) {
+      currentSeason = 'spring'; // March-May
+    } else {
+      currentSeason = 'winter'; // December-February
+    }
+    
+    const seasonSchedule = schedule[currentSeason];
+    
+    if (seasonSchedule) {
+      if (hours >= 17 && hours < 22) {
+        currentRate = seasonSchedule.peak;
+        currentPeriod = 'Peak (17:00-22:00)';
+      } else if ((hours >= 7 && hours < 17) || (hours >= 22 && hours < 23)) {
+        currentRate = seasonSchedule.shoulder;
+        currentPeriod = 'Shoulder (7:00-17:00, 22:00-23:00)';
+      } else {
+        currentRate = seasonSchedule.offPeak;
+        currentPeriod = 'Off-Peak (23:00-7:00)';
+      }
+    }
+  }
+  
+  return { currentRate, currentPeriod };
+}
+
+/**
  * Get comprehensive tariff information for a site
  */
 export async function getTariffInfoForSite(siteId: number): Promise<TariffInfo | null> {
@@ -54,44 +101,8 @@ export async function getTariffInfoForSite(siteId: number): Promise<TariffInfo |
     // For now, we just use the first tariff found
     const tariff = siteTariffs[0];
     
-    // Get current rate based on time of day if it's a Time of Use tariff
-    let currentRate = Number(tariff.importRate);
-    let currentPeriod = 'Standard Rate';
-    
-    if (tariff.isTimeOfUse && tariff.scheduleData) {
-      const now = new Date();
-      const hours = now.getHours();
-      const schedule = tariff.scheduleData as TariffSchedule;
-      
-      // Determine current season
-      const month = now.getMonth() + 1; // JavaScript months are 0-indexed
-      
-      let currentSeason;
-      if (month >= 6 && month <= 9) {
-        currentSeason = 'summer'; // June-September
-      } else if (month >= 10 && month <= 11) {
-        currentSeason = 'autumn'; // October-November
-      } else if (month >= 3 && month <= 5) {
-        currentSeason = 'spring'; // March-May
-      } else {
-        currentSeason = 'winter'; // December-February
-      }
-      
-      const seasonSchedule = schedule[currentSeason];
-      
-      if (seasonSchedule) {
-        if (hours >= 17 && hours < 22) {
-          currentRate = seasonSchedule.peak;
-          currentPeriod = 'Peak (17:00-22:00)';
-        } else if ((hours >= 7 && hours < 17) || (hours >= 22 && hours < 23)) {
-          currentRate = seasonSchedule.shoulder;
-          currentPeriod = 'Shoulder (7:00-17:00, 22:00-23:00)';
-        } else {
-          currentRate = seasonSchedule.offPeak;
-          currentPeriod = 'Off-Peak (23:00-7:00)';
-        }
-      }
-    }
+    // Get current rate and period
+    const { currentRate, currentPeriod } = getCurrentTariffRateAndPeriod(tariff);
     
     return {
       id: tariff.id,
@@ -108,6 +119,52 @@ export async function getTariffInfoForSite(siteId: number): Promise<TariffInfo |
     };
   } catch (error) {
     console.error('Error fetching tariff info:', error);
+    return null;
+  }
+}
+
+/**
+ * Get comprehensive tariff information for a specific device
+ * (includes device-specific tariff if set, otherwise falls back to site tariff)
+ */
+export async function getDeviceTariffInfo(deviceId: number): Promise<TariffInfo | null> {
+  try {
+    // Get the device
+    const [device] = await db.select().from(devices).where(eq(devices.id, deviceId));
+    
+    if (!device) {
+      return null;
+    }
+    
+    // If device has a specific tariff assigned, use that
+    if (device.tariffId) {
+      // Get the device-specific tariff
+      const [deviceTariff] = await db.select().from(tariffs).where(eq(tariffs.id, device.tariffId));
+      
+      if (deviceTariff) {
+        // Get current rate and period
+        const { currentRate, currentPeriod } = getCurrentTariffRateAndPeriod(deviceTariff);
+        
+        return {
+          id: deviceTariff.id,
+          name: deviceTariff.name || "Unnamed Device Tariff",
+          provider: deviceTariff.provider || "Unknown Provider",
+          importRate: Number(deviceTariff.importRate),
+          exportRate: Number(deviceTariff.exportRate),
+          isTimeOfUse: deviceTariff.isTimeOfUse || false,
+          scheduleData: deviceTariff.scheduleData as TariffSchedule,
+          currency: deviceTariff.currency || "ILS",
+          currentRate,
+          currentPeriod,
+          isIsraeliTariff: deviceTariff.name ? deviceTariff.name.includes('Israeli') : false,
+        };
+      }
+    }
+    
+    // If no device-specific tariff, fall back to site tariff
+    return getTariffInfoForSite(device.siteId);
+  } catch (error) {
+    console.error('Error fetching device tariff info:', error);
     return null;
   }
 }
@@ -485,9 +542,9 @@ export async function generateTariffBasedRecommendations(
   devices: any[],
   batteryStateOfCharge?: number
 ): Promise<any> {
-  // Get tariff information
-  const tariffInfo = await getTariffInfoForSite(siteId);
-  if (!tariffInfo) {
+  // Get site tariff information (fallback)
+  const siteTariffInfo = await getTariffInfoForSite(siteId);
+  if (!siteTariffInfo) {
     return {
       recommendations: [],
       reasoning: 'No tariff information available for this site.'
@@ -498,16 +555,30 @@ export async function generateTariffBasedRecommendations(
   const recommendations = [];
   let reasoning = '';
   
-  // Add tariff context to reasoning
-  reasoning += `Current tariff: ${tariffInfo.name}, Current rate: ${tariffInfo.currentRate} ${tariffInfo.currency}/kWh (${tariffInfo.currentPeriod}).\n`;
+  // Add site tariff context to reasoning
+  reasoning += `Site tariff: ${siteTariffInfo.name}, Current site rate: ${siteTariffInfo.currentRate} ${siteTariffInfo.currency}/kWh (${siteTariffInfo.currentPeriod}).\n`;
   
   // Israeli-specific logic
-  if (tariffInfo.isIsraeliTariff) {
+  if (siteTariffInfo.isIsraeliTariff) {
     reasoning += 'Using specialized Israeli tariff optimization strategies based on the significant price differentials between peak and off-peak periods.\n';
   }
   
+  reasoning += 'Note: Device-specific tariffs will override site tariff where applicable.\n\n';
+  
   // Process each device
   for (const device of devices) {
+    // Get device-specific tariff info if available
+    const deviceTariffInfo = await getDeviceTariffInfo(device.id);
+    
+    // Use device-specific tariff if available, otherwise fall back to site tariff
+    const tariffInfo = deviceTariffInfo || siteTariffInfo;
+    
+    // Add device-specific tariff info to reasoning if it differs from site tariff
+    if (deviceTariffInfo && deviceTariffInfo.id !== siteTariffInfo.id) {
+      reasoning += `Device ${device.name} (ID: ${device.id}) uses a specific tariff: ${deviceTariffInfo.name}.\n`;
+      reasoning += `Current device rate: ${deviceTariffInfo.currentRate} ${deviceTariffInfo.currency}/kWh (${deviceTariffInfo.currentPeriod}).\n`;
+    }
+    
     switch (device.type) {
       case 'battery_storage':
       case 'battery':
@@ -614,18 +685,18 @@ export async function generateTariffBasedRecommendations(
   
   // Calculate expected savings
   let expectedSavings = 0;
-  if (tariffInfo.isTimeOfUse) {
+  if (siteTariffInfo.isTimeOfUse) {
     // Simple estimate based on typical daily consumption
     const dailyConsumptionKWh = 15; // Average household daily consumption
-    const standardRate = tariffInfo.importRate;
-    const currentRate = tariffInfo.currentRate;
+    const standardRate = siteTariffInfo.importRate;
+    const currentRate = siteTariffInfo.currentRate;
     
     // Basic savings calculation
     if (currentRate < standardRate) {
       expectedSavings = (standardRate - currentRate) * dailyConsumptionKWh;
     }
     
-    reasoning += `Estimated daily savings: ${expectedSavings.toFixed(2)} ${tariffInfo.currency} based on typical consumption patterns and current rates.\n`;
+    reasoning += `Estimated daily savings: ${expectedSavings.toFixed(2)} ${siteTariffInfo.currency} based on typical consumption patterns and current rates.\n`;
   }
   
   return {
