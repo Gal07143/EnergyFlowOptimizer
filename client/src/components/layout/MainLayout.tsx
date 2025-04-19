@@ -169,7 +169,7 @@ const energyItems = [
     title: 'Demand Response',
     icon: <BarChart2 className="h-5 w-5" />,
     href: '/demand-response',
-    badge: null as BadgeType
+    badge: { text: 'Active', variant: 'default' as const } as BadgeType
   }
 ];
 
