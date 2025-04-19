@@ -253,7 +253,7 @@ export class ProtocolBridgeAdapter {
         
       case 'battery':
         if (readings.soc !== undefined) {
-          const topic = formatTopic(TOPIC_PATTERNS.BATTERY_SOC, { deviceId: this.deviceId });
+          const topic = formatDeviceTopic(TOPIC_PATTERNS.BATTERY_SOC, this.deviceId);
           await this.mqttService.publish(topic, {
             ...data,
             soc: readings.soc
@@ -264,7 +264,7 @@ export class ProtocolBridgeAdapter {
         }
         
         if (readings.power !== undefined) {
-          const topic = formatTopic(TOPIC_PATTERNS.BATTERY_POWER, { deviceId: this.deviceId });
+          const topic = formatDeviceTopic(TOPIC_PATTERNS.BATTERY_POWER, this.deviceId);
           await this.mqttService.publish(topic, {
             ...data,
             power: readings.power
@@ -277,7 +277,7 @@ export class ProtocolBridgeAdapter {
         
       case 'solar':
         if (readings.production !== undefined) {
-          const topic = formatTopic(TOPIC_PATTERNS.SOLAR_PRODUCTION, { deviceId: this.deviceId });
+          const topic = formatDeviceTopic(TOPIC_PATTERNS.SOLAR_PRODUCTION, this.deviceId);
           await this.mqttService.publish(topic, {
             ...data,
             production: readings.production
@@ -290,7 +290,7 @@ export class ProtocolBridgeAdapter {
         
       case 'heat_pump':
         if (readings.temperature !== undefined) {
-          const topic = formatTopic(TOPIC_PATTERNS.HEAT_PUMP_TEMPERATURE, { deviceId: this.deviceId });
+          const topic = formatDeviceTopic(TOPIC_PATTERNS.HEAT_PUMP_TEMPERATURE, this.deviceId);
           await this.mqttService.publish(topic, {
             ...data,
             temperature: readings.temperature
@@ -303,7 +303,7 @@ export class ProtocolBridgeAdapter {
         
       case 'meter':
         if (readings.reading !== undefined) {
-          const topic = formatTopic(TOPIC_PATTERNS.METER_READING, { deviceId: this.deviceId });
+          const topic = formatDeviceTopic(TOPIC_PATTERNS.METER_READING, this.deviceId);
           await this.mqttService.publish(topic, {
             ...data,
             reading: readings.reading
@@ -314,7 +314,7 @@ export class ProtocolBridgeAdapter {
         }
         
         if (readings.power !== undefined) {
-          const topic = formatTopic(TOPIC_PATTERNS.METER_POWER, { deviceId: this.deviceId });
+          const topic = formatDeviceTopic(TOPIC_PATTERNS.METER_POWER, this.deviceId);
           await this.mqttService.publish(topic, {
             ...data,
             power: readings.power
