@@ -1,11 +1,12 @@
 import express from 'express';
-import { requireAuth, requireManager } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
+import { requireManager } from '../middleware/roleAuth';
 import { generateMockAlarms, generateMockAlarmStats } from '../utils/mockDataGenerator';
 
 const router = express.Router();
 
 // Get current active alarms for a site
-router.get('/sites/:siteId/alarms/current', requireAuth, async (req, res) => {
+router.get('/sites/:siteId/alarms/current', isAuthenticated, async (req, res) => {
   try {
     const { siteId } = req.params;
     const { status } = req.query;
@@ -26,7 +27,7 @@ router.get('/sites/:siteId/alarms/current', requireAuth, async (req, res) => {
 });
 
 // Get historical alarms for a site
-router.get('/sites/:siteId/alarms/history', requireAuth, async (req, res) => {
+router.get('/sites/:siteId/alarms/history', isAuthenticated, async (req, res) => {
   try {
     const { siteId } = req.params;
     
@@ -41,7 +42,7 @@ router.get('/sites/:siteId/alarms/history', requireAuth, async (req, res) => {
 });
 
 // Get alarm statistics for a site
-router.get('/sites/:siteId/alarms/stats', requireAuth, async (req, res) => {
+router.get('/sites/:siteId/alarms/stats', isAuthenticated, async (req, res) => {
   try {
     const { siteId } = req.params;
     
@@ -56,7 +57,7 @@ router.get('/sites/:siteId/alarms/stats', requireAuth, async (req, res) => {
 });
 
 // Acknowledge an alarm
-router.post('/alarms/:alarmId/acknowledge', requireAuth, async (req, res) => {
+router.post('/alarms/:alarmId/acknowledge', isAuthenticated, async (req, res) => {
   try {
     const { alarmId } = req.params;
     
@@ -74,7 +75,7 @@ router.post('/alarms/:alarmId/acknowledge', requireAuth, async (req, res) => {
 });
 
 // Resolve an alarm
-router.post('/alarms/:alarmId/resolve', requireAuth, async (req, res) => {
+router.post('/alarms/:alarmId/resolve', isAuthenticated, async (req, res) => {
   try {
     const { alarmId } = req.params;
     
@@ -92,7 +93,7 @@ router.post('/alarms/:alarmId/resolve', requireAuth, async (req, res) => {
 });
 
 // Get operations summary for a site
-router.get('/sites/:siteId/operations/summary', requireAuth, async (req, res) => {
+router.get('/sites/:siteId/operations/summary', isAuthenticated, async (req, res) => {
   try {
     const { siteId } = req.params;
     

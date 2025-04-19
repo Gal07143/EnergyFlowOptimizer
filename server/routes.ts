@@ -46,6 +46,7 @@ import deviceRegistryRoutes from './routes/deviceRegistry';
 import { electricalDiagramRoutes } from './routes/electricalDiagram';
 import { predictiveMaintenanceRoutes } from './routes/predictiveMaintenanceRoutes';
 import gatewayRoutes from './routes/gatewayRoutes';
+import alarmsRoutes from './routes/alarms';
 import * as gatewayController from './controllers/gatewayController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -630,6 +631,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Predictive Maintenance Routes
   app.use('/api/maintenance', predictiveMaintenanceRoutes);
+  
+  // Alarms Routes
+  app.use('/api', alarmsRoutes);
 
   // Edge Computing Routes
   app.get('/api/edge/nodes', isAuthenticated, edgeComputingController.getEdgeNodes);
