@@ -707,6 +707,16 @@ async function seedTechnicalSpecs(deviceCatalogData) {
     deviceMap.set(device.modelNumber, device.id);
   }
   
+  // Get existing technical specs to avoid duplication
+  const existingTechSpecs = await db.select().from(deviceTechnicalSpecs);
+  console.log(`Found ${existingTechSpecs.length} existing technical specifications in the database`);
+  
+  // Create a set of device IDs that already have tech specs
+  const existingTechSpecsDeviceIds = new Set();
+  for (const spec of existingTechSpecs) {
+    existingTechSpecsDeviceIds.add(spec.deviceCatalogId);
+  }
+  
   // First, get existing tech specs to avoid duplication
   const existingTechSpecs = await db.select().from(deviceTechnicalSpecs);
   const existingTechSpecsDeviceIds = new Set(existingTechSpecs.map(t => t.deviceCatalogId));
@@ -1306,13 +1316,52 @@ async function seedTechnicalSpecs(deviceCatalogData) {
   ];
   
   const insertedTechSpecs = [];
+  const updatedTechSpecs = [];
   
-  for (const techSpec of techSpecs) {
-    const [insertedSpec] = await db.insert(deviceTechnicalSpecs).values(techSpec).returning();
-    insertedTechSpecs.push(insertedSpec);
+  // Filter out specs for devices that already have tech specs
+  const newTechSpecs = techSpecs.filter(s => !existingTechSpecsDeviceIds.has(s.deviceCatalogId));
+  const techSpecsToUpdate = techSpecs.filter(s => existingTechSpecsDeviceIds.has(s.deviceCatalogId));
+  
+  console.log(`Inserting ${newTechSpecs.length} new tech specs and updating ${techSpecsToUpdate.length} existing ones`);
+  
+  // Insert new tech specs
+  if (newTechSpecs.length > 0) {
+    for (const techSpec of newTechSpecs) {
+      try {
+        const [insertedSpec] = await db.insert(deviceTechnicalSpecs).values(techSpec).returning();
+        insertedTechSpecs.push(insertedSpec);
+      } catch (error) {
+        console.error(`Error inserting tech spec for device ID ${techSpec.deviceCatalogId}:`, error.message);
+      }
+    }
   }
   
-  return insertedTechSpecs;
+  // Update existing tech specs
+  for (const techSpec of techSpecsToUpdate) {
+    const existingSpec = existingTechSpecs.find(s => s.deviceCatalogId === techSpec.deviceCatalogId);
+    
+    if (existingSpec) {
+      try {
+        const [updated] = await db
+          .update(deviceTechnicalSpecs)
+          .set({
+            ...techSpec,
+            updatedAt: new Date()
+          })
+          .where(sql`${deviceTechnicalSpecs.deviceCatalogId} = ${existingSpec.deviceCatalogId}`)
+          .returning();
+        
+        updatedTechSpecs.push(updated);
+      } catch (error) {
+        console.error(`Error updating tech spec for device ID ${techSpec.deviceCatalogId}:`, error.message);
+      }
+    }
+  }
+  
+  console.log(`Inserted ${insertedTechSpecs.length} new tech specs, updated ${updatedTechSpecs.length} existing ones`);
+  
+  // Return all tech specs (both inserted and updated)
+  return [...insertedTechSpecs, ...updatedTechSpecs];
 }
 
 /**
@@ -1328,6 +1377,18 @@ async function seedConfigurationPresets(deviceCatalogData) {
   for (const device of deviceCatalogData) {
     deviceMap.set(device.modelNumber, device.id);
   }
+  
+  // First, get existing presets to avoid duplication
+  const existingPresets = await db.select().from(deviceCatalogPresets);
+  
+  // Create a map of existing presets by device catalog id and name (which together should be unique)
+  const existingPresetMap = new Map();
+  for (const preset of existingPresets) {
+    const key = `${preset.deviceCatalogId}-${preset.name}`;
+    existingPresetMap.set(key, preset);
+  }
+  
+  console.log(`Found ${existingPresets.length} existing configuration presets in the database`);
   
   // Define configuration presets
   const presets = [
@@ -1869,13 +1930,45 @@ async function seedConfigurationPresets(deviceCatalogData) {
   ];
   
   const insertedPresets = [];
+  const updatedPresets = [];
   
+  // For each preset, check if it already exists
   for (const preset of presets) {
-    const [insertedPreset] = await db.insert(deviceCatalogPresets).values(preset).returning();
-    insertedPresets.push(insertedPreset);
+    // Create a unique key for the preset
+    const key = `${preset.deviceCatalogId}-${preset.name}`;
+    
+    // Check if this preset already exists
+    if (existingPresetMap.has(key)) {
+      // If it exists, update it
+      try {
+        const existingPreset = existingPresetMap.get(key);
+        const [updatedPreset] = await db
+          .update(deviceCatalogPresets)
+          .set({
+            ...preset,
+            updatedAt: new Date()
+          })
+          .where(sql`${deviceCatalogPresets.id} = ${existingPreset.id}`)
+          .returning();
+        
+        updatedPresets.push(updatedPreset);
+      } catch (error) {
+        console.error(`Error updating preset ${preset.name} for device ID ${preset.deviceCatalogId}:`, error.message);
+      }
+    } else {
+      // If it doesn't exist, insert it
+      try {
+        const [insertedPreset] = await db.insert(deviceCatalogPresets).values(preset).returning();
+        insertedPresets.push(insertedPreset);
+      } catch (error) {
+        console.error(`Error inserting preset ${preset.name} for device ID ${preset.deviceCatalogId}:`, error.message);
+      }
+    }
   }
   
-  return insertedPresets;
+  console.log(`Inserted ${insertedPresets.length} new configuration presets, updated ${updatedPresets.length} existing ones`);
+  
+  return [...insertedPresets, ...updatedPresets];
 }
 
 // Execute the seed function
