@@ -225,78 +225,134 @@ export default function DashboardPage() {
   
   return (
     <div className="container py-6 px-4">
-      <div className="flex flex-col space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
+      <div className="flex flex-col space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 pb-2 border-b">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="text-muted-foreground">Overview of your energy system's performance and status</p>
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+            <p className="text-muted-foreground mt-1">Real-time overview of your energy system's performance and status</p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button variant="outline">Today</Button>
-            <Button variant="outline">Week</Button>
-            <Button variant="outline">Month</Button>
-            <Button variant="outline">Year</Button>
+            <Button 
+              variant="outline" 
+              className="rounded-full font-medium" 
+              size="sm"
+            >
+              Today
+            </Button>
+            <Button 
+              variant="outline" 
+              className="rounded-full font-medium" 
+              size="sm"
+            >
+              Week
+            </Button>
+            <Button 
+              variant="default" 
+              className="rounded-full font-medium bg-primary/90 hover:bg-primary shadow-sm" 
+              size="sm"
+            >
+              Month
+            </Button>
+            <Button 
+              variant="outline" 
+              className="rounded-full font-medium" 
+              size="sm"
+            >
+              Year
+            </Button>
           </div>
         </div>
         
         {/* Key stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <SunIcon className="h-8 w-8 text-yellow-500" />
-                <p className="text-sm text-muted-foreground">Today's Generation</p>
-                <p className="text-2xl font-bold">{energyStats.dailyGeneration} kWh</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
+          <Card className="overflow-hidden border-none shadow-md shadow-yellow-100 dark:shadow-yellow-900/10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-yellow-500"></div>
+            <CardContent className="p-4 pt-6">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-full p-2.5">
+                  <SunIcon className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Today's Generation</p>
+                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{energyStats.dailyGeneration} kWh</p>
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <Home className="h-8 w-8 text-purple-500" />
-                <p className="text-sm text-muted-foreground">Today's Consumption</p>
-                <p className="text-2xl font-bold">{energyStats.dailyConsumption} kWh</p>
+          <Card className="overflow-hidden border-none shadow-md shadow-purple-100 dark:shadow-purple-900/10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-purple-500"></div>
+            <CardContent className="p-4 pt-6">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-full p-2.5">
+                  <Home className="h-6 w-6 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Today's Consumption</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{energyStats.dailyConsumption} kWh</p>
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <Zap className="h-8 w-8 text-green-500" />
-                <p className="text-sm text-muted-foreground">Self-Consumption</p>
-                <p className="text-2xl font-bold">{energyStats.selfConsumptionRate}%</p>
+          <Card className="overflow-hidden border-none shadow-md shadow-green-100 dark:shadow-green-900/10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-green-500"></div>
+            <CardContent className="p-4 pt-6">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-full p-2.5">
+                  <Zap className="h-6 w-6 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Self-Consumption</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{energyStats.selfConsumptionRate}%</p>
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <Scale className="h-8 w-8 text-blue-500" />
-                <p className="text-sm text-muted-foreground">Monthly Savings</p>
-                <p className="text-2xl font-bold">${energyStats.monthlySavings}</p>
+          <Card className="overflow-hidden border-none shadow-md shadow-blue-100 dark:shadow-blue-900/10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-blue-500"></div>
+            <CardContent className="p-4 pt-6">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-full p-2.5">
+                  <Scale className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Monthly Savings</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">${energyStats.monthlySavings}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <GanttChart className="h-8 w-8 text-orange-500" />
-                <p className="text-sm text-muted-foreground">Peak Reduction</p>
-                <p className="text-2xl font-bold">{energyStats.peakReduction}%</p>
+          <Card className="overflow-hidden border-none shadow-md shadow-orange-100 dark:shadow-orange-900/10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-orange-500"></div>
+            <CardContent className="p-4 pt-6">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-full p-2.5">
+                  <GanttChart className="h-6 w-6 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Peak Reduction</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{energyStats.peakReduction}%</p>
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col items-center text-center space-y-2">
-                <CloudSun className="h-8 w-8 text-teal-500" />
-                <p className="text-sm text-muted-foreground">Carbon Offset</p>
-                <p className="text-2xl font-bold">{energyStats.carbonOffset} kg</p>
+          <Card className="overflow-hidden border-none shadow-md shadow-teal-100 dark:shadow-teal-900/10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-teal-500"></div>
+            <CardContent className="p-4 pt-6">
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="bg-teal-50 dark:bg-teal-900/20 rounded-full p-2.5">
+                  <CloudSun className="h-6 w-6 text-teal-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Carbon Offset</p>
+                  <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">{energyStats.carbonOffset} kg</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -305,22 +361,25 @@ export default function DashboardPage() {
         {/* Main content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Energy consumption chart */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
+          <Card className="lg:col-span-2 overflow-hidden border-none shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/80 to-primary"></div>
+            <CardHeader className="pb-2 pt-6">
+              <CardTitle className="text-xl flex items-center font-bold">
                 <Activity className="h-5 w-5 mr-2 text-primary" />
-                Energy Overview
+                <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                  Energy Overview
+                </span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 7-day energy generation, consumption, and net import/export
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="energy">
-                <TabsList className="w-full grid grid-cols-3">
-                  <TabsTrigger value="energy">Energy</TabsTrigger>
-                  <TabsTrigger value="cost">Cost</TabsTrigger>
-                  <TabsTrigger value="emissions">Emissions</TabsTrigger>
+                <TabsList className="w-full grid grid-cols-3 rounded-full p-1 bg-muted/50">
+                  <TabsTrigger value="energy" className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/90 data-[state=active]:to-primary data-[state=active]:text-white">Energy</TabsTrigger>
+                  <TabsTrigger value="cost" className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/90 data-[state=active]:to-primary data-[state=active]:text-white">Cost</TabsTrigger>
+                  <TabsTrigger value="emissions" className="rounded-full data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/90 data-[state=active]:to-primary data-[state=active]:text-white">Emissions</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="energy" className="pt-4">
@@ -498,26 +557,29 @@ export default function DashboardPage() {
           </Card>
           
           {/* Weather forecast */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <CloudSun className="h-5 w-5 mr-2 text-primary" />
-                Weather & Generation Forecast
+          <Card className="overflow-hidden border-none shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-sky-500"></div>
+            <CardHeader className="pb-2 pt-6">
+              <CardTitle className="text-xl flex items-center font-bold">
+                <CloudSun className="h-5 w-5 mr-2 text-sky-500" />
+                <span className="bg-gradient-to-r from-blue-500 to-sky-500 bg-clip-text text-transparent">
+                  Weather & Generation
+                </span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 24-hour weather and solar generation forecast
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {/* Current weather - first item in forecast */}
-                <div className="bg-muted/50 rounded-lg p-4 flex items-center justify-between">
+                <div className="bg-gradient-to-br from-sky-100 to-blue-50 dark:from-sky-900/20 dark:to-blue-900/10 rounded-xl p-5 flex items-center justify-between shadow-sm">
                   <div>
-                    <div className="text-sm text-muted-foreground">Current Weather</div>
-                    <div className="text-2xl font-semibold">{forecastData[0].temperature}°C</div>
-                    <div className="text-sm capitalize">{forecastData[0].weather.replace('-', ' ')}</div>
+                    <div className="text-sm font-medium text-sky-700 dark:text-sky-300">Current Weather</div>
+                    <div className="text-3xl font-bold text-slate-800 dark:text-white">{forecastData[0].temperature}°C</div>
+                    <div className="text-sm font-medium text-slate-600 dark:text-slate-300 capitalize mt-1">{forecastData[0].weather.replace('-', ' ')}</div>
                   </div>
-                  <div className="text-4xl">
+                  <div className="text-5xl">
                     {forecastData[0].weather === 'sunny' && '☀️'}
                     {forecastData[0].weather === 'partly-cloudy' && '⛅'}
                     {forecastData[0].weather === 'cloudy' && '☁️'}
@@ -527,44 +589,69 @@ export default function DashboardPage() {
                 </div>
                 
                 {/* Hourly forecast */}
-                <div className="grid grid-cols-3 gap-2">
-                  {forecastData.slice(1, 7).map((forecast, i) => (
-                    <div key={i} className="text-center bg-muted/30 rounded-md p-2">
-                      <div className="text-xs font-medium">{forecast.time}</div>
-                      <div className="text-xl my-1">
-                        {forecast.weather === 'sunny' && '☀️'}
-                        {forecast.weather === 'partly-cloudy' && '⛅'}
-                        {forecast.weather === 'cloudy' && '☁️'}
-                        {forecast.weather === 'rain' && '🌧️'}
-                        {forecast.weather === 'clear-night' && '🌙'}
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Hourly Forecast</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {forecastData.slice(1, 7).map((forecast, i) => (
+                      <div 
+                        key={i} 
+                        className="text-center bg-gradient-to-b from-white to-sky-50 dark:from-slate-800 dark:to-slate-800/70 rounded-lg p-3 shadow-sm border border-slate-100 dark:border-slate-700"
+                      >
+                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{forecast.time}</div>
+                        <div className="text-xl my-2">
+                          {forecast.weather === 'sunny' && '☀️'}
+                          {forecast.weather === 'partly-cloudy' && '⛅'}
+                          {forecast.weather === 'cloudy' && '☁️'}
+                          {forecast.weather === 'rain' && '🌧️'}
+                          {forecast.weather === 'clear-night' && '🌙'}
+                        </div>
+                        <div className="text-sm font-bold text-slate-700 dark:text-white">{forecast.temperature}°C</div>
                       </div>
-                      <div className="text-sm font-medium">{forecast.temperature}°C</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
                 
                 {/* Solar potential */}
                 <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="text-sm text-muted-foreground">Solar Potential</div>
-                    <div className="text-sm font-medium">{forecastData[0].solarPotential}%</div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Solar Generation Potential</h3>
+                    <div className="text-sm font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-full">
+                      {forecastData[0].solarPotential}% Today
+                    </div>
                   </div>
-                  <div className="w-full h-20">
+                  <div className="w-full h-28 bg-gradient-to-b from-amber-50/50 to-transparent dark:from-amber-900/10 dark:to-transparent rounded-lg p-3">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
                         data={forecastData}
                         margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
                       >
+                        <defs>
+                          <linearGradient id="solarGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1}/>
+                          </linearGradient>
+                        </defs>
                         <Area 
                           type="monotone" 
                           dataKey="solarPotential" 
                           stroke="#f59e0b" 
-                          fill="#fcd34d" 
+                          strokeWidth={2}
+                          fill="url(#solarGradient)" 
                         />
                         <XAxis 
                           dataKey="time"
                           tick={{ fontSize: 10 }}
                           interval={1}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <Tooltip 
+                          formatter={(value) => [`${value}%`, 'Solar Potential']}
+                          contentStyle={{
+                            borderRadius: '8px',
+                            border: 'none',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                          }}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -601,29 +688,45 @@ export default function DashboardPage() {
         {/* Bottom row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Device status */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Plug className="h-5 w-5 mr-2 text-primary" />
-                Device Status
+          <Card className="overflow-hidden border-none shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-400 to-purple-500"></div>
+            <CardHeader className="pb-2 pt-6">
+              <CardTitle className="text-xl flex items-center font-bold">
+                <Plug className="h-5 w-5 mr-2 text-violet-500" />
+                <span className="bg-gradient-to-r from-violet-500 to-purple-500 bg-clip-text text-transparent">
+                  Device Status
+                </span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Current status of your connected devices
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {deviceStatusData.map((device) => (
-                  <div key={device.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                  <div 
+                    key={device.id} 
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b last:border-0 last:pb-0"
+                  >
                     <div className="flex items-center">
-                      {getDeviceIcon(device.type)}
+                      <div className="flex items-center justify-center h-9 w-9 rounded-full bg-violet-50 dark:bg-violet-900/20">
+                        {getDeviceIcon(device.type)}
+                      </div>
                       <div className="ml-3">
                         <div className="font-medium">{device.name}</div>
-                        <div className="text-xs text-muted-foreground capitalize">{device.status}</div>
+                        <div className="text-xs text-muted-foreground capitalize flex items-center mt-0.5">
+                          <div className={cn(
+                            "h-1.5 w-1.5 rounded-full mr-1",
+                            device.status === 'online' ? "bg-green-500" : 
+                            device.status === 'offline' ? "bg-red-500" : 
+                            device.status === 'standby' ? "bg-amber-500" : "bg-slate-400"
+                          )}></div>
+                          {device.status}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <span className="font-medium">{device.value}</span>
+                    <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 rounded-full px-3 py-1">
+                      <span className="font-semibold text-sm">{device.value}</span>
                       {getTrendIcon(device.trend)}
                     </div>
                   </div>
@@ -638,36 +741,58 @@ export default function DashboardPage() {
           </Card>
           
           {/* Energy events */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Clock className="h-5 w-5 mr-2 text-primary" />
-                Energy Events
+          <Card className="overflow-hidden border-none shadow-lg">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-rose-500"></div>
+            <CardHeader className="pb-2 pt-6">
+              <CardTitle className="text-xl flex items-center font-bold">
+                <Clock className="h-5 w-5 mr-2 text-orange-500" />
+                <span className="bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent">
+                  Energy Events
+                </span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-sm">
                 Upcoming and active energy events
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {energyEvents.map((event) => (
-                  <div key={event.id} className="flex items-start space-x-3 border-b pb-3 last:border-0 last:pb-0">
-                    <div className="pt-0.5">
-                      {getEventIcon(event.type)}
+                  <div 
+                    key={event.id} 
+                    className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b last:border-0 last:pb-0"
+                  >
+                    <div className="flex-shrink-0">
+                      <div className={cn(
+                        "flex items-center justify-center h-10 w-10 rounded-full",
+                        event.type === 'demand_response' ? "bg-orange-50 dark:bg-orange-900/20" :
+                        event.type === 'peak_shaving' ? "bg-red-50 dark:bg-red-900/20" :
+                        event.type === 'grid_support' ? "bg-blue-50 dark:bg-blue-900/20" :
+                        "bg-slate-50 dark:bg-slate-800"
+                      )}>
+                        {getEventIcon(event.type)}
+                      </div>
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium">{event.title}</div>
-                        {getEventStatusBadge(event.status)}
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="font-semibold">{event.title}</div>
+                        <div className="flex-shrink-0">
+                          {getEventStatusBadge(event.status)}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
+                      <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        <Clock className="h-3 w-3 mr-1" />
                         Starts: {event.startTime} {event.duration && `• Duration: ${event.duration}`}
                       </div>
                       {event.message && (
-                        <div className="text-sm mt-1">{event.message}</div>
+                        <div className="text-sm mt-2 text-slate-700 dark:text-slate-300">{event.message}</div>
                       )}
                       {event.reward && (
-                        <div className="text-sm text-green-600 font-medium mt-1">Reward: {event.reward}</div>
+                        <div className="text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-medium mt-2 px-2 py-1 rounded-md inline-block">
+                          <span className="flex items-center">
+                            <DollarSign className="h-3.5 w-3.5 mr-1" />
+                            Reward: {event.reward}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
