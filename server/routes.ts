@@ -39,6 +39,8 @@ import { VPPController } from './controllers/vppController';
 import { initVPPService } from './services/vppService';
 import { ConsumptionPatternController } from './controllers/consumptionPatternController';
 import { initConsumptionPatternService } from './services/consumptionPatternService';
+import * as v2gController from './controllers/v2gController';
+import { v2gOptimizationService } from './services/v2gOptimizationService';
 import deviceRegistryRoutes from './routes/deviceRegistry';
 import { electricalDiagramRoutes } from './routes/electricalDiagram';
 import { predictiveMaintenanceRoutes } from './routes/predictiveMaintenanceRoutes';
@@ -102,6 +104,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Initialize Gateway controller with MQTT service
     gatewayController.initGatewayController(mqttService);
     console.log('Gateway controller initialized');
+    
+    // Initialize V2G optimization service
+    try {
+      await v2gOptimizationService.initialize();
+      console.log('V2G optimization service initialized');
+    } catch (v2gError) {
+      console.error('Error initializing V2G optimization service:', v2gError);
+    }
   } catch (error) {
     console.error('Error initializing services:', error);
   }
@@ -637,6 +647,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Edge Node Status
   app.get('/api/edge/nodes/:nodeId/status', isAuthenticated, edgeComputingController.getNodeStatus);
+
+  // V2G/V2H bidirectional EV charging routes
+  app.get('/api/v2g/vehicles', isAuthenticated, v2gController.getEVVehicles);
+  app.get('/api/v2g/vehicles/:id', isAuthenticated, v2gController.getEVVehicleById);
+  app.post('/api/v2g/vehicles', isAuthenticated, v2gController.createEVVehicle);
+  app.put('/api/v2g/vehicles/:id', isAuthenticated, v2gController.updateEVVehicle);
+  app.delete('/api/v2g/vehicles/:id', isAuthenticated, v2gController.deleteEVVehicle);
+  
+  app.get('/api/v2g/charging-sessions', isAuthenticated, v2gController.getChargingSessions);
+  app.get('/api/v2g/charging-sessions/:id', isAuthenticated, v2gController.getChargingSessionById);
+  app.post('/api/v2g/charging-sessions', isAuthenticated, v2gController.createChargingSession);
+  app.put('/api/v2g/charging-sessions/:id', isAuthenticated, v2gController.updateChargingSession);
+  app.post('/api/v2g/charging-sessions/:id/end', isAuthenticated, v2gController.endChargingSession);
+  
+  app.get('/api/v2g/service-providers', v2gController.getV2GServiceProviders);
+  app.get('/api/v2g/enrollments', isAuthenticated, v2gController.getServiceEnrollments);
+  app.post('/api/v2g/enrollments', isAuthenticated, v2gController.createServiceEnrollment);
+  app.post('/api/v2g/enrollments/:id/terminate', isAuthenticated, v2gController.terminateServiceEnrollment);
+  
+  app.get('/api/v2g/statistics/:userId', isAuthenticated, v2gController.getV2GUserStatistics);
 
   return httpServer;
 }

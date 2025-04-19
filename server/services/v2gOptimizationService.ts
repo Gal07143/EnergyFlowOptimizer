@@ -4,7 +4,8 @@ import { evVehicles, evChargingSessions, v2gServiceProviders, v2gServiceEnrollme
 import { eq, and, desc, isNull, lte, gte, not, sql } from 'drizzle-orm';
 import { devices } from '@shared/schema';
 import { getOpenAiService } from './openAiService';
-import { optimizeUsingAI } from './optimizationService';
+// Import the getOpenAiService directly
+// Don't use optimizationService to avoid adding another dependency
 
 // Optimization strategies for V2G/V2H
 export type V2GOptimizationMode = 
@@ -66,7 +67,7 @@ export interface V2GConstraints {
 
 export class V2GOptimizationService {
   private static instance: V2GOptimizationService;
-  private mqttService = getMqttService();
+  private mqttService: any = null;
   private openAiService = getOpenAiService();
   
   // Singleton pattern
@@ -81,34 +82,48 @@ export class V2GOptimizationService {
   async initialize() {
     console.log('Initializing V2G optimization service');
     
-    // Subscribe to EV state changes
-    this.mqttService.subscribe('devices/+/status', (topic, message) => {
-      const deviceId = this.extractDeviceIdFromTopic(topic);
-      if (deviceId) {
-        this.handleDeviceStatusUpdate(deviceId, message);
+    try {
+      // Initialize MQTT service 
+      this.mqttService = getMqttService();
+      
+      if (this.mqttService && this.mqttService.isConnected()) {
+        // Subscribe to EV state changes
+        this.mqttService.subscribe('devices/+/status', (topic, message) => {
+          const deviceId = this.extractDeviceIdFromTopic(topic);
+          if (deviceId) {
+            this.handleDeviceStatusUpdate(deviceId, message);
+          }
+        });
+        
+        // Subscribe to grid pricing updates
+        this.mqttService.subscribe('grid/pricing/+', (topic, message) => {
+          this.handleGridPricingUpdate(topic, message);
+        });
+        
+        // Subscribe to site load forecasts
+        this.mqttService.subscribe('sites/+/load/forecast', (topic, message) => {
+          const siteId = this.extractSiteIdFromTopic(topic);
+          if (siteId) {
+            this.handleSiteLoadForecast(siteId, message);
+          }
+        });
+        
+        // Subscribe to V2G service provider events
+        this.mqttService.subscribe('v2g/providers/+/events', (topic, message) => {
+          const providerId = this.extractProviderIdFromTopic(topic);
+          if (providerId) {
+            this.handleProviderEvent(providerId, message);
+          }
+        });
+        
+        console.log('V2G optimization service MQTT subscriptions set up successfully');
+      } else {
+        console.warn('MQTT service not connected or not available. V2G optimization service will have limited functionality.');
       }
-    });
-    
-    // Subscribe to grid pricing updates
-    this.mqttService.subscribe('grid/pricing/+', (topic, message) => {
-      this.handleGridPricingUpdate(topic, message);
-    });
-    
-    // Subscribe to site load forecasts
-    this.mqttService.subscribe('sites/+/load/forecast', (topic, message) => {
-      const siteId = this.extractSiteIdFromTopic(topic);
-      if (siteId) {
-        this.handleSiteLoadForecast(siteId, message);
-      }
-    });
-    
-    // Subscribe to V2G service provider events
-    this.mqttService.subscribe('v2g/providers/+/events', (topic, message) => {
-      const providerId = this.extractProviderIdFromTopic(topic);
-      if (providerId) {
-        this.handleProviderEvent(providerId, message);
-      }
-    });
+    } catch (error) {
+      console.error('Error initializing V2G optimization service:', error);
+      // Continue without MQTT functionality
+    }
     
     console.log('V2G optimization service initialized');
   }
@@ -346,10 +361,14 @@ export class V2GOptimizationService {
               }
             };
             
-            this.mqttService.publish(
-              formatTopic(`devices/${activeSession.session.deviceId}/commands`),
-              JSON.stringify(command)
-            );
+            if (this.mqttService && typeof this.mqttService.publish === 'function') {
+              this.mqttService.publish(
+                `devices/${activeSession.session.deviceId}/commands`,
+                JSON.stringify(command)
+              );
+            } else {
+              console.log('MQTT service not available for publishing command:', command);
+            }
             
             console.log(`Started V2G discharge event ${dischargeEvent.id} for vehicle ${enrollment.vehicleId}`);
           }
@@ -1044,8 +1063,16 @@ export class V2GOptimizationService {
     const carbonForecast = this.generateSampleCarbonIntensity(now, 96);
     
     try {
-      // Use the AI optimization service
-      const aiResult = await optimizeUsingAI({
+      // Use the OpenAI service directly
+      const aiService = this.openAiService;
+      
+      if (!aiService.isInitialized()) {
+        console.warn('OpenAI service not initialized, falling back to basic optimization');
+        return this.optimizeForRevenue(vehicleId, deviceId, constraints, v2gServices);
+      }
+      
+      // Prepare the data for OpenAI
+      const optimizationData = {
         modelName: 'gpt-4o',
         optimizationGoals: {
           primaryGoal: mode,
@@ -1075,7 +1102,17 @@ export class V2GOptimizationService {
           minSocLimit: s.minSocLimit,
           maxPowerKw: s.maxPowerKw
         }))
-      });
+      };
+      
+      // Call OpenAI to optimize
+      const aiResult = await aiService.optimizeEnergy(
+        `${mode} optimization for vehicle ${vehicleId}`, 
+        optimizationData.constraints, 
+        {
+          forecasts: optimizationData.forecasts,
+          v2gServices: optimizationData.v2gServices
+        }
+      );
       
       // Process the AI result and build our schedule format
       let schedule: V2GScheduleSlot[] = [];
@@ -1294,13 +1331,18 @@ export class V2GOptimizationService {
       }
     };
     
-    // Send command to device via MQTT
-    this.mqttService.publish(
-      formatTopic(`devices/${deviceId}/commands`),
-      JSON.stringify(command)
-    );
-    
-    console.log(`Sent V2G/V2H schedule to device ${deviceId}`);
+    // Send command to device via MQTT if available
+    if (this.mqttService && typeof this.mqttService.publish === 'function') {
+      this.mqttService.publish(
+        `devices/${deviceId}/commands`,
+        JSON.stringify(command)
+      );
+      console.log(`Sent V2G/V2H schedule to device ${deviceId}`);
+      return true;
+    } else {
+      console.log(`MQTT service not available. Cannot send V2G/V2H schedule to device ${deviceId}`);
+      return false;
+    }
   }
   
   // Sample data generator for electricity prices ($/kWh)
