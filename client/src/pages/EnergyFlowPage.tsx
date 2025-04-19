@@ -143,7 +143,7 @@ export default function EnergyFlowPage() {
         </div>
         
         {/* Real-time energy flow visualization */}
-        <div className="w-full mx-auto max-w-[1200px]">
+        <div className="w-full mx-auto max-w-[1200px] mb-6">
           <RealTimeEnergyFlow />
         </div>
         

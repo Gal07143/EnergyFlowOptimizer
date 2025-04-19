@@ -555,7 +555,7 @@ export default function RealTimeEnergyFlow() {
             </div>
             
             {/* Bottom row - Consumption devices */}
-            <div className="w-full px-8 pt-10 pb-4 grid grid-cols-2">
+            <div className="w-full px-8 pt-16 pb-8 grid grid-cols-2">
               {/* EV Charger Group */}
               <div className="flex flex-col">
                 <div className="flex items-center mb-2">
@@ -762,7 +762,7 @@ export default function RealTimeEnergyFlow() {
               {/* Home to EV Charger */}
               {arrows.homeToEv.active && (
                 <path 
-                  d="M280,240 C220,300 220,300 160,360" 
+                  d="M280,240 C220,320 220,320 160,380" 
                   stroke="#3b82f6" 
                   strokeWidth="2.5" 
                   fill="none"
@@ -775,7 +775,7 @@ export default function RealTimeEnergyFlow() {
               {/* Home to Heat Pump */}
               {arrows.homeToPump.active && (
                 <path 
-                  d="M320,240 C380,300 380,300 440,360" 
+                  d="M320,240 C380,320 380,320 440,380" 
                   stroke="#f97316" 
                   strokeWidth="2.5" 
                   fill="none"
