@@ -13,6 +13,14 @@ import { promisify } from "util";
 import { requireRole, requireAdmin, requireManager, requirePartnerAccess, requireDeviceAccess } from './middleware/roleAuth';
 import { isAuthenticated } from './middleware/auth';
 import { initDeviceManagementService } from './services/deviceManagementService';
+import { 
+  getLatestBatteryTelemetry, 
+  getBatteryTelemetryHistory, 
+  getBatteryCapacityTests,
+  getBatteryLifecycleEvents,
+  getBatteryThermalEvents,
+  scheduleCapacityTest
+} from './controllers/batteryController';
 import { initMqttService } from './services/mqttService';
 import { ocppManager } from './adapters/ocppAdapter';
 import { getEEBusManager } from './adapters/eebusAdapter';

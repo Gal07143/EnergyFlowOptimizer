@@ -504,6 +504,12 @@ const DeviceDetail = () => {
             <LineChart className="h-4 w-4 mr-2" />
             Charts
           </TabsTrigger>
+          {device.type === 'battery_storage' && (
+            <TabsTrigger value="battery">
+              <BatteryCharging className="h-4 w-4 mr-2" />
+              Battery Management
+            </TabsTrigger>
+          )}
           <TabsTrigger value="settings">
             <Settings className="h-4 w-4 mr-2" />
             Settings
@@ -629,6 +635,13 @@ const DeviceDetail = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        {/* Battery Management tab */}
+        {device.type === 'battery_storage' && (
+          <TabsContent value="battery">
+            <BatteryHealthPanel deviceId={deviceId} />
+          </TabsContent>
+        )}
         
         {/* Settings tab */}
         <TabsContent value="settings">
