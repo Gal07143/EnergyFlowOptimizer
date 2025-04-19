@@ -49,6 +49,7 @@ import gatewayRoutes from './routes/gatewayRoutes';
 import alarmsRoutes from './routes/alarms';
 import * as gatewayController from './controllers/gatewayController';
 import * as connectionTemplateController from './controllers/connectionTemplateController';
+import * as batteryController from './controllers/batteryController';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
