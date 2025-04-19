@@ -11,6 +11,7 @@ import EnergyFlowHeatmapPage from "@/pages/EnergyFlowHeatmapPage";
 import OptimizationDashboard from "@/pages/OptimizationDashboard";
 import BatteryArbitragePage from "@/pages/BatteryArbitragePage";
 import ReportsPage from "@/pages/ReportsPage";
+import AlarmsPage from "@/pages/AlarmsPage";
 import Settings from "@/pages/Settings";
 import Weather from "@/pages/Weather";
 import DemandResponse from "@/pages/DemandResponse";
