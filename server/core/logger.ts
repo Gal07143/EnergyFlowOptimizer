@@ -1,14 +1,16 @@
 /**
- * Logging module for Energy Management System
+ * Logging System for Energy Management System
  * 
- * This module provides standardized logging functionality for the EMS
- * with level-based filtering, formatting, and service-specific contexts.
+ * This module provides a standardized logging system for the EMS,
+ * supporting different log levels, formats, and destinations.
  */
 
-import { BaseService } from './baseService';
+import fs from 'fs';
+import path from 'path';
+import util from 'util';
 
 /**
- * Log levels
+ * Log levels enum
  */
 export enum LogLevel {
   DEBUG = 0,
@@ -19,55 +21,88 @@ export enum LogLevel {
 }
 
 /**
- * LogContext interface for providing context to log entries
+ * Log entry interface
+ */
+export interface LogEntry {
+  timestamp: Date;
+  level: LogLevel;
+  message: string;
+  context?: LogContext;
+  error?: Error;
+}
+
+/**
+ * Log context interface
  */
 export interface LogContext {
-  service?: string;
   [key: string]: any;
 }
 
 /**
- * LogEntry interface for structured log entries
- */
-export interface LogEntry {
-  timestamp: string;
-  level: LogLevel;
-  message: string;
-  context?: LogContext;
-  error?: any;
-}
-
-/**
- * Logger configuration
+ * Logger configuration interface
  */
 export interface LoggerConfig {
   minLevel?: LogLevel;
   useColors?: boolean;
+  enableConsole?: boolean;
+  enableFile?: boolean;
+  filePath?: string;
+  maxFileSize?: number;
+  maxFiles?: number;
+  enableJsonFormat?: boolean;
+  includeTimestamp?: boolean;
+  service?: string;
 }
 
 /**
- * Logger class for structured logging
+ * Logger class for handling logging
  */
 export class Logger {
   private static instance: Logger;
-  private minLevel: LogLevel = LogLevel.INFO;
-  private useColors: boolean = true;
+  private config: LoggerConfig = {
+    minLevel: LogLevel.INFO,
+    useColors: true,
+    enableConsole: true,
+    enableFile: false,
+    filePath: path.join(process.cwd(), 'logs', 'ems.log'),
+    maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxFiles: 5,
+    enableJsonFormat: false,
+    includeTimestamp: true,
+    service: 'ems'
+  };
 
-  private constructor(config: LoggerConfig = {}) {
-    if (config.minLevel !== undefined) {
-      this.minLevel = config.minLevel;
-    }
-    if (config.useColors !== undefined) {
-      this.useColors = config.useColors;
+  private logLevelNames: Record<LogLevel, string> = {
+    [LogLevel.DEBUG]: 'debug',
+    [LogLevel.INFO]: 'info',
+    [LogLevel.WARN]: 'warn',
+    [LogLevel.ERROR]: 'error',
+    [LogLevel.FATAL]: 'fatal'
+  };
+
+  private logLevelColors: Record<LogLevel, string> = {
+    [LogLevel.DEBUG]: '\x1b[36m', // Cyan
+    [LogLevel.INFO]: '\x1b[32m',  // Green
+    [LogLevel.WARN]: '\x1b[33m',  // Yellow
+    [LogLevel.ERROR]: '\x1b[31m', // Red
+    [LogLevel.FATAL]: '\x1b[35m'  // Magenta
+  };
+
+  private resetColor: string = '\x1b[0m';
+
+  private constructor() {
+    // If logging to file is enabled, ensure the directory exists
+    if (this.config.enableFile) {
+      this.ensureLogDirectory();
     }
   }
 
   /**
-   * Get the singleton logger instance
+   * Get the singleton instance
    */
-  public static getInstance(config: LoggerConfig = {}): Logger {
+  public static getInstance(): Logger {
     if (!Logger.instance) {
-      Logger.instance = new Logger(config);
+      Logger.instance = new Logger();
     }
     return Logger.instance;
   }
@@ -75,172 +110,381 @@ export class Logger {
   /**
    * Configure the logger
    */
-  public configure(config: LoggerConfig): void {
-    if (config.minLevel !== undefined) {
-      this.minLevel = config.minLevel;
-    }
-    if (config.useColors !== undefined) {
-      this.useColors = config.useColors;
+  public configure(config: Partial<LoggerConfig>): void {
+    this.config = { ...this.config, ...config };
+
+    // If logging to file is enabled, ensure the directory exists
+    if (this.config.enableFile) {
+      this.ensureLogDirectory();
     }
   }
 
   /**
-   * Log a message at DEBUG level
+   * Ensure the log directory exists
    */
-  public debug(message: string, context?: LogContext): void {
+  private ensureLogDirectory(): void {
+    if (!this.config.filePath) return;
+    
+    const logDir = path.dirname(this.config.filePath);
+    if (!fs.existsSync(logDir)) {
+      try {
+        fs.mkdirSync(logDir, { recursive: true });
+      } catch (error) {
+        console.error(`Failed to create log directory: ${logDir}`, error);
+      }
+    }
+  }
+
+  /**
+   * Log a message at the DEBUG level
+   */
+  public debug(message: string, context?: LogContext | Error): void {
     this.log(LogLevel.DEBUG, message, context);
   }
 
   /**
-   * Log a message at INFO level
+   * Log a message at the INFO level
    */
-  public info(message: string, context?: LogContext): void {
+  public info(message: string, context?: LogContext | Error): void {
     this.log(LogLevel.INFO, message, context);
   }
 
   /**
-   * Log a message at WARN level
+   * Log a message at the WARN level
    */
-  public warn(message: string, context?: LogContext): void {
+  public warn(message: string, context?: LogContext | Error): void {
     this.log(LogLevel.WARN, message, context);
   }
 
   /**
-   * Log a message at ERROR level
+   * Log a message at the ERROR level
    */
-  public error(message: string, error?: any, context?: LogContext): void {
-    this.log(LogLevel.ERROR, message, context, error);
+  public error(message: string, context?: LogContext | Error): void {
+    this.log(LogLevel.ERROR, message, context);
   }
 
   /**
-   * Log a message at FATAL level
+   * Log a message at the FATAL level
    */
-  public fatal(message: string, error?: any, context?: LogContext): void {
-    this.log(LogLevel.FATAL, message, context, error);
-  }
-
-  /**
-   * Create a service-specific child logger
-   */
-  public createServiceLogger(service: string | BaseService): ServiceLogger {
-    const serviceName = typeof service === 'string' ? service : service.constructor.name;
-    return new ServiceLogger(this, serviceName);
+  public fatal(message: string, context?: LogContext | Error): void {
+    this.log(LogLevel.FATAL, message, context);
   }
 
   /**
    * Log a message at the specified level
    */
-  private log(level: LogLevel, message: string, context?: LogContext, error?: any): void {
-    if (level < this.minLevel) {
+  private log(level: LogLevel, message: string, contextOrError?: LogContext | Error): void {
+    // Check if the log level is high enough
+    if (level < this.config.minLevel!) {
       return;
     }
 
+    const timestamp = new Date();
+    let context: LogContext | undefined;
+    let error: Error | undefined;
+
+    // Handle context or error parameter
+    if (contextOrError) {
+      if (contextOrError instanceof Error) {
+        error = contextOrError;
+      } else {
+        context = contextOrError;
+      }
+    }
+
+    // Create log entry
     const entry: LogEntry = {
-      timestamp: new Date().toISOString(),
+      timestamp,
       level,
       message,
       context,
       error
     };
 
-    this.writeLogEntry(entry);
+    // Log to console
+    if (this.config.enableConsole) {
+      this.logToConsole(entry);
+    }
+
+    // Log to file
+    if (this.config.enableFile) {
+      this.logToFile(entry);
+    }
   }
 
   /**
-   * Write a log entry to the output
+   * Log an entry to the console
    */
-  private writeLogEntry(entry: LogEntry): void {
-    const levelStr = LogLevel[entry.level];
-    const timestamp = new Date(entry.timestamp).toLocaleTimeString();
+  private logToConsole(entry: LogEntry): void {
+    const { timestamp, level, message, context, error } = entry;
     
-    let contextStr = '';
-    if (entry.context) {
-      if (entry.context.service) {
-        contextStr = `[${entry.context.service}] `;
-      }
+    let formattedMessage = '';
+    
+    // Add timestamp if configured
+    if (this.config.includeTimestamp) {
+      const timeString = timestamp.toLocaleTimeString();
+      formattedMessage += `${timeString} `;
     }
-
-    let colorStart = '';
-    let colorEnd = '';
     
-    if (this.useColors) {
-      switch (entry.level) {
-        case LogLevel.DEBUG:
-          colorStart = '\x1b[36m'; // Cyan
-          break;
-        case LogLevel.INFO:
-          colorStart = '\x1b[32m'; // Green
-          break;
-        case LogLevel.WARN:
-          colorStart = '\x1b[33m'; // Yellow
-          break;
-        case LogLevel.ERROR:
-          colorStart = '\x1b[31m'; // Red
-          break;
-        case LogLevel.FATAL:
-          colorStart = '\x1b[35m'; // Purple
-          break;
-      }
-      colorEnd = '\x1b[0m';
+    // Add service name if provided
+    if (this.config.service) {
+      formattedMessage += `[${this.config.service}] `;
     }
-
-    console.log(`${timestamp} ${colorStart}${levelStr}${colorEnd}: ${contextStr}${entry.message}`);
     
-    if (entry.error) {
-      if (entry.error instanceof Error) {
-        console.error(entry.error.stack || entry.error.message);
+    // Add log level
+    const levelName = this.logLevelNames[level];
+    if (this.config.useColors) {
+      const colorCode = this.logLevelColors[level];
+      formattedMessage += `${colorCode}${levelName.toUpperCase()}${this.resetColor} `;
+    } else {
+      formattedMessage += `${levelName.toUpperCase()} `;
+    }
+    
+    // Add message
+    formattedMessage += message;
+    
+    // Add context if provided
+    if (context) {
+      const contextStr = util.inspect(context, { depth: 3, colors: this.config.useColors });
+      formattedMessage += ` ${contextStr}`;
+    }
+    
+    // Choose the appropriate console method based on log level
+    let consoleMethod: 'log' | 'info' | 'warn' | 'error';
+    switch (level) {
+      case LogLevel.DEBUG:
+      case LogLevel.INFO:
+        consoleMethod = 'info';
+        break;
+      case LogLevel.WARN:
+        consoleMethod = 'warn';
+        break;
+      case LogLevel.ERROR:
+      case LogLevel.FATAL:
+        consoleMethod = 'error';
+        break;
+      default:
+        consoleMethod = 'log';
+    }
+    
+    // Log the message
+    console[consoleMethod](formattedMessage);
+    
+    // Log the error stack if provided
+    if (error) {
+      console.error(error);
+    }
+  }
+
+  /**
+   * Log an entry to a file
+   */
+  private logToFile(entry: LogEntry): void {
+    if (!this.config.filePath) return;
+    
+    try {
+      const { timestamp, level, message, context, error } = entry;
+      
+      let logData: any;
+      
+      if (this.config.enableJsonFormat) {
+        // JSON format
+        logData = {
+          timestamp: timestamp.toISOString(),
+          level: this.logLevelNames[level],
+          message,
+          service: this.config.service
+        };
+        
+        if (context) {
+          logData.context = context;
+        }
+        
+        if (error) {
+          logData.error = {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          };
+        }
+        
+        logData = JSON.stringify(logData);
       } else {
-        console.error(entry.error);
+        // Text format
+        let logEntry = '';
+        
+        // Add timestamp
+        logEntry += `${timestamp.toISOString()} `;
+        
+        // Add service name if provided
+        if (this.config.service) {
+          logEntry += `[${this.config.service}] `;
+        }
+        
+        // Add log level
+        logEntry += `[${this.logLevelNames[level].toUpperCase()}] `;
+        
+        // Add message
+        logEntry += message;
+        
+        // Add context if provided
+        if (context) {
+          logEntry += ` ${util.inspect(context, { depth: 3, colors: false })}`;
+        }
+        
+        // Add error if provided
+        if (error) {
+          logEntry += `\nError: ${error.message}\n${error.stack}`;
+        }
+        
+        logData = logEntry;
       }
+      
+      // Append to log file
+      fs.appendFileSync(this.config.filePath, logData + '\n');
+      
+      // Check file size and rotate if needed
+      this.checkAndRotateLogs();
+    } catch (e) {
+      console.error('Failed to write to log file:', e);
+    }
+  }
+
+  /**
+   * Check log file size and rotate if needed
+   */
+  private checkAndRotateLogs(): void {
+    if (!this.config.filePath || !this.config.maxFileSize || !this.config.maxFiles) return;
+    
+    try {
+      const stats = fs.statSync(this.config.filePath);
+      
+      if (stats.size >= this.config.maxFileSize) {
+        this.rotateLogFiles();
+      }
+    } catch (e) {
+      console.error('Failed to check log file size:', e);
+    }
+  }
+
+  /**
+   * Rotate log files
+   */
+  private rotateLogFiles(): void {
+    if (!this.config.filePath || !this.config.maxFiles) return;
+    
+    try {
+      const baseFilePath = this.config.filePath;
+      const maxFiles = this.config.maxFiles;
+      
+      // Delete the oldest log file if it exists
+      const oldestLogFile = `${baseFilePath}.${maxFiles - 1}`;
+      if (fs.existsSync(oldestLogFile)) {
+        fs.unlinkSync(oldestLogFile);
+      }
+      
+      // Shift other log files
+      for (let i = maxFiles - 2; i >= 0; i--) {
+        const oldFile = i === 0 ? baseFilePath : `${baseFilePath}.${i}`;
+        const newFile = `${baseFilePath}.${i + 1}`;
+        
+        if (fs.existsSync(oldFile)) {
+          fs.renameSync(oldFile, newFile);
+        }
+      }
+      
+      // Create a new empty log file
+      fs.writeFileSync(baseFilePath, '');
+    } catch (e) {
+      console.error('Failed to rotate log files:', e);
     }
   }
 }
 
 /**
- * Service-specific logger that automatically adds service context
+ * Service-specific logger class
  */
 export class ServiceLogger {
-  private logger: Logger;
+  private baseLogger: Logger;
   private serviceName: string;
 
-  constructor(logger: Logger, serviceName: string) {
-    this.logger = logger;
+  /**
+   * Create a new service logger
+   */
+  constructor(serviceName: string) {
+    this.baseLogger = logger;
     this.serviceName = serviceName;
   }
 
   /**
-   * Log a message at DEBUG level
+   * Log a message at the DEBUG level
    */
-  public debug(message: string, additionalContext: Omit<LogContext, 'service'> = {}): void {
-    this.logger.debug(message, { ...additionalContext, service: this.serviceName });
+  public debug(message: string, context?: LogContext | Error): void {
+    this.log(LogLevel.DEBUG, message, context);
   }
 
   /**
-   * Log a message at INFO level
+   * Log a message at the INFO level
    */
-  public info(message: string, additionalContext: Omit<LogContext, 'service'> = {}): void {
-    this.logger.info(message, { ...additionalContext, service: this.serviceName });
+  public info(message: string, context?: LogContext | Error): void {
+    this.log(LogLevel.INFO, message, context);
   }
 
   /**
-   * Log a message at WARN level
+   * Log a message at the WARN level
    */
-  public warn(message: string, additionalContext: Omit<LogContext, 'service'> = {}): void {
-    this.logger.warn(message, { ...additionalContext, service: this.serviceName });
+  public warn(message: string, context?: LogContext | Error): void {
+    this.log(LogLevel.WARN, message, context);
   }
 
   /**
-   * Log a message at ERROR level
+   * Log a message at the ERROR level
    */
-  public error(message: string, error?: any, additionalContext: Omit<LogContext, 'service'> = {}): void {
-    this.logger.error(message, error, { ...additionalContext, service: this.serviceName });
+  public error(message: string, context?: LogContext | Error): void {
+    this.log(LogLevel.ERROR, message, context);
   }
 
   /**
-   * Log a message at FATAL level
+   * Log a message at the FATAL level
    */
-  public fatal(message: string, error?: any, additionalContext: Omit<LogContext, 'service'> = {}): void {
-    this.logger.fatal(message, error, { ...additionalContext, service: this.serviceName });
+  public fatal(message: string, context?: LogContext | Error): void {
+    this.log(LogLevel.FATAL, message, context);
+  }
+
+  /**
+   * Log a message at the specified level
+   */
+  private log(level: LogLevel, message: string, contextOrError?: LogContext | Error): void {
+    let context: LogContext = { service: this.serviceName };
+    let error: Error | undefined;
+
+    // Handle context or error parameter
+    if (contextOrError) {
+      if (contextOrError instanceof Error) {
+        error = contextOrError;
+      } else {
+        context = { ...context, ...contextOrError };
+      }
+    }
+
+    // Use the appropriate log method based on the level
+    switch (level) {
+      case LogLevel.DEBUG:
+        this.baseLogger.debug(`[${this.serviceName}] ${message}`, error || context);
+        break;
+      case LogLevel.INFO:
+        this.baseLogger.info(`[${this.serviceName}] ${message}`, error || context);
+        break;
+      case LogLevel.WARN:
+        this.baseLogger.warn(`[${this.serviceName}] ${message}`, error || context);
+        break;
+      case LogLevel.ERROR:
+        this.baseLogger.error(`[${this.serviceName}] ${message}`, error || context);
+        break;
+      case LogLevel.FATAL:
+        this.baseLogger.fatal(`[${this.serviceName}] ${message}`, error || context);
+        break;
+    }
   }
 }
 
