@@ -1,13 +1,38 @@
 import { Request, Response } from 'express';
 import { insertPartnerSchema } from '@shared/schema';
 import { ZodError } from 'zod';
-import { formatZodError } from '../utils/validationUtils';
+
+/**
+ * Format Zod validation errors for API responses
+ * 
+ * @param error ZodError object
+ * @returns Formatted error object with field paths and messages
+ */
+function formatZodError(error: ZodError) {
+  return error.errors.reduce((acc, err) => {
+    const path = err.path.join('.');
+    return {
+      ...acc,
+      [path]: err.message
+    };
+  }, {});
+}
+
+// Define typed User interface to help with type checking
+interface AuthenticatedRequest extends Request {
+  user: {
+    id: number;
+    role: string;
+    partnerId?: number;
+    [key: string]: any;
+  }
+}
 
 /**
  * Get all partner organizations
  * Admin only can see all partners
  */
-export async function getAllPartners(req: Request, res: Response) {
+export async function getAllPartners(req: AuthenticatedRequest, res: Response) {
   try {
     // Only admins can view all partners
     if (req.user.role !== 'admin') {
@@ -26,7 +51,7 @@ export async function getAllPartners(req: Request, res: Response) {
  * Get a partner organization by ID
  * Admin can view any, partner users can only view their own
  */
-export async function getPartnerById(req: Request, res: Response) {
+export async function getPartnerById(req: AuthenticatedRequest, res: Response) {
   try {
     const partnerId = parseInt(req.params.id, 10);
     
@@ -51,7 +76,7 @@ export async function getPartnerById(req: Request, res: Response) {
 /**
  * Get current user's partner organization
  */
-export async function getCurrentPartner(req: Request, res: Response) {
+export async function getCurrentPartner(req: AuthenticatedRequest, res: Response) {
   try {
     // If no partnerId, return 404
     if (!req.user.partnerId) {
@@ -75,7 +100,7 @@ export async function getCurrentPartner(req: Request, res: Response) {
  * Create a new partner organization
  * Admin only
  */
-export async function createPartner(req: Request, res: Response) {
+export async function createPartner(req: AuthenticatedRequest, res: Response) {
   try {
     // Only admins can create partners
     if (req.user.role !== 'admin') {
@@ -104,7 +129,7 @@ export async function createPartner(req: Request, res: Response) {
  * Update a partner organization
  * Admin can update any, partner_admin can only update their own
  */
-export async function updatePartner(req: Request, res: Response) {
+export async function updatePartner(req: AuthenticatedRequest, res: Response) {
   try {
     const partnerId = parseInt(req.params.id, 10);
     
@@ -137,7 +162,7 @@ export async function updatePartner(req: Request, res: Response) {
  * Get users for a specific partner organization
  * Admin can view any, partner_admin can only view their own
  */
-export async function getPartnerUsers(req: Request, res: Response) {
+export async function getPartnerUsers(req: AuthenticatedRequest, res: Response) {
   try {
     const partnerId = parseInt(req.params.id, 10);
     
@@ -149,7 +174,7 @@ export async function getPartnerUsers(req: Request, res: Response) {
     const users = await req.app.locals.storage.getUsersByPartner(partnerId);
     
     // Remove sensitive information like passwords
-    const sanitizedUsers = users.map(user => {
+    const sanitizedUsers = users.map((user: { password: string; [key: string]: any }) => {
       const { password, ...sanitized } = user;
       return sanitized;
     });
@@ -165,7 +190,7 @@ export async function getPartnerUsers(req: Request, res: Response) {
  * Get sites for a specific partner organization
  * Admin can view any, partner users can only view their own
  */
-export async function getPartnerSites(req: Request, res: Response) {
+export async function getPartnerSites(req: AuthenticatedRequest, res: Response) {
   try {
     const partnerId = parseInt(req.params.id, 10);
     
