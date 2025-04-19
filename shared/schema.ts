@@ -17,6 +17,47 @@ export const deviceTypeEnum = pgEnum('device_type', [
   'bidirectional_ev_charger' // Added for V2G/V2H functionality
 ]);
 
+// Battery Management System Enums
+export const bmsProtocolEnum = pgEnum('bms_protocol', [
+  'canbus',
+  'modbus_tcp',
+  'modbus_rtu',
+  'rs485',
+  'rs232',
+  'i2c',
+  'smbus',
+  'spi',
+  'proprietary'
+]);
+
+export const batteryCellTypeEnum = pgEnum('battery_cell_type', [
+  'lithium_ion',
+  'lithium_iron_phosphate',
+  'lead_acid',
+  'nickel_metal_hydride',
+  'nickel_cadmium',
+  'flow_battery',
+  'sodium_ion',
+  'solid_state'
+]);
+
+export const cellBalancingMethodEnum = pgEnum('cell_balancing_method', [
+  'passive',
+  'active',
+  'dynamic',
+  'adaptive',
+  'none'
+]);
+
+export const batteryHealthStatusEnum = pgEnum('battery_health_status', [
+  'excellent',   // >90% of original capacity
+  'good',        // 75-90% of original capacity
+  'fair',        // 60-75% of original capacity
+  'poor',        // 40-60% of original capacity
+  'critical',    // <40% of original capacity
+  'unknown'      // Status could not be determined
+]);
+
 export const gatewayProtocolEnum = pgEnum('gateway_protocol', [
   'mqtt',
   'http',
@@ -484,6 +525,21 @@ export const devices = pgTable('devices', {
   gatewayId: integer('gateway_id').references(() => sites.id), // Changed temporarily to break circular reference
   devicePath: text('device_path'), // Path/address on the gateway (e.g. Modbus address, MQTT topic suffix)
   tariffId: integer('tariff_id').references(() => tariffs.id), // Device-specific tariff, overrides site tariff when present
+  
+  // BMS Integration fields
+  bmsProtocol: bmsProtocolEnum('bms_protocol'),
+  bmsConnectionDetails: json('bms_connection_details'), // Connection parameters specific to the BMS protocol
+  batteryCellType: batteryCellTypeEnum('battery_cell_type'),
+  cellCount: integer('cell_count'),
+  cellBalancingMethod: cellBalancingMethodEnum('cell_balancing_method'),
+  batteryHealthStatus: batteryHealthStatusEnum('battery_health_status').default('unknown'),
+  nominalVoltage: numeric('nominal_voltage'), // In volts
+  nominalCapacity: numeric('nominal_capacity'), // In Ah
+  maxChargeCurrent: numeric('max_charge_current'), // In amps
+  maxDischargeCurrent: numeric('max_discharge_current'), // In amps
+  maxChargeVoltage: numeric('max_charge_voltage'), // In volts
+  minDischargeVoltage: numeric('min_discharge_voltage'), // In volts
+  
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -544,6 +600,68 @@ export const deviceReadings = pgTable('device_readings', {
   // Extended data
   additionalData: json('additional_data'),
   processingMetadata: json('processing_metadata'),
+});
+
+// Battery-specific detailed telemetry data
+export const batteryTelemetry = pgTable('battery_telemetry', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  timestamp: timestamp('timestamp').defaultNow(),
+  
+  // Battery performance data
+  stateOfCharge: numeric('state_of_charge'), // Percentage (0-100)
+  stateOfHealth: numeric('state_of_health'), // Percentage (0-100)
+  remainingCapacity: numeric('remaining_capacity'), // Ah
+  cycleCount: numeric('cycle_count'),
+  
+  // Cell-level data
+  minCellVoltage: numeric('min_cell_voltage'), // V
+  maxCellVoltage: numeric('max_cell_voltage'), // V
+  avgCellVoltage: numeric('avg_cell_voltage'), // V
+  cellVoltageDelta: numeric('cell_voltage_delta'), // Max-Min, V
+  cellVoltages: json('cell_voltages'), // Array of individual cell voltages
+  cellTemperatures: json('cell_temperatures'), // Array of individual cell temperatures
+  cellBalancingStatus: json('cell_balancing_status'), // Status of cell balancing for each cell
+  
+  // Electrical data
+  totalVoltage: numeric('total_voltage'), // V
+  currentCharge: numeric('current_charge'), // A (positive = charging)
+  currentDischarge: numeric('current_discharge'), // A (positive = discharging)
+  instantPower: numeric('instant_power'), // kW
+  
+  // Thermal management data
+  minTemperature: numeric('min_temperature'), // °C
+  maxTemperature: numeric('max_temperature'), // °C
+  avgTemperature: numeric('avg_temperature'), // °C
+  coolingStatus: text('cooling_status'),
+  heatingStatus: text('heating_status'),
+  
+  // Performance metrics
+  internalResistance: numeric('internal_resistance'), // mΩ
+  powerAvailable: numeric('power_available'), // kW
+  timeToFullCharge: numeric('time_to_full_charge'), // minutes at current rate
+  estimatedTimeRemaining: numeric('estimated_time_remaining'), // minutes at current discharge
+  
+  // Alerts and status
+  alarmStates: json('alarm_states'), // JSON object with active alarms
+  warningStates: json('warning_states'), // JSON object with active warnings
+  bmsStatus: text('bms_status'), // Overall BMS status (normal, warning, alarm, etc.)
+  protectionStatus: json('protection_status'), // Active protection mechanisms
+  
+  // Efficiency metrics
+  chargeEfficiency: numeric('charge_efficiency'), // Percentage
+  thermalLoss: numeric('thermal_loss'), // kW
+  
+  // Prediction data
+  predictedRemainingCapacity: numeric('predicted_remaining_capacity'), // Capacity after N cycles
+  estimatedRemainingLifetime: numeric('estimated_remaining_lifetime'), // Days
+  
+  // Sampling metadata (same as deviceReadings)
+  samplingRate: samplingRateEnum('sampling_rate').default('high'),
+  dataQuality: dataQualityEnum('data_quality').default('validated'),
+  
+  // Raw BMS data for troubleshooting
+  rawBmsData: json('raw_bms_data'),
 });
 
 // Energy Readings - Enhanced Time-Series Data
@@ -723,7 +841,9 @@ export const eventLogTypeEnum = pgEnum('event_log_type', [
   'state_transition', // Device state changes
   'command',          // Remote commands sent to devices
   'data_quality',     // Data validation issues
-  'communication'     // Communication protocol events
+  'communication',    // Communication protocol events
+  'battery_test',     // Battery capacity test events
+  'battery_health'    // Battery health assessment events
 ]);
 
 export const eventCategoryEnum = pgEnum('event_category', [
@@ -848,6 +968,25 @@ export const gridConnectionType = pgEnum('grid_connection_type', [
   'single_phase', 
   'three_phase', 
   'split_phase'
+]);
+
+// Battery Test Types
+export const batteryTestTypeEnum = pgEnum('battery_test_type', [
+  'capacity_test',
+  'resistance_test',
+  'self_discharge_test',
+  'pulse_test',
+  'thermal_stress_test',
+  'cycle_life_test'
+]);
+
+// Battery Test Status
+export const batteryTestStatusEnum = pgEnum('battery_test_status', [
+  'scheduled',
+  'in_progress',
+  'completed',
+  'failed',
+  'interrupted'
 ]);
 
 export const gridConnections = pgTable('grid_connections', {
@@ -1072,6 +1211,156 @@ export const storageTierMetrics = pgTable('storage_tier_metrics', {
 });
 
 // ** END OF MULTI-TIERED STORAGE SYSTEM **
+
+// Battery Management System Tables
+export const batteryCapacityTests = pgTable('battery_capacity_tests', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  testType: batteryTestTypeEnum('test_type').default('capacity_test'),
+  startTime: timestamp('start_time').defaultNow(),
+  endTime: timestamp('end_time'),
+  status: batteryTestStatusEnum('status').default('in_progress'),
+  
+  // Test conditions
+  initialSoC: numeric('initial_soc'), // %
+  targetSoC: numeric('target_soc'), // %
+  ambientTemperature: numeric('ambient_temperature'), // °C
+  
+  // Test parameters
+  chargeRate: numeric('charge_rate'), // C-rate
+  dischargeRate: numeric('discharge_rate'), // C-rate
+  minVoltage: numeric('min_voltage'), // V
+  maxVoltage: numeric('max_voltage'), // V
+  chargeCurrentLimit: numeric('charge_current_limit'), // A
+  dischargeCurrentLimit: numeric('discharge_current_limit'), // A
+  
+  // Test results
+  measuredCapacity: numeric('measured_capacity'), // Ah
+  theoreticalCapacity: numeric('theoretical_capacity'), // Ah (from specs)
+  capacityRetention: numeric('capacity_retention'), // % of original
+  averageTemperature: numeric('average_temperature'), // °C during test
+  peakTemperature: numeric('peak_temperature'), // °C during test
+  internalResistance: numeric('internal_resistance'), // mΩ
+  energyEfficiency: numeric('energy_efficiency'), // %
+  
+  // Analysis outputs
+  stateOfHealth: numeric('state_of_health'), // %
+  predictedRemainingCycles: integer('predicted_remaining_cycles'),
+  ageingFactor: numeric('ageing_factor'), // Rate of capacity loss
+  temperatureImpact: numeric('temperature_impact'), // Impact of temperature on results
+  anomalyDetected: boolean('anomaly_detected').default(false),
+  anomalyDescription: text('anomaly_description'),
+  
+  // Raw data for analysis
+  rawTestData: json('raw_test_data'), // Time series of voltage, current, temperature, etc.
+  testReport: text('test_report'), // Detailed report of test
+  
+  // Test metadata
+  testMethod: text('test_method'),
+  testEquipment: text('test_equipment'),
+  testOperator: integer('test_operator').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const batteryLifecycleEvents = pgTable('battery_lifecycle_events', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  timestamp: timestamp('timestamp').defaultNow(),
+  
+  // Event type and details
+  eventType: text('event_type').notNull(), // 'full_cycle', 'partial_cycle', 'extreme_temperature', 'high_current', etc.
+  severity: text('severity').default('info'), // 'info', 'warning', 'critical'
+  description: text('description').notNull(),
+  
+  // Measurable impacts
+  capacityImpact: numeric('capacity_impact'), // Estimated % loss of capacity
+  resistanceImpact: numeric('resistance_impact'), // Estimated % increase in resistance
+  lifetimeImpact: numeric('lifetime_impact'), // Estimated % reduction in remaining lifetime
+  
+  // Event conditions
+  startSoC: numeric('start_soc'), // %
+  endSoC: numeric('end_soc'), // %
+  minSoC: numeric('min_soc'), // %
+  maxSoC: numeric('max_soc'), // %
+  
+  averageTemperature: numeric('average_temperature'), // °C
+  maxTemperature: numeric('max_temperature'), // °C
+  
+  averageCurrent: numeric('average_current'), // A
+  peakCurrent: numeric('peak_current'), // A
+  
+  duration: integer('duration'), // seconds
+  energyThroughput: numeric('energy_throughput'), // kWh
+  
+  // Environmental factors
+  ambientTemperature: numeric('ambient_temperature'), // °C
+  humidity: numeric('humidity'), // %
+  
+  // Context
+  chargeMode: text('charge_mode'), // 'standard', 'fast', 'optimized', etc.
+  applicationContext: text('application_context'), // What the battery was used for
+  
+  // Related data
+  rawEventData: json('raw_event_data'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const batteryThermalEvents = pgTable('battery_thermal_events', {
+  id: serial('id').primaryKey(),
+  deviceId: integer('device_id').notNull().references(() => devices.id),
+  timestamp: timestamp('timestamp').defaultNow(),
+  
+  // Event details
+  eventType: text('event_type').notNull(), // 'thermal_runaway', 'overheating', 'cooling_failure', 'temperature_imbalance'
+  severity: text('severity').default('warning'),
+  description: text('description').notNull(),
+  
+  // Temperature data
+  maxTemperature: numeric('max_temperature'), // °C
+  minTemperature: numeric('min_temperature'), // °C
+  avgTemperature: numeric('avg_temperature'), // °C
+  temperatureRiseRate: numeric('temperature_rise_rate'), // °C/min
+  temperatureVariance: numeric('temperature_variance'), // Standard deviation across cells
+  
+  // Cooling system data
+  coolingSystemActive: boolean('cooling_system_active').default(false),
+  coolingPower: numeric('cooling_power'), // W
+  coolingEfficiency: numeric('cooling_efficiency'), // %
+  
+  // Ambient conditions
+  ambientTemperature: numeric('ambient_temperature'), // °C
+  solarRadiation: numeric('solar_radiation'), // W/m²
+  airflowRate: numeric('airflow_rate'), // m³/s
+  
+  // Battery state during event
+  stateOfCharge: numeric('state_of_charge'), // %
+  chargeRate: numeric('charge_rate'), // C-rate
+  dischargeRate: numeric('discharge_rate'), // C-rate
+  current: numeric('current'), // A
+  
+  // Actions taken
+  actionsTaken: json('actions_taken'), // e.g., {"cooling_increased": true, "charge_rate_limited": true}
+  responseLatency: integer('response_latency'), // ms response time
+  mitigationEffectiveness: numeric('mitigation_effectiveness'), // % reduction in temperature
+  
+  // Impact assessment
+  estimatedCapacityImpact: numeric('estimated_capacity_impact'), // % degradation
+  estimatedLifetimeImpact: numeric('estimated_lifetime_impact'), // % reduction
+  
+  // Event duration
+  duration: integer('duration'), // seconds
+  timeToResolution: integer('time_to_resolution'), // seconds to return to normal
+  
+  // Raw data and thermal imaging
+  thermalImageUrl: text('thermal_image_url'),
+  rawThermalData: json('raw_thermal_data'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
 
 // Device Catalog Tables
 export const deviceManufacturers = pgTable('device_manufacturers', {
