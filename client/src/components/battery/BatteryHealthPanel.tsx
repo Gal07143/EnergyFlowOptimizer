@@ -1,393 +1,271 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangleIcon, InfoIcon, CalendarIcon, BatteryChargingIcon, ThermometerIcon, LineChartIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  Battery,
+  BatteryCharging,
+  Thermometer,
+  Calendar,
+  Clock,
+  Activity,
+  BarChart3,
+  ChevronDown,
+  Info,
+  LifeBuoy,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  ZapIcon,
+  ClockIcon,
+} from "lucide-react";
 
 interface BatteryHealthPanelProps {
   deviceId: number;
 }
 
 const BatteryHealthPanel: React.FC<BatteryHealthPanelProps> = ({ deviceId }) => {
+  const [activeTab, setActiveTab] = useState<string>("overview");
+  
+  // Fetch device data
   const { data: device, isLoading: deviceLoading } = useQuery({
     queryKey: [`/api/devices/${deviceId}`],
   });
   
-  const { data: healthData, isLoading: healthLoading, error: healthError } = useQuery({
-    queryKey: [`/api/devices/${deviceId}/battery/telemetry/latest`],
-  });
-  
-  const { data: capacityTests, isLoading: testsLoading } = useQuery({
+  // Fetch capacity test data
+  const { data: capacityTests, isLoading: capacityTestsLoading } = useQuery({
     queryKey: [`/api/devices/${deviceId}/battery/capacity-tests`],
   });
   
-  if (deviceLoading || healthLoading) {
+  // Fetch lifecycle event data
+  const { data: lifecycleEvents, isLoading: lifecycleEventsLoading } = useQuery({
+    queryKey: [`/api/devices/${deviceId}/battery/lifecycle-events`],
+  });
+  
+  // Determine battery health status color
+  const getHealthStatusColor = (status?: string) => {
+    switch (status) {
+      case 'excellent': return 'text-green-500';
+      case 'good': return 'text-green-400';
+      case 'fair': return 'text-amber-400';
+      case 'poor': return 'text-orange-500';
+      case 'critical': return 'text-red-500';
+      default: return 'text-gray-400';
+    }
+  };
+  
+  // Get badge variant based on health status
+  const getBadgeVariant = (status?: string) => {
+    switch (status) {
+      case 'excellent': return 'default';
+      case 'good': return 'default';
+      case 'fair': return 'secondary';
+      case 'poor': return 'warning';
+      case 'critical': return 'destructive';
+      default: return 'outline';
+    }
+  };
+  
+  // Format the date to a readable format
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+  
+  if (deviceLoading) {
     return <div className="flex justify-center p-8">Loading battery health data...</div>;
   }
   
-  if (healthError) {
-    return (
-      <Alert variant="destructive" className="my-4">
-        <AlertTriangleIcon className="h-4 w-4" />
-        <AlertTitle>Error loading health data</AlertTitle>
-        <AlertDescription>
-          {(healthError as Error).message || "Failed to load battery health data"}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  
-  if (!healthData) {
-    return (
-      <Alert>
-        <InfoIcon className="h-4 w-4" />
-        <AlertTitle>No health data</AlertTitle>
-        <AlertDescription>
-          No health data found for this battery device.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-  
-  const getBatteryHealthColor = (health?: number): string => {
-    if (!health) return "bg-gray-400";
-    if (health >= 90) return "bg-green-500";
-    if (health >= 70) return "bg-green-400";
-    if (health >= 50) return "bg-yellow-400";
-    if (health >= 30) return "bg-orange-400";
-    return "bg-red-500";
-  };
-  
-  const getHealthDescription = (health?: number): string => {
-    if (!health) return "Unknown";
-    if (health >= 90) return "Excellent - battery is performing optimally";
-    if (health >= 80) return "Very Good - minimal degradation detected";
-    if (health >= 70) return "Good - degradation within normal parameters";
-    if (health >= 60) return "Fair - moderate degradation, monitor closely";
-    if (health >= 50) return "Mediocre - noticeable performance impact";
-    if (health >= 30) return "Poor - significant degradation";
-    return "Critical - replacement recommended";
-  };
-  
-  const stateOfHealth = healthData?.stateOfHealth || 0;
-  
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Battery Health Assessment</h2>
-        <Button variant="outline" size="sm">
-          Schedule Assessment
-        </Button>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="col-span-2">
-          <CardHeader className="pb-3">
-            <CardTitle>Health Overview</CardTitle>
-            <CardDescription>Current health status and metrics</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <div>
-                    <span className="text-sm font-medium">State of Health</span>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {getHealthDescription(stateOfHealth)}
-                    </p>
-                  </div>
-                  <span className="text-2xl font-bold">{stateOfHealth}%</span>
-                </div>
-                <Progress 
-                  value={stateOfHealth} 
-                  className="h-3"
-                  // This will need to be handled in CSS as indicatorClassName doesn't exist
-                  // in the current component definition
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <div className="space-y-1.5">
-                  <div className="text-xs text-muted-foreground">Capacity</div>
-                  <div className="text-base font-medium">
-                    {healthData.remainingCapacity?.toFixed(2) || "N/A"} kWh
-                    <span className="text-xs text-muted-foreground ml-1">
-                      / {device?.nominalCapacity || "Unknown"} kWh
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <div className="text-xs text-muted-foreground">Cycle Count</div>
-                  <div className="text-base font-medium">
-                    {healthData.cycleCount || "N/A"}
-                    <span className="text-xs text-muted-foreground ml-1">
-                      cycles
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <div className="text-xs text-muted-foreground">Age</div>
-                  <div className="text-base font-medium">
-                    {device?.installDate 
-                      ? Math.floor((new Date().getTime() - new Date(device.installDate).getTime()) / (1000 * 60 * 60 * 24 * 30)) 
-                      : "N/A"}
-                    <span className="text-xs text-muted-foreground ml-1">
-                      months
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <div className="text-xs text-muted-foreground">Est. Remaining Life</div>
-                  <div className="text-base font-medium">
-                    {healthData.estimatedRemainingLifetime
-                      ? Math.round(healthData.estimatedRemainingLifetime / 30)
-                      : "N/A"}
-                    <span className="text-xs text-muted-foreground ml-1">
-                      months
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Battery Specifications</CardTitle>
-            <CardDescription>Technical parameters</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-1">
-                <div className="text-xs text-muted-foreground">Chemistry</div>
-                <div className="text-sm text-right capitalize">
-                  {device?.batteryCellType?.replace(/_/g, ' ') || 'N/A'}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-1">
-                <div className="text-xs text-muted-foreground">Cell Count</div>
-                <div className="text-sm text-right">
-                  {device?.cellCount || 'N/A'}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-1">
-                <div className="text-xs text-muted-foreground">Nominal Capacity</div>
-                <div className="text-sm text-right">
-                  {device?.nominalCapacity ? `${device.nominalCapacity} kWh` : 'N/A'}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-1">
-                <div className="text-xs text-muted-foreground">Nominal Voltage</div>
-                <div className="text-sm text-right">
-                  {device?.nominalVoltage ? `${device.nominalVoltage} V` : 'N/A'}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-1">
-                <div className="text-xs text-muted-foreground">Cell Balancing</div>
-                <div className="text-sm text-right capitalize">
-                  {device?.batteryBalancingMethod?.replace(/_/g, ' ') || 'N/A'}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-1">
-                <div className="text-xs text-muted-foreground">Manufacturer</div>
-                <div className="text-sm text-right">
-                  {device?.manufacturer || 'N/A'}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
+      {/* Health Status Overview */}
       <Card>
-        <CardHeader>
-          <CardTitle>Latest Capacity Test Results</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-xl">Battery Health Status</CardTitle>
+            <Badge variant={getBadgeVariant(device?.batteryHealthStatus)} className="capitalize">
+              {device?.batteryHealthStatus || "Unknown"}
+            </Badge>
+          </div>
           <CardDescription>
-            Results from recent capacity tests
+            Overall battery health assessment and key metrics
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {testsLoading ? (
-            <div className="text-center text-muted-foreground py-6">Loading capacity test data...</div>
-          ) : !capacityTests || capacityTests.length === 0 ? (
-            <div className="text-center text-muted-foreground py-6">
-              No capacity tests have been performed yet
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left text-xs font-medium py-2">Date</th>
-                    <th className="text-left text-xs font-medium py-2">Type</th>
-                    <th className="text-left text-xs font-medium py-2">Start SoC</th>
-                    <th className="text-left text-xs font-medium py-2">End SoC</th>
-                    <th className="text-left text-xs font-medium py-2">Measured Capacity</th>
-                    <th className="text-left text-xs font-medium py-2">Health</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {capacityTests.map((test: any) => (
-                    <tr key={test.id} className="border-b">
-                      <td className="py-2 text-sm">
-                        {new Date(test.startTime).toLocaleDateString()}
-                      </td>
-                      <td className="py-2 text-sm capitalize">
-                        {test.testType?.replace(/_/g, ' ') || 'N/A'}
-                      </td>
-                      <td className="py-2 text-sm">
-                        {test.initialSoC ? `${test.initialSoC}%` : 'N/A'}
-                      </td>
-                      <td className="py-2 text-sm">
-                        {test.finalSoC ? `${test.finalSoC}%` : 'N/A'}
-                      </td>
-                      <td className="py-2 text-sm">
-                        {test.measuredCapacity ? `${test.measuredCapacity.toFixed(2)} kWh` : 'N/A'}
-                      </td>
-                      <td className="py-2 text-sm">
-                        {test.calculatedSoh ? `${test.calculatedSoh.toFixed(1)}%` : 'N/A'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          <Button variant="outline" size="sm" className="ml-auto">
-            Schedule Capacity Test
-          </Button>
-        </CardFooter>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Health Analysis</CardTitle>
-          <CardDescription>
-            Battery health assessment and recommendations
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-card/50">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center">
-                    <BatteryChargingIcon className="h-4 w-4 mr-2" />
-                    <CardTitle className="text-base">Health Trend</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm">
-                    {stateOfHealth >= 90 
-                      ? "Battery degradation is minimal and following the expected curve." 
-                      : stateOfHealth >= 70 
-                      ? "Battery degradation is within normal parameters." 
-                      : stateOfHealth >= 50 
-                      ? "Battery degradation is accelerated." 
-                      : "Battery degradation is severe and requires attention."}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-card/50">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center">
-                    <ThermometerIcon className="h-4 w-4 mr-2" />
-                    <CardTitle className="text-base">Thermal Analysis</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm">
-                    {healthData.maxTemperature && healthData.maxTemperature > 40 
-                      ? "High operating temperatures detected, which may accelerate battery degradation." 
-                      : healthData.maxTemperature && healthData.minTemperature && 
-                        (healthData.maxTemperature - healthData.minTemperature > 5)
-                      ? "Temperature gradient between cells is higher than optimal." 
-                      : "Thermal conditions are within acceptable parameters."}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-card/50">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center">
-                    <LineChartIcon className="h-4 w-4 mr-2" />
-                    <CardTitle className="text-base">Usage Pattern</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm">
-                    {healthData.cycleCount && healthData.cycleCount > 500
-                      ? "High cycle count detected, which is contributing to battery degradation."
-                      : "Usage patterns are within normal operational parameters."}
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* State of Health */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-medium">State of Health (SoH)</h3>
+                <span className={`text-sm font-semibold ${getHealthStatusColor(device?.batteryHealthStatus)}`}>
+                  {device?.stateOfHealth || 0}%
+                </span>
+              </div>
+              <Progress 
+                value={device?.stateOfHealth || 0} 
+                className="h-2" 
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {device?.stateOfHealth >= 90 ? 'Excellent condition' :
+                 device?.stateOfHealth >= 80 ? 'Good condition' :
+                 device?.stateOfHealth >= 70 ? 'Fair condition' :
+                 device?.stateOfHealth >= 60 ? 'Poor condition' : 'Critical condition'}
+              </p>
             </div>
             
-            <div className="mt-6">
-              <h3 className="text-sm font-medium mb-3">Recommendations</h3>
-              <div className="space-y-3">
-                {stateOfHealth < 50 && (
-                  <Alert>
-                    <AlertTriangleIcon className="h-4 w-4" />
-                    <AlertTitle className="text-sm">Battery Replacement</AlertTitle>
-                    <AlertDescription className="text-xs">
-                      Battery health is below 50%, which may significantly impact system performance and reliability. 
-                      Consider scheduling a replacement within the next {Math.max(1, Math.floor(healthData.estimatedRemainingLifetime / 30))} months.
-                    </AlertDescription>
-                  </Alert>
+            {/* State of Charge */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-medium">State of Charge (SoC)</h3>
+                <span className="text-sm font-semibold">
+                  {device?.stateOfCharge || 0}%
+                </span>
+              </div>
+              <Progress 
+                value={device?.stateOfCharge || 0} 
+                className="h-2" 
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Current charge level of the battery
+              </p>
+            </div>
+            
+            {/* Cycle Count */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-medium">Charge Cycles</h3>
+                <span className="text-sm font-semibold">
+                  {device?.cycleCount || 0} cycles
+                </span>
+              </div>
+              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary" 
+                  style={{ 
+                    width: `${Math.min(((device?.cycleCount || 0) / (device?.maxCycles || 3000)) * 100, 100)}%` 
+                  }}
+                ></div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {device?.maxCycles ? `${Math.round(((device?.cycleCount || 0) / device.maxCycles) * 100)}% of rated cycles used` : 'Cycle usage information not available'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Battery Specifications</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cell Type</span>
+                  <span className="capitalize">{device?.batteryCellType?.replace('_', ' ') || "Unknown"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cell Count</span>
+                  <span>{device?.cellCount || "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nominal Capacity</span>
+                  <span>{device?.nominalCapacity ? `${device.nominalCapacity} kWh` : "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nominal Voltage</span>
+                  <span>{device?.nominalVoltage ? `${device.nominalVoltage} V` : "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Balancing Method</span>
+                  <span className="capitalize">{device?.batteryBalancingMethod?.replace('_', ' ') || "Unknown"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Manufacturer</span>
+                  <span>{device?.manufacturer || "Unknown"}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Health Assessment</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Voltage</span>
+                  <span>{device?.totalVoltage ? `${device.totalVoltage} V` : "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Current Charge</span>
+                  <span>{device?.currentCharge ? `${device.currentCharge} A` : "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Instant Power</span>
+                  <span>{device?.instantPower ? `${device.instantPower} W` : "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Power Available</span>
+                  <span>{device?.powerAvailable ? `${device.powerAvailable} W` : "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Charge Efficiency</span>
+                  <span>{device?.chargeEfficiency ? `${(device.chargeEfficiency * 100).toFixed(1)}%` : "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Thermal Loss</span>
+                  <span>{device?.thermalLoss ? `${device.thermalLoss} W` : "N/A"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Time Estimates</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Time to Full Charge</span>
+                  <span>{device?.timeToFullCharge ? 
+                    `${Math.floor(device.timeToFullCharge / 60)}h ${device.timeToFullCharge % 60}m` 
+                    : "N/A"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Estimated Time Remaining</span>
+                  <span>{device?.estimatedTimeRemaining ? 
+                    `${Math.floor(device.estimatedTimeRemaining / 60)}h ${device.estimatedTimeRemaining % 60}m` 
+                    : "N/A"}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Latest Tests & Events</h3>
+              <div className="space-y-2">
+                {capacityTests && capacityTests.length > 0 ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Last Capacity Test</span>
+                    <span>{formatDate(capacityTests[0].startTime)}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Last Capacity Test</span>
+                    <span>No tests recorded</span>
+                  </div>
                 )}
                 
-                {healthData.cellVoltageDelta && healthData.cellVoltageDelta > 0.1 && (
-                  <Alert>
-                    <AlertTriangleIcon className="h-4 w-4" />
-                    <AlertTitle className="text-sm">Cell Balancing Recommended</AlertTitle>
-                    <AlertDescription className="text-xs">
-                      Cell voltage imbalance ({healthData.cellVoltageDelta.toFixed(3)}V) exceeds the recommended threshold (0.100V).
-                      Schedule a cell balancing procedure to improve performance and extend battery life.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                {healthData.maxTemperature && healthData.maxTemperature > 40 && (
-                  <Alert>
-                    <AlertTriangleIcon className="h-4 w-4" />
-                    <AlertTitle className="text-sm">Temperature Management</AlertTitle>
-                    <AlertDescription className="text-xs">
-                      High operating temperatures detected (max: {healthData.maxTemperature.toFixed(1)}°C).
-                      Improve thermal management to extend battery life.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                {(!capacityTests || capacityTests.length === 0) && (
-                  <Alert>
-                    <InfoIcon className="h-4 w-4" />
-                    <AlertTitle className="text-sm">Baseline Capacity Test</AlertTitle>
-                    <AlertDescription className="text-xs">
-                      No capacity tests have been performed. Schedule a baseline capacity test to improve health tracking accuracy.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                {!healthData.alarmStates && !healthData.warningStates && stateOfHealth >= 70 && (
-                  <div className="text-sm text-muted-foreground">
-                    No specific recommendations at this time. Battery is operating within normal parameters.
+                {lifecycleEvents && lifecycleEvents.length > 0 ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Last Event</span>
+                    <span>{formatDate(lifecycleEvents[0].timestamp)}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Last Event</span>
+                    <span>No events recorded</span>
                   </div>
                 )}
               </div>
@@ -395,6 +273,401 @@ const BatteryHealthPanel: React.FC<BatteryHealthPanelProps> = ({ deviceId }) => 
           </div>
         </CardContent>
       </Card>
+      
+      {/* Detailed Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="thermal">
+            <Thermometer className="h-4 w-4 mr-2" />
+            Thermal Data
+          </TabsTrigger>
+          <TabsTrigger value="lifecycle">
+            <Calendar className="h-4 w-4 mr-2" />
+            Lifecycle Events
+          </TabsTrigger>
+          <TabsTrigger value="capacity">
+            <Battery className="h-4 w-4 mr-2" />
+            Capacity Tests
+          </TabsTrigger>
+        </TabsList>
+        
+        {/* Thermal Data Tab */}
+        <TabsContent value="thermal" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Thermal Management & Analysis</CardTitle>
+              <CardDescription>
+                Temperature data and thermal management status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Temperature Readings</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Minimum Temperature</span>
+                        <span>{device?.minTemperature ? `${device.minTemperature}°C` : "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Maximum Temperature</span>
+                        <span>{device?.maxTemperature ? `${device.maxTemperature}°C` : "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Average Temperature</span>
+                        <span>{device?.avgTemperature ? `${device.avgTemperature}°C` : "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Temperature Range</span>
+                        <span>
+                          {device?.maxTemperature && device?.minTemperature
+                            ? `${(device.maxTemperature - device.minTemperature).toFixed(1)}°C`
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Cooling System</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Cooling Status</span>
+                        <span className="capitalize">{device?.coolingStatus || "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Heating Status</span>
+                        <span className="capitalize">{device?.heatingStatus || "N/A"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Thermal Analysis</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Operating Temperature</span>
+                        <span>{device?.maxTemperature ? `${device.maxTemperature}°C` : "N/A"}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Temperature Spread</span>
+                        <span>
+                          {device?.maxTemperature && device?.minTemperature
+                            ? `${(device.maxTemperature - device.minTemperature).toFixed(1)}°C`
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Thermal Events</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Cycle Count</span>
+                        <span>{device?.cycleCount || "0"}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Health Impact</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {device?.maxTemperature && device.maxTemperature > 35
+                        ? "High operating temperatures may be reducing battery lifespan"
+                        : "Temperature range is within normal operating parameters"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Lifecycle Events Tab */}
+        <TabsContent value="lifecycle" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Battery Lifecycle Events</CardTitle>
+              <CardDescription>
+                Critical events throughout the battery's operational lifetime
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Battery Status</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-card/50 p-4 rounded-lg border">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-medium mb-1">BMS Status</div>
+                        <div className="text-lg font-semibold capitalize">{device?.bmsStatus || "Unknown"}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-card/50 p-4 rounded-lg border">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-medium mb-1">Cycle Count</div>
+                        <div className="text-lg font-semibold">{device?.cycleCount || "0"}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-card/50 p-4 rounded-lg border">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-medium mb-1">Expected Lifespan</div>
+                        <div className="text-lg font-semibold">{device?.estimatedRemainingLifetime || "Unknown"}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Key Health Indicators</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Cell Voltage Delta</span>
+                        <span>{device?.cellVoltageDelta ? `${device.cellVoltageDelta.toFixed(3)} V` : "N/A"}</span>
+                      </div>
+                      <Progress 
+                        value={device?.cellVoltageDelta ? Math.min(device.cellVoltageDelta / 0.5 * 100, 100) : 0} 
+                        className="h-2" 
+                      />
+                      {device?.cellVoltageDelta && (
+                        <p className="text-xs text-muted-foreground">
+                          {device.cellVoltageDelta < 0.05 ? "Excellent cell balance" : 
+                           device.cellVoltageDelta < 0.1 ? "Good cell balance" :
+                           device.cellVoltageDelta < 0.2 ? "Fair cell balance" : "Poor cell balance"}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Temperature Variance</span>
+                        <span>{device?.maxTemperature ? `${device.maxTemperature.toFixed(1)}°C` : "N/A"}</span>
+                      </div>
+                      <Progress 
+                        value={device?.maxTemperature ? Math.min(device.maxTemperature / 60 * 100, 100) : 0} 
+                        className="h-2" 
+                      />
+                      {device?.maxTemperature && (
+                        <p className="text-xs text-muted-foreground">
+                          {device.maxTemperature < 30 ? "Optimal temperature range" :
+                           device.maxTemperature < 40 ? "Acceptable temperature range" :
+                           "Temperature too high, may impact lifespan"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-medium">Recent Lifecycle Events</h3>
+                    <span className="text-xs text-muted-foreground">{lifecycleEvents ? lifecycleEvents.length : 0} events</span>
+                  </div>
+                  
+                  {lifecycleEventsLoading ? (
+                    <div className="flex justify-center p-6">
+                      <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : lifecycleEvents && lifecycleEvents.length > 0 ? (
+                    <div className="space-y-2">
+                      {lifecycleEvents.slice(0, 5).map((event: any, index: number) => (
+                        <div key={index} className="flex items-start space-x-3 p-3 rounded-md bg-card/50 border">
+                          {event.eventType === 'warning' && <AlertTriangle className="h-5 w-5 mt-0.5 text-amber-500" />}
+                          {event.eventType === 'error' && <XCircle className="h-5 w-5 mt-0.5 text-red-500" />}
+                          {event.eventType === 'info' && <Info className="h-5 w-5 mt-0.5 text-blue-500" />}
+                          {event.eventType === 'recovery' && <CheckCircle className="h-5 w-5 mt-0.5 text-green-500" />}
+                          
+                          <div className="flex-1">
+                            <div className="flex justify-between">
+                              <p className="text-sm font-medium">{event.eventDescription || 'Unknown event'}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(event.timestamp)}</p>
+                            </div>
+                            {event.details && <p className="text-xs text-muted-foreground mt-1">{event.details}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex justify-center p-6 text-muted-foreground">
+                      No lifecycle events recorded
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Capacity Tests Tab */}
+        <TabsContent value="capacity" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Capacity Tests</CardTitle>
+                  <CardDescription>
+                    Historical capacity tests and performance analysis
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm">
+                  Schedule Test
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">Battery Capacity Overview</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-card/50 p-4 rounded-lg border">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-medium mb-1">Nominal Capacity</div>
+                        <div className="text-lg font-semibold">{device?.nominalCapacity || "N/A"} kWh</div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-card/50 p-4 rounded-lg border">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-medium mb-1">Current Capacity</div>
+                        <div className="text-lg font-semibold">{device?.currentCapacity || "N/A"} kWh</div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-card/50 p-4 rounded-lg border">
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm font-medium mb-1">Capacity Retention</div>
+                        <div className="text-lg font-semibold">
+                          {device?.currentCapacity && device?.nominalCapacity 
+                            ? `${((device.currentCapacity / device.nominalCapacity) * 100).toFixed(1)}%` 
+                            : "N/A"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-medium">Recent Capacity Tests</h3>
+                    <span className="text-xs text-muted-foreground">
+                      {capacityTests ? capacityTests.length : 0} tests recorded
+                    </span>
+                  </div>
+                  
+                  {capacityTestsLoading ? (
+                    <div className="flex justify-center p-6">
+                      <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : capacityTests && capacityTests.length > 0 ? (
+                    <div className="space-y-4">
+                      {capacityTests.slice(0, 3).map((test: any, index: number) => (
+                        <div key={index} className="p-4 rounded-md bg-card/50 border">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center">
+                                <Badge 
+                                  variant={test.status === 'completed' ? 'default' : 
+                                           test.status === 'failed' ? 'destructive' : 
+                                           test.status === 'scheduled' ? 'outline' : 'secondary'}
+                                  className="capitalize mb-1"
+                                >
+                                  {test.status}
+                                </Badge>
+                                
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  {test.testType === 'full_cycle' ? 'Full Cycle Test' :
+                                   test.testType === 'partial_cycle' ? 'Partial Cycle Test' :
+                                   test.testType === 'pulse_test' ? 'Pulse Test' : 'Capacity Test'}
+                                </span>
+                              </div>
+                              
+                              <p className="text-sm font-medium mt-1">
+                                {test.status === 'completed' ? 
+                                  `Measured capacity: ${test.measuredCapacity} kWh (${((test.measuredCapacity / (device?.nominalCapacity || 1)) * 100).toFixed(1)}%)` : 
+                                  test.status === 'scheduled' ? 
+                                  'Test scheduled' : 
+                                  'Test information'}
+                              </p>
+                              
+                              {test.notes && (
+                                <p className="text-xs text-muted-foreground mt-1">{test.notes}</p>
+                              )}
+                            </div>
+                            
+                            <div className="text-right">
+                              <div className="text-xs text-muted-foreground">
+                                {formatDate(test.startTime)}
+                              </div>
+                              
+                              <div className="text-xs mt-1">
+                                {test.chargeRate && test.dischargeRate && (
+                                  <span>
+                                    {test.chargeRate}C / {test.dischargeRate}C
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {test.status === 'completed' && (
+                            <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">Duration</p>
+                                <p>
+                                  {test.duration ? 
+                                    `${Math.floor(test.duration / 60)}h ${test.duration % 60}m` : 
+                                    'N/A'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Energy In/Out</p>
+                                <p>
+                                  {test.energyIn && test.energyOut ? 
+                                    `${test.energyIn.toFixed(1)} / ${test.energyOut.toFixed(1)} kWh` : 
+                                    'N/A'}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Efficiency</p>
+                                <p>
+                                  {test.roundTripEfficiency ? 
+                                    `${(test.roundTripEfficiency * 100).toFixed(1)}%` : 
+                                    'N/A'}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex justify-center p-6 text-muted-foreground">
+                      No capacity tests recorded
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t pt-6">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Capacity Testing</AlertTitle>
+                <AlertDescription>
+                  Regular capacity tests help track battery degradation over time and optimize charging strategies.
+                  It is recommended to perform a full capacity test every 30-60 days.
+                </AlertDescription>
+              </Alert>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
