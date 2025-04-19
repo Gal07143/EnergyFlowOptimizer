@@ -45,6 +45,11 @@ export abstract class BaseDeviceAdapter implements DeviceAdapter {
   protected bridgeManager = getProtocolBridgeManager();
   protected connected: boolean = false;
   protected bridgeConnected: boolean = false;
+  protected connectionAttempts: number = 0;
+  protected maxConnectionAttempts: number = 5;
+  protected reconnectInterval: number = 5000; // Initial reconnect interval
+  protected maxReconnectInterval: number = 60000; // Max 1 minute between reconnects
+  protected connectionTimeout: NodeJS.Timeout | null = null;
 
   constructor(deviceId: number, deviceType: string, protocol: Protocol) {
     this.deviceId = deviceId;
@@ -85,8 +90,105 @@ export abstract class BaseDeviceAdapter implements DeviceAdapter {
   protected abstract getDeviceSpecificMappingRules(): any[];
 
   // Common methods
-  abstract connect(): Promise<boolean>;
-  abstract disconnect(): Promise<void>;
+  // Attempt to connect with exponential backoff retry logic
+  async connect(): Promise<boolean> {
+    try {
+      if (this.connected) {
+        return true;
+      }
+      
+      this.connectionAttempts += 1;
+      console.log(`Connection attempt ${this.connectionAttempts} for ${this.deviceType} device ${this.deviceId}`);
+      
+      // Implementation-specific connection logic handled by concrete adapters
+      const result = await this.connectImplementation();
+      
+      if (result) {
+        // Connection successful
+        this.connected = true;
+        this.connectionAttempts = 0;
+        this.reconnectInterval = 5000; // Reset reconnect interval
+        console.log(`Successfully connected to ${this.deviceType} device ${this.deviceId}`);
+        
+        // Setup protocol bridge if not already set up
+        if (!this.bridgeConnected) {
+          this.setupProtocolBridge();
+        }
+        
+        // Clear any pending reconnection timeout
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
+        
+        return true;
+      } else {
+        // Connection failed - schedule reconnect if within retry limit
+        return this.handleConnectionFailure(new Error("Connection failed"));
+      }
+    } catch (error) {
+      return this.handleConnectionFailure(error);
+    }
+  }
+  
+  // Handle connection failures with exponential backoff
+  private handleConnectionFailure(error: any): boolean {
+    console.error(`Error connecting to ${this.deviceType} device ${this.deviceId}:`, error.message);
+    
+    if (this.connectionAttempts < this.maxConnectionAttempts) {
+      // Calculate backoff interval with jitter
+      const backoff = Math.min(
+        this.reconnectInterval * Math.pow(1.5, this.connectionAttempts - 1),
+        this.maxReconnectInterval
+      ) * (0.8 + Math.random() * 0.4); // Add 20% jitter
+      
+      console.log(`Scheduling reconnection for ${this.deviceType} device ${this.deviceId} in ${Math.round(backoff)}ms`);
+      
+      // Clear any existing timeout
+      if (this.connectionTimeout) {
+        clearTimeout(this.connectionTimeout);
+      }
+      
+      // Schedule reconnection
+      this.connectionTimeout = setTimeout(() => {
+        this.connect();
+      }, backoff);
+      
+      return false;
+    } else {
+      console.error(`Maximum connection attempts reached for ${this.deviceType} device ${this.deviceId}`);
+      
+      // Reset for future attempts after a cooldown period
+      this.connectionTimeout = setTimeout(() => {
+        this.connectionAttempts = 0;
+        console.log(`Connection cooldown completed for ${this.deviceType} device ${this.deviceId}`);
+      }, this.maxReconnectInterval * 2);
+      
+      return false;
+    }
+  }
+  
+  // Implementation-specific connection logic (abstract)
+  protected abstract connectImplementation(): Promise<boolean>;
+  
+  // Disconnect implementation
+  async disconnect(): Promise<void> {
+    // Clear any pending reconnection timeout
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+    
+    // Implementation-specific disconnection
+    await this.disconnectImplementation();
+    
+    this.connected = false;
+    console.log(`Disconnected from ${this.deviceType} device ${this.deviceId}`);
+  }
+  
+  // Implementation-specific disconnection logic (abstract)
+  protected abstract disconnectImplementation(): Promise<void>;
+  
   abstract readData(): Promise<any>;
   abstract writeData(params: any): Promise<boolean>;
 
