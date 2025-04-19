@@ -2020,9 +2020,9 @@ export const evChargingSessions = pgTable('ev_charging_sessions', {
   totalEnergyKwh: numeric('total_energy_kwh'), // Total energy transferred
   chargingMode: evChargingModeEnum('charging_mode').default('balanced'),
   bidirectionalEnabled: boolean('bidirectional_enabled').default(false),
-  energyToGridKwh: numeric('energy_to_grid_kwh').default(0), // Energy discharged to grid
-  energyToHomeKwh: numeric('energy_to_home_kwh').default(0), // Energy discharged to home
-  energyFromGridKwh: numeric('energy_from_grid_kwh').default(0), // Energy drawn from grid
+  energyToGridKwh: numeric('energy_to_grid_kwh').default('0'), // Energy discharged to grid
+  energyToHomeKwh: numeric('energy_to_home_kwh').default('0'), // Energy discharged to home
+  energyFromGridKwh: numeric('energy_from_grid_kwh').default('0'), // Energy drawn from grid
   peakChargingRateKw: numeric('peak_charging_rate_kw'), // Maximum charging rate reached
   peakDischargingRateKw: numeric('peak_discharging_rate_kw'), // Maximum discharging rate reached
   costSavings: numeric('cost_savings'), // Estimated cost savings from session
