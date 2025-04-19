@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -23,9 +23,17 @@ import {
   LineChart,
   BarChart2,
   History,
-  AlertCircle
+  AlertCircle,
+  Database,
+  Cable,
+  Server,
+  Wifi,
+  Network
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { ManufacturerConnectionSettings } from './ManufacturerConnectionSettings';
 
 interface DeviceDetailPanelProps {
   deviceId: number;
@@ -116,7 +124,74 @@ export default function DeviceDetailPanel({ deviceId, onClose }: DeviceDetailPan
   const [isEditing, setIsEditing] = useState(false);
   const [device, setDevice] = useState<DeviceData>(getMockDeviceData(deviceId));
   const [editedDevice, setEditedDevice] = useState<DeviceData>(getMockDeviceData(deviceId));
+  const [selectedManufacturerId, setSelectedManufacturerId] = useState<number | null>(null);
+  const [selectedDeviceCatalogId, setSelectedDeviceCatalogId] = useState<number | null>(null);
+  const [selectedProtocol, setSelectedProtocol] = useState<string>('modbus');
+  const [selectedConnectionMethod, setSelectedConnectionMethod] = useState<string>('direct');
+  const [connectionSettings, setConnectionSettings] = useState<any | null>(null);
   const { toast } = useToast();
+  
+  // Fetch connection settings for the device
+  const { data: deviceConnectionSettings, isLoading: isLoadingSettings } = useQuery({
+    queryKey: [`/api/devices/${deviceId}/connection-settings`],
+    enabled: activeTab === 'connection',
+    queryFn: async () => {
+      try {
+        return await fetch(`/api/devices/${deviceId}/connection-settings`).then(res => {
+          if (!res.ok) throw new Error('Failed to load connection settings');
+          return res.json();
+        });
+      } catch (error) {
+        console.error('Error fetching connection settings:', error);
+        return null;
+      }
+    }
+  });
+  
+  // Update connection settings when deviceConnectionSettings changes
+  useEffect(() => {
+    if (deviceConnectionSettings) {
+      setConnectionSettings(deviceConnectionSettings.settings || {});
+      setSelectedManufacturerId(deviceConnectionSettings.manufacturerId);
+      setSelectedDeviceCatalogId(deviceConnectionSettings.deviceCatalogId);
+      setSelectedProtocol(deviceConnectionSettings.protocol || 'modbus');
+      setSelectedConnectionMethod(deviceConnectionSettings.connectionMethod || 'direct');
+    }
+  }, [deviceConnectionSettings]);
+  
+  // Mutation for saving connection settings
+  const saveConnectionSettingsMutation = useMutation({
+    mutationFn: async (settings: any) => {
+      const response = await apiRequest('PUT', `/api/devices/${deviceId}/connection-settings`, {
+        manufacturerId: selectedManufacturerId,
+        deviceCatalogId: selectedDeviceCatalogId,
+        protocol: selectedProtocol,
+        connectionMethod: selectedConnectionMethod,
+        settings: connectionSettings
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save connection settings');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Connection Settings Saved',
+        description: 'Device connection settings have been updated successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/devices/${deviceId}/connection-settings`] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error Saving Settings',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  });
   
   // Handle device control actions
   const handleDeviceAction = (action: string) => {
@@ -205,6 +280,7 @@ export default function DeviceDetailPanel({ deviceId, onClose }: DeviceDetailPan
           <TabsList className="bg-transparent">
             <TabsTrigger value="overview" className="data-[state=active]:bg-muted">Overview</TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-muted">Settings</TabsTrigger>
+            <TabsTrigger value="connection" className="data-[state=active]:bg-muted">Connection</TabsTrigger>
             <TabsTrigger value="data" className="data-[state=active]:bg-muted">Data & Charts</TabsTrigger>
             <TabsTrigger value="history" className="data-[state=active]:bg-muted">History</TabsTrigger>
           </TabsList>
@@ -508,6 +584,130 @@ export default function DeviceDetailPanel({ deviceId, onClose }: DeviceDetailPan
                   )}
                 </div>
               )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="connection" className="p-6 pb-14 m-0">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Connection Settings</h3>
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full ${device.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'} mr-2`}></div>
+                    <span className="text-sm font-medium capitalize">
+                      {device.status === 'online' ? 'Connected' : 'Disconnected'}
+                    </span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => handleDeviceAction('test_connection')}>
+                    Test Connection
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-4 bg-muted/30 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <Database className="h-5 w-5 mr-2 text-primary" />
+                    <h4 className="text-md font-medium">Manufacturer & Model</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="manufacturer">Manufacturer</Label>
+                      <Select defaultValue={device.manufacturer || ''}>
+                        <SelectTrigger id="manufacturer">
+                          <SelectValue placeholder="Select manufacturer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="SolarEdge">SolarEdge</SelectItem>
+                          <SelectItem value="Tesla">Tesla</SelectItem>
+                          <SelectItem value="Schneider Electric">Schneider Electric</SelectItem>
+                          <SelectItem value="ABB">ABB</SelectItem>
+                          <SelectItem value="LG Energy Solution">LG Energy Solution</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="device-model">Device Model</Label>
+                      <Select defaultValue={device.model || ''}>
+                        <SelectTrigger id="device-model">
+                          <SelectValue placeholder="Select model" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Model X1">Model X1</SelectItem>
+                          <SelectItem value="Model X2">Model X2</SelectItem>
+                          <SelectItem value="Model X3">Model X3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4 bg-muted/30 p-4 rounded-lg">
+                  <div className="flex items-center">
+                    <Cable className="h-5 w-5 mr-2 text-primary" />
+                    <h4 className="text-md font-medium">Protocol & Connection</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="connection-protocol">Connection Protocol</Label>
+                      <Select defaultValue="modbus">
+                        <SelectTrigger id="connection-protocol">
+                          <SelectValue placeholder="Select protocol" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="modbus">Modbus TCP/RTU</SelectItem>
+                          <SelectItem value="mqtt">MQTT</SelectItem>
+                          <SelectItem value="ocpp">OCPP</SelectItem>
+                          <SelectItem value="eebus">EEBus</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="connection-method">Connection Method</Label>
+                      <Select defaultValue="direct">
+                        <SelectTrigger id="connection-method">
+                          <SelectValue placeholder="Select method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="direct">Direct</SelectItem>
+                          <SelectItem value="gateway">Via Gateway</SelectItem>
+                          <SelectItem value="cloud">Cloud API</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <ManufacturerConnectionSettings 
+                    manufacturerId={1} 
+                    deviceCatalogId={1}
+                    deviceType={device.type}
+                    protocol="modbus"
+                    onSettingsChange={(settings) => console.log('Connection settings updated:', settings)}
+                    initialSettings={{
+                      connection: 'tcp',
+                      ipAddress: device.ipAddress,
+                      port: 502,
+                      slaveId: 1
+                    }}
+                  />
+                </div>
+                
+                <div className="flex justify-end">
+                  <Button onClick={() => {
+                    toast({
+                      title: 'Connection Settings Saved',
+                      description: 'Device connection settings have been updated successfully',
+                    });
+                  }}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Connection Settings
+                  </Button>
+                </div>
+              </div>
             </div>
           </TabsContent>
           
