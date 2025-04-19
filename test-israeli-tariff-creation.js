@@ -4,21 +4,24 @@
 
 import axios from 'axios';
 
+// Create an axios instance with cookie support
+const instance = axios.create({
+  baseURL: 'http://localhost:5000/api',
+  withCredentials: true
+});
+
 const API_BASE = 'http://localhost:5000/api';
 let siteId = null;
-let authToken = null;
 
 async function login() {
   try {
     console.log('Logging in...');
-    const response = await axios.post(`${API_BASE}/login`, {
+    // Use the instance with cookie support for login
+    const response = await instance.post('/login', {
       username: 'admin',
       password: 'password123'
     });
     
-    authToken = response.data.token;
-    // Set the auth token for all future requests
-    axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
     console.log('Login successful!');
     return true;
   } catch (error) {
@@ -27,32 +30,26 @@ async function login() {
   }
 }
 
+async function createDemoSite() {
+  try {
+    console.log('Creating demo site and data...');
+    const demoResponse = await instance.post('/demo-setup');
+    siteId = demoResponse.data.site.id;
+    console.log(`Demo site created successfully! Site ID: ${siteId}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to create demo site:', error.response?.data || error.message);
+    return false;
+  }
+}
+
 async function createIsraeliTariff() {
   try {
-    console.log('Creating demo site...');
-    const siteResponse = await axios.post(`${API_BASE}/sites`, {
-      name: 'Israeli Tariff Test Site',
-      location: 'Tel Aviv, Israel',
-      timezone: 'Asia/Jerusalem'
-    });
-    
-    console.log('Site creation response:', JSON.stringify(siteResponse.data, null, 2));
-    
-    if (siteResponse.data && siteResponse.data.id) {
-      siteId = siteResponse.data.id;
-    } else if (siteResponse.data && siteResponse.data.site && siteResponse.data.site.id) {
-      siteId = siteResponse.data.site.id;
-    } else {
-      // Fallback to creating a demo site through the demo-setup endpoint
-      console.log('Site ID not found in response, trying demo-setup endpoint...');
-      const demoResponse = await axios.post(`${API_BASE}/demo-setup`);
-      siteId = demoResponse.data.site.id;
-    }
-    
-    console.log(`Demo site created successfully! Site ID: ${siteId}`);
+    // Update the existing tariff to be an Israeli Time-of-Use tariff
+    console.log(`Updating tariff for site ${siteId} to Israeli Time-of-Use tariff...`);
     
     console.log('Creating Israeli Time-of-Use tariff...');
-    const tariffResponse = await axios.post(`${API_BASE}/sites/${siteId}/tariff`, {
+    const tariffResponse = await instance.post(`/sites/${siteId}/tariff`, {
       name: 'Israeli Time-of-Use Tariff',
       provider: 'Israel Electric Corporation',
       importRate: 0.48,
@@ -96,7 +93,7 @@ async function createIsraeliTariff() {
 async function fetchTariff() {
   try {
     console.log(`Fetching tariff for site ${siteId}...`);
-    const response = await axios.get(`${API_BASE}/sites/${siteId}/tariff`);
+    const response = await instance.get(`/sites/${siteId}/tariff`);
     
     console.log('Tariff details:');
     console.log(JSON.stringify(response.data, null, 2));
@@ -110,7 +107,7 @@ async function fetchTariff() {
 async function getCurrentTariffRate() {
   try {
     console.log(`Fetching current tariff rate for site ${siteId}...`);
-    const response = await axios.get(`${API_BASE}/sites/${siteId}/tariff/rate`);
+    const response = await instance.get(`/sites/${siteId}/tariff/rate`);
     
     console.log('Current tariff rate:');
     console.log(JSON.stringify(response.data, null, 2));
@@ -128,7 +125,13 @@ async function main() {
     return;
   }
   
-  // Step 1: Create Israeli ToU tariff
+  // Step 1: Create a demo site with the default setup
+  if (!(await createDemoSite())) {
+    console.log('Exiting due to demo site creation failure');
+    return;
+  }
+  
+  // Step 2: Create Israeli ToU tariff by updating the existing tariff
   const tariff = await createIsraeliTariff();
   if (!tariff) {
     console.log('Exiting due to tariff creation failure');
